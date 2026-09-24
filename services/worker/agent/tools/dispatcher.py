@@ -79,8 +79,25 @@ class ToolDispatcher:
 
 
 # Exécuteurs réels — le dispatcher ne connaît que leurs noms (pas d'implémentation).
+def _trace_persist(trace: ToolTrace) -> None:
+    """Persistance de l'appel (table tool_calls §7.3) — défensive : une panne de base
+    ne doit jamais masquer le résultat d'un outil (le système décide, la base témoigne)."""
+    import logging
+
+    try:
+        from agent.infrastructure.db.repositories import save_tool_call
+
+        save_tool_call(trace.tool_name, trace.arguments, trace.result, trace.status,
+                       trace.latency_ms, session_id=trace.session_id)
+    except Exception:
+        logging.getLogger("sama.tools").warning(
+            "trace tool_call non persistée (%s) — résultat du tool conservé",
+            trace.tool_name, exc_info=True,
+        )
+
+
 def _register_defaults() -> ToolDispatcher:
-    d = ToolDispatcher()
+    d = ToolDispatcher(trace_sink=_trace_persist)
     from agent.tools.tools.journey import get_journey_state, get_missing_requirements, get_next_action
     from agent.tools.tools.procedure import get_procedure
     from agent.tools.tools.evidence import get_evidence

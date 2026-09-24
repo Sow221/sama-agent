@@ -16,6 +16,9 @@ Worker IA + API (D1) : `FastAPI` (contrat C §62) + agent `livekit-agents` (bouc
 | `agent/infrastructure/stt/asr_kiriku.py` | ASR wolof **Kiriku-Wolof-ASR** (ADR-002) — GPU Brev |
 | `agent/infrastructure/tts/tts_xtts.py` | TTS wolof **xTTS-v2-wolof** (ADR-003) — GPU Brev, attribution GalsenAI |
 | `agent/infrastructure/prompts.py` | Chargement des prompts versionnés (`prompts/system|intent|document`) |
+| `agent/infrastructure/db/` | Persistance (référence §7.3) : engine `SAMA_DATABASE_URL`, 16 tables, seed idempotent depuis `data/`, repositories |
+| `agent/application/use_cases/persist_journey.py` | `apply_journey` (POST persisté) + `resume_journey` (**GET reprise** : source de vérité serveur) |
+| `agent/tools/` | Frontière LLM ↔ système (tool calling) : définitions GLM, dispatcher, exécuteurs ; chaque appel tracé (`tool_calls`) |
 | `agent/voice/main.py` | Agent LiveKit : micro → ASR → orchestrateur → TTS → track voix |
 
 ## Lancer (jour J, nœud GPU Brev)
@@ -39,6 +42,18 @@ $env:SAMA_MODE = "deterministic"   # Version B honnête (aussi = boucle API test
 ```
 Les imports lourds (transformers, TTS) sont paresseux : l'API démarre sans GPU. Les modèles ASR/LLM/TTS
 ne sont chargés qu'en `SAMA_MODE=live` (jour J).
+
+## Persistance (PostgreSQL cible, SQLite local)
+
+La source de vérité est le serveur : `journeys` + `journey_requirements` (jamais l'historique
+conversationnel). Le schéma initial est la migration Alembic `alembic/versions/…_schema_initial`.
+- `POST /api/journey` : dérive + persiste l'état ; `GET /api/journey/{id}` : le relit et le re-dérive.
+- `POST /api/documents/analyze` : persiste documents + observations + audit.
+- En dev/tests : `SAMA_DATABASE_URL=sqlite:///./var/sama.db` (défaut), `sqlite://` = mémoire.
+- Jour J Brev : `SAMA_DATABASE_URL=postgresql+psycopg://…` ; les migrations s'appliquent ainsi :
+```bash
+cd services/worker && python -m alembic upgrade head
+```
 
 ## Tests
 ```bash

@@ -27,6 +27,7 @@ npm run dev                           # apps/web → http://localhost:3000
 # 1. Python local (dépendances légères, sans GPU) — voir services/worker/README.md
 # 2. API réelle (Version B, mode deterministic : mêmes contrats, mêmes états, honnête) :
 $env:SAMA_MODE = "deterministic"; & "\.venv\Scripts\python.exe" -m uvicorn agent.api.fastapi:app --port 8000
+#    Persistance : PostgreSQL cible, SQLite local par défaut (var/sama.db) — voir services/worker/README.md ; reprise via GET /api/journey/{id}.
 # 3. Batterie de validation :
 & "\.venv\Scripts\python.exe" -m pytest tests -q          # moteur + contrats partagés + états/priorité
 npm run verify                                            # parité + terminologie (point 8) + secrets (point 23) + Vitest

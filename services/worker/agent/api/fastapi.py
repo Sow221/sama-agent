@@ -23,9 +23,10 @@ from agent import mode as app_mode
 # Use cases — importés depuis leur module (pas via le façade `__init__`, qui ré-exporte
 # les fonctions : les noms de modules et de fonctions cohabiteraient de façon ambiguë).
 from agent.application.use_cases.process_intent import infer_intent
-from agent.application.use_cases.get_journey import get_journey
 from agent.application.use_cases.analyze_document import analyze_document
 from agent.application.use_cases.get_evidence import get_evidence
+from agent.application.use_cases.persist_journey import apply_journey, resume_journey
+from agent.application.use_cases.persist_analysis import persist_document_analysis
 from agent.schemas import (
     DocumentAnalysis,
     Evidence,
@@ -111,10 +112,23 @@ def intent(req: IntentRequest, request: Request) -> IntentResponse:
 @app.post("/api/journey", response_model=JourneyResponse)
 def journey(req: JourneyRequest, request: Request) -> JourneyResponse:
     try:
-        result = get_journey(req)
+        result = apply_journey(req)
     except KeyError as exc:
         # Procédure inconnue : 404 métier, jamais 500.
         raise HTTPException(status_code=404, detail=f"procédure inconnue : {exc}")
+    request.state.trace_fields = {
+        "journeyState": result.status,
+    }
+    return result
+
+
+@app.get("/api/journey/{journey_id}", response_model=JourneyResponse)
+def resume_journey_endpoint(journey_id: str, request: Request) -> JourneyResponse:
+    """Reprise d'un dossier (GET resume) : l'état vient du serveur, jamais du navigateur."""
+    try:
+        result = resume_journey(journey_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"parcours inconnu : {exc}")
     request.state.trace_fields = {
         "journeyState": result.status,
     }
@@ -138,6 +152,12 @@ async def analyze(
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"analyse indisponible : {exc}")
+    # Persistance réelle (documents + observations + audit) — l'état du dossier suit.
+    try:
+        persist_document_analysis(journeyId, analysis, file.filename or "fichier",
+                                  file.content_type or "application/octet-stream")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"persistance indisponible : {exc}")
     request.state.trace_fields = {
         "documentStatus": analysis.status,
         "journeyState": journeyId,

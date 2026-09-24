@@ -21,6 +21,7 @@ SAMA_DEVICE=cuda
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_API_KEY=<secret Brev>
 NVIDIA_MODEL=glm-5.3-flash
+SAMA_DATABASE_URL=postgresql+psycopg://<user>:<secret>@<host>:5432/sama
 KIRIKU_MODEL=AIHubSN/Kiriku-Wolof-ASR
 XTTS_MODEL=galsenai/xTTS-v2-wolof
 XTTS_SPEAKER=<wav de référence 6 s (voix démo)>
@@ -50,10 +51,13 @@ Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICEN
 # 1. SFU LiveKit (transports audio)
 livekit-server --config livekit.yaml &
 
-# 2. API worker
+# 2. Base (PostgreSQL) — migrations restantes puis seed automatique au premier appel
+cd services/worker && python -m alembic upgrade head
+
+# 3. API worker
 cd services/worker && pip install -e . && python -m agent.api.fastapi &
 
-# 3. Agent voix (boucle vocale réelle)
+# 4. Agent voix (boucle vocale réelle)
 python -m agent.voice.main &
 ```
 
