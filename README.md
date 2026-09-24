@@ -6,8 +6,10 @@ Le cœur produit : **dialogue vocal continu avec l'IA** (ASR Kiriku → LLM NVID
 
 ## Structure
 ```
-apps/web            Front Next.js + TS + Tailwind (7 écrans blueprint + Realtime Voice) — TanStack Query + Zustand (D4)
-services/worker     API FastAPI (D1) + agent LiveKit : ASR Kiriku, LLM GLM-5.3-Flash, Journey déterministe, TTS xTTS wolof
+apps/web            Front Next.js + TS + Tailwind (7 écrans blueprint + Realtime Voice) — TanStack Query + Zustand (D4) ; reprise serveur (GET resume)
+services/worker     API FastAPI (D1) + agent LiveKit — architecture hexagonale : agent/domain (pur) → agent/application (use_cases, dialogue, orchestration) → agent/infrastructure (llm, vision, stt, tts, prompts, db) → agent/api ; tools + dispatcher (frontière LLM ↔ système)
+services/worker/agent/infrastructure/db  Persistance (référence §7.3) : SQLAlchemy 2.0, 16 tables, seed idempotent, repositories — source de vérité serveur
+services/worker/alembic   Migrations de schéma (initial : 16 tables) — `python -m alembic upgrade head`
 services/livekit    SFU auto-hébergé (Brev)
 packages/shared     enums.json = SOURCE UNIQUE (ADR-006) → enums.ts + enums.py générés (D3 + parité CI)
 data/               JSON déterministe (procédures, sources, evidence) + fichiers démo = ENTRÉES réelles
@@ -33,7 +35,7 @@ $env:SAMA_MODE = "deterministic"; & "\.venv\Scripts\python.exe" -m uvicorn agent
 npm run verify                                            # parité + terminologie (point 8) + secrets (point 23) + Vitest
 npm run smoke -w                             # smoke API scripté (point 26) — API lancée requise
 node scripts/latency.mjs 20                  # latence RÉELLE (point 17), pas la cible
-npx --prefix apps/web playwright test         # E2E complet du parcours (point 18) — front + API lancés
+npx --prefix apps/web playwright test         # E2E : parcours complet + reprise de dossier (point 18/25) — front + API lancés
 ```
 
 ## Décisions
