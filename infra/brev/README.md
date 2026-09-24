@@ -6,7 +6,7 @@ Document opérationnel du nœud GPU Brev. Il fait foi pour l'exécution du scén
 
 | Service | Image / process | Port | Notes |
 |---|---|---|---|
-| API worker (FastAPI) | `services/worker` (`serve.fastapi`) | 8000 | `SAMA_MODE=live` au jour J |
+| API worker (FastAPI) | `services/worker` (`agent.api.fastapi`) | 8000 | `SAMA_MODE=live` au jour J |
 | Agent voix (LiveKit) | `services/worker` (`agent.voice.main`) | — | se connecte au SFU LiveKit |
 | SFU LiveKit | `livekit-server` auto-hébergé | 7880 (WS) / 7881 (TCP/UDP) | transport audio temps réel |
 
@@ -21,6 +21,7 @@ SAMA_DEVICE=cuda
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_API_KEY=<secret Brev>
 NVIDIA_MODEL=glm-5.3-flash
+SAMA_DATABASE_URL=postgresql+psycopg://<user>:<secret>@<host>:5432/sama
 KIRIKU_MODEL=AIHubSN/Kiriku-Wolof-ASR
 XTTS_MODEL=galsenai/xTTS-v2-wolof
 XTTS_SPEAKER=<wav de référence 6 s (voix démo)>
@@ -50,10 +51,13 @@ Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICEN
 # 1. SFU LiveKit (transports audio)
 livekit-server --config livekit.yaml &
 
-# 2. API worker
-cd services/worker && pip install -e . && python -m serve.fastapi &
+# 2. Base (PostgreSQL) — migrations restantes puis seed automatique au premier appel
+cd services/worker && python -m alembic upgrade head
 
-# 3. Agent voix (boucle vocale réelle)
+# 3. API worker
+cd services/worker && pip install -e . && python -m agent.api.fastapi &
+
+# 4. Agent voix (boucle vocale réelle)
 python -m agent.voice.main &
 ```
 

@@ -12,6 +12,9 @@ dependencies = [
     "python-multipart>=0.0.19",
     "livekit-api>=0.9",
     "livekit-agents>=0.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
     "torch>=2.4",
     "transformers>=4.46",
     "numpy>=1.26",
@@ -22,7 +25,11 @@ dependencies = [
 tts = ["TTS>=0.22"]
 
 [tool.setuptools]
-packages = ["serve", "agent", "agent.engines", "agent.stt", "agent.tts", "agent.llm", "agent.voice"]
+# Découverte automatique des paquets du worker (architecture hexagonale :
+# agent.domain, agent.application, agent.infrastructure, agent.api, agent.voice…).
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

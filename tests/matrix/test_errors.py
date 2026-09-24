@@ -1,5 +1,5 @@
 """
-Contrats d'erreur (plan point 26, cas A–G) — l'API RÉELLE (serve.fastapi) est testée,
+Contrats d'erreur (plan point 26, cas A–G) — l'API RÉELLE (agent.api.fastapi) est testée,
 pas un mock : les statuts HTTP et messages sont le comportement de production.
 Cas H/I/J (ASR/LLM/TTS indisponibles) : jour J GPU Brev uniquement.
 """
@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import os
 
-os.environ.setdefault("SAMA_MODE", "deterministic")  # avant import de serve.fastapi
+os.environ.setdefault("SAMA_MODE", "deterministic")  # avant import de agent.api.fastapi
 
 # Import du vrai app — l'accroche contextuelle (conftest) ajoute services/worker + packages/shared/gen.
 from fastapi.testclient import TestClient
-from serve.fastapi import app
+from agent.api.fastapi import app
 
 client = TestClient(app)
 

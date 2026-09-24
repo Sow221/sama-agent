@@ -28,6 +28,12 @@ venv/
 .env.local
 .env*.local
 
+# Runtime & persistance locale (SQLite dev — la donnée versionnée vit dans data/)
+var/
+*.db
+*.sqlite
+*.sqlite3
+
 # Logs & OS
 *.log
 .DS_Store

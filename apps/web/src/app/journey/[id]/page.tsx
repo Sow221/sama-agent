@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 import { Button, Spinner } from "@/components/ui";
 import { JourneySteps } from "@/components/journey/JourneySteps";
 import { NextActionCard } from "@/components/journey/NextActionCard";
-import { useJourneyMutation } from "@/lib/query/hooks";
+import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
 
 /** Pourquoi un élément bloque (point 20 — « ce qui manque / pourquoi »). */
@@ -30,11 +30,18 @@ export default function ParcoursPage() {
   const persistReady = usePersistReady();
 
   const mutation = useJourneyMutation(setResponse);
+  // Reprise : l'état vient d'abord du SERVEUR (GET resume). Si le parcours n'a
+  // jamais été persisté (404), l'effet de repli ci-dessous le crée via le POST.
+  const resume = useJourneyResume(journeyId, persistReady && !response);
 
   useEffect(() => {
-    // Attendre l'hydratation : un effet « vide (pas de réponse) » ne doit jamais
-    // écraser un dossier porteur d'analyses (point 6 — état serveur dérivé).
-    if (journeyId && !response && persistReady) {
+    if (resume.data) setResponse(resume.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.data]);
+
+  useEffect(() => {
+    // Repli uniquement si reprise impossible (parcours non persisté côté serveur).
+    if (journeyId && !response && persistReady && resume.isError && resume.isFetched) {
       // Point 6 : on ne demande JAMAIS un état qui efface des analyses — le refetch
       // embarque les documents déjà analysés pour que le moteur dérive le même état.
       // (les `name` sont backfillés par le moteur serveur)
@@ -45,7 +52,7 @@ export default function ParcoursPage() {
       mutation.mutate(known.length ? { journeyId, documents: known } : { journeyId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, response, analyses, persistReady]);
+  }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);
 
   if (!response) {
     return (

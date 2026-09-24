@@ -1,0 +1,1 @@
+"""Exécuteurs d'outils (agent runtime) — chaque outil répond depuis LE SYSTÈME."""

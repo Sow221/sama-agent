@@ -27,6 +27,20 @@ export function useJourneyMutation(onSuccess: (r: JourneyResponse) => void) {
   });
 }
 
+/**
+ * Reprise de dossier (GET /api/journey/:id) — la source de vérité est le SERVEUR
+ * (référence §7.3) : l'état vient de journeys + journey_requirements, jamais du
+ * navigateur. 404 (parcours non encore persisté) → les pages basculent sur le POST.
+ */
+export function useJourneyResume(journeyId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["journey", journeyId, "resume"],
+    queryFn: (): Promise<JourneyResponse> => api.resume(journeyId as string),
+    enabled: Boolean(journeyId && enabled),
+    retry: false,
+  });
+}
+
 export function useAnalyzeMutation() {
   return useMutation({
     mutationFn: (form: FormData): Promise<DocumentAnalysis> => api.analyze(form),

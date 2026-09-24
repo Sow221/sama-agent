@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent.engines import journey_engine
+from agent.domain import journey_engine
 from agent.schemas import JourneyDocument, JourneyRequest
 import enums
 

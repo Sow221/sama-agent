@@ -4,8 +4,11 @@ Agent LiveKit — la boucle vocale réelle (ADR-004/005).
 Flux (tout réel, zéro contenu pré-écrit) :
   client (VAD Silero) ──DataChannel──► this worker
       user_segment / barge_in / cancel
-  audio micro ──► Kiriku ASR (wolof) ──► GLM intent ──► Journey Engine ──► réponse
+  audio micro ──► ASR Kiriku (wolof) ──► orchestrator (intent → Journey → formulation)
       ──► xTTS wolof ──► track audio publiée dans la room (voix IA réelle).
+
+Structure hexagonale (référence §5) : le worker appelle l'ORCHESTRATEUR applicatif,
+jamais le domaine ni les providers directement ici.
 """
 from __future__ import annotations
 
@@ -22,15 +25,18 @@ from livekit import rtc
 from livekit.agents import WorkerOptions, cli
 
 from agent import bootstrap  # noqa: F401
-from agent.schemas import DocumentAnalysis, IntentRequest, JourneyDocument, JourneyRequest
-from agent.engines import document_engine, intent_engine, journey_engine
-from agent.stt import asr_kiriku
-from agent.tts import tts_xtts
+from agent.schemas import DocumentAnalysis, JourneyDocument, JourneyRequest
+from agent.application.orchestration.agent_orchestrator import voice_turn
+from agent.application.use_cases.analyze_document import analyze_document
+from agent.application.use_cases.get_journey import get_journey
+from agent.infrastructure.stt import asr_kiriku
+from agent.infrastructure.tts import tts_xtts
 
 log = logging.getLogger("sama.worker.voice")
 logging.basicConfig(level=logging.INFO)
 
-# État réel du dossier côté worker (mémoire de session ; l'API métier reste stateless).
+# État réel du dossier côté worker (mémoire de session ; la persistance PostgreSQL arrive
+# en Phase PERS via les repositories — l'état serveur devient alors source de vérité).
 _DOSSIERS: dict[str, list[JourneyDocument]] = {}
 
 
@@ -43,26 +49,15 @@ def update_dossier_from_analysis(journey_id: str, analysis: DocumentAnalysis) ->
     docs.append(JourneyDocument(requirementId=analysis.requirementId, status=analysis.status))
 
 
-def _current_journey(journey_id: str) -> JourneyResponse:
-    return journey_engine.resolve(
+def _current_journey(journey_id: str):
+    return get_journey(
         JourneyRequest(journeyId=journey_id, documents=_DOSSIERS.get(journey_id))
     )
 
 
 def _turn(text: str, journey_id: str) -> str:
-    """Un tour de la boucle : intent (LLM) → Journey (déterministe) → réponse (vérité du moment)."""
-    intent = intent_engine.infer_intent(IntentRequest(transcript=text, language=None))
-    if intent.needsClarification:
-        return intent.clarificationQuestion or "Pouvez-vous préciser votre demande ?"
-
-    journey = _current_journey(journey_id)
-    if journey.nextAction == "PROVIDE_PHOTOS":
-        return "Il manque encore les photographies."
-    if journey.nextAction == "PROVIDE_DOCUMENT":
-        return "Il manque encore des documents. Fournissez-les."
-    if journey.status == "READY_FOR_NEXT_STEP":
-        return "Votre dossier est complet. Prochaine étape : le service CAPP."
-    return "Voici votre parcours. Suivez le dossier dans l'application."
+    """Un tour de la boucle : intent (LLM) → Journey (déterministe) → réponse formulée."""
+    return voice_turn(text, journey_id, documents=_DOSSIERS.get(journey_id))
 
 
 def _frames_to_wav_16k(frames: list[rtc.AudioFrame]) -> bytes:

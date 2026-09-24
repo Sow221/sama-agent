@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Spinner } from "@/components/ui";
 import { DocumentCard } from "@/components/journey/DocumentCard";
-import { useJourneyMutation } from "@/lib/query/hooks";
+import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
 
 export default function DossierPage() {
@@ -19,11 +19,17 @@ export default function DossierPage() {
   const persistReady = usePersistReady();
 
   const mutation = useJourneyMutation(setResponse);
+  // Reprise : l'état vient d'abord du SERVEUR (GET resume — source de vérité §7.3).
+  const resume = useJourneyResume(journeyId, persistReady && !response);
 
   useEffect(() => {
-    // Attendre l'hydratation : un effet « vide (pas de réponse) » ne doit jamais
-    // écraser un dossier porteur d'analyses (point 6 — état serveur dérivé).
-    if (journeyId && !response && persistReady) {
+    if (resume.data) setResponse(resume.data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.data]);
+
+  useEffect(() => {
+    // Repli uniquement si reprise impossible (parcours non persisté côté serveur).
+    if (journeyId && !response && persistReady && resume.isError && resume.isFetched) {
       // Point 6 : même principe que Parcours — le refetch ne peut pas effacer d'analyses,
       // il les embarque pour que le moteur serveur dérive le même état.
       const known = Object.entries(analyses).map(([requirementId, a]) => ({
@@ -33,7 +39,7 @@ export default function DossierPage() {
       mutation.mutate(known.length ? { journeyId, documents: known } : { journeyId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, response, analyses, persistReady]);
+  }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);
 
   if (!response) {
     return (

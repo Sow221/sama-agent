@@ -75,6 +75,12 @@ export const api = {
     });
   },
 
+  /** GET /api/journey/:id — reprise de dossier : l'état vient du SERVEUR (source de vérité),
+   *  jamais reconstruit depuis le navigateur (référence §7.3). */
+  resume(journeyId: string): Promise<JourneyResponse> {
+    return request(`/api/journey/${encodeURIComponent(journeyId)}`, journeyResponseSchema);
+  },
+
   /** POST /api/documents/analyze — vision réelle sur le fichier envoyé */
   analyze(form: FormData): Promise<DocumentAnalysis> {
     return request("/api/documents/analyze", documentAnalysisSchema, {

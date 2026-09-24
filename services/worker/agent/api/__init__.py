@@ -1,0 +1,1 @@
+"""API HTTP publique (FastAPI) — interface vers les use cases applicatifs."""
