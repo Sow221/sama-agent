@@ -1,8 +1,9 @@
-"""
-API HTTP publique (D1 — ADR-009) : contrat C §62.
+"""API HTTP publique (D1 — ADR-009) : contrat C §62.
 FastAPI + CORS (origine web) + trace middleware (C §55) + endpoints :
   POST /api/intent · POST /api/journey · POST /api/documents/analyze
   GET  /api/evidence/:requirement · POST /api/voice/token · GET /healthz
+Structure hexagonale (référence §5) : les routes appellent les USE CASES (application),
+jamais le domaine ni les providers directement.
 """
 from __future__ import annotations
 
@@ -18,8 +19,13 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, Response, Uploa
 from fastapi.middleware.cors import CORSMiddleware
 from livekit import api as livekit_api
 
-from agent.engines import document_engine, evidence_engine, intent_engine, journey_engine
 from agent import mode as app_mode
+# Use cases — importés depuis leur module (pas via le façade `__init__`, qui ré-exporte
+# les fonctions : les noms de modules et de fonctions cohabiteraient de façon ambiguë).
+from agent.application.use_cases.process_intent import infer_intent
+from agent.application.use_cases.get_journey import get_journey
+from agent.application.use_cases.analyze_document import analyze_document
+from agent.application.use_cases.get_evidence import get_evidence
 from agent.schemas import (
     DocumentAnalysis,
     Evidence,
@@ -40,11 +46,11 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    log.info("Sama Agent worker — up (mode=%s)", os.getenv("SAMA_MODE", "live"))
+    log.info("Sama Agent worker — up (mode=%s)", app_mode.mode())
     yield
 
 
-app = FastAPI(title="Sama Agent API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Sama Agent API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
@@ -82,13 +88,13 @@ async def trace_middleware(request: Request, call_next):
 
 @app.get("/healthz")
 def healthz() -> dict:
-    return {"status": "ok", "mode": os.getenv("SAMA_MODE", "live")}
+    return {"status": "ok", "mode": app_mode.mode()}
 
 
 @app.post("/api/intent", response_model=IntentResponse)
 def intent(req: IntentRequest, request: Request) -> IntentResponse:
     try:
-        result = intent_engine.infer_intent(req)
+        result = infer_intent(req)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"intent indisponible : {exc}")
     request.state.trace_fields = {
@@ -105,7 +111,7 @@ def intent(req: IntentRequest, request: Request) -> IntentResponse:
 @app.post("/api/journey", response_model=JourneyResponse)
 def journey(req: JourneyRequest, request: Request) -> JourneyResponse:
     try:
-        result = journey_engine.resolve(req)
+        result = get_journey(req)
     except KeyError as exc:
         # Procédure inconnue : 404 métier, jamais 500.
         raise HTTPException(status_code=404, detail=f"procédure inconnue : {exc}")
@@ -124,7 +130,7 @@ async def analyze(
 ) -> DocumentAnalysis:
     try:
         content = await file.read()
-        analysis = document_engine.analyze(
+        analysis = analyze_document(
             requirement_id=requirementId,
             file_name=file.filename or "fichier",
             file_bytes=content,
@@ -142,7 +148,7 @@ async def analyze(
 @app.get("/api/evidence/{requirement}", response_model=Evidence)
 def evidence(requirement: str) -> Evidence:
     try:
-        return evidence_engine.lookup(requirement)
+        return get_evidence(requirement)
     except KeyError:
         raise HTTPException(status_code=404, detail="preuve introuvable")
 
@@ -173,4 +179,4 @@ def voice_token() -> VoiceToken:
 
 
 if __name__ == "__main__":
-    uvicorn.run("serve.fastapi:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+    uvicorn.run("agent.api.fastapi:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

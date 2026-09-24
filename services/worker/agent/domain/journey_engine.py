@@ -1,8 +1,6 @@
-"""
-Journey Engine — MOTEUR DÉTERMINISTE (ADR-005/006), cœur du produit.
+"""Journey Engine — MOTEUR DÉTERMINISTE (ADR-005/006), cœur du produit.
 - Agnostique langue : raisonne sur des codes (enums), jamais sur du texte wolof/FR.
 - La completion est TOUJOURS dérivée (G3) — jamais lue depuis un client.
-- Lookup des procédures dans data/procedures/*.json (vérité CI).
 - Labels/raisons de NextAction : source unique enums.json (parité TS ≡ Python ≡ JSON).
 
 PRIORITÉ EXPLICITE DES ÉTATS (point 11 — jamais plus optimiste que la vérité) :
@@ -12,29 +10,14 @@ PRIORITÉ EXPLICITE DES ÉTATS (point 11 — jamais plus optimiste que la vérit
     4. READY_FOR_NEXT_STEP — complet
 La prochaine action suit la même priorité (REVIEW_DOCUMENT > PROVIDE_* > CONTACT_SERVICE).
 Règles pures → unit-testables (matrice C §53 + cas du plan de validation).
+Le domaine ne dépend d'aucun modèle IA ni d'aucune base (règle de la référence).
 """
 from __future__ import annotations
 
-import json
-from functools import lru_cache
-from pathlib import Path
-
-from agent.bootstrap import DATA_DIR
+from agent.domain.procedures import load_procedure, required_of, steps_of
+from agent.domain.actions import SUSPECT_STATUSES, label_of, resolve_next_action
 from agent.schemas import Completion, JourneyDocument, JourneyRequest, JourneyResponse, JourneyStep
 import enums
-
-PROCEDURES = DATA_DIR / "procedures"
-
-# Statuts qui exigent une vérification humaine (priorité 1 sur le parcours).
-_SUSPECT_STATUSES = (enums.DocumentStatus.NEEDS_REVIEW, enums.DocumentStatus.UNEXPECTED)
-
-
-@lru_cache(maxsize=32)
-def load_procedure(procedure_id: str) -> dict:
-    path = PROCEDURES / f"{procedure_id}.json"
-    if not path.exists():
-        raise KeyError(f"procédure inconnue : {procedure_id}")
-    return json.loads(path.read_text("utf-8"))
 
 
 def _step_status(order: int, docs: list[JourneyDocument], required: list[dict]) -> str:
@@ -62,54 +45,22 @@ def _first_doc(docs: list[JourneyDocument], *statuses: enums.DocumentStatus) -> 
     return None
 
 
-def _is_photos_requirement(req: dict) -> bool:
-    return "photo" in [t for t in req.get("acceptedTypes", [])]
-
-
-def _label_of(kind: type[enums.NextAction], action: enums.NextAction | None) -> str | None:
-    """Label/raison de la NextAction — source unique enums.json (jamais reconstruit côté front)."""
-    if action is None:
-        return None
-    member = getattr(kind, action.value, None)
-    return member.value if member is not None else None
-
-
-def _next_action(docs: list[JourneyDocument], required: list[dict]) -> tuple[enums.NextAction | None, str | None]:
-    """Prochaine action — MÊME priorité que le statut (point 12 : unique, liée à l'état, justifiée)."""
-    # 1. Un document suspect prime (ne jamais paraître plus prêt que la vérité).
-    suspect = _first_doc(docs, enums.DocumentStatus.NEEDS_REVIEW, enums.DocumentStatus.UNEXPECTED)
-    if suspect:
-        return enums.NextAction.REVIEW_DOCUMENT, suspect.requirementId
-    # 2. Une exigence manquante bloque.
-    missing = _first_doc(docs, enums.DocumentStatus.MISSING)
-    if missing:
-        req = next((r for r in required if r["id"] == missing.requirementId), None)
-        if req and _is_photos_requirement(req):
-            return enums.NextAction.PROVIDE_PHOTOS, missing.requirementId
-        return enums.NextAction.PROVIDE_DOCUMENT, missing.requirementId
-    # 3+4. Complet → passer au service ; sinon lire les informations.
-    return enums.NextAction.READ_INFORMATION, None
-
-
 def resolve(req: JourneyRequest) -> JourneyResponse:
-    """Pur : même entrée → même sortie. Aucun appel réseau."""
+    """Pur : même entrée → même sortie. Aucun appel réseau, aucun modèle."""
     procedure = load_procedure(req.procedureId or req.journeyId)
-    required: list[dict] = [r for r in procedure["requirements"] if r.get("required", False)]
+    required: list[dict] = required_of(procedure)
 
     docs = (
         [d if isinstance(d, JourneyDocument) else JourneyDocument(**d) for d in req.documents]
         if req.documents
-        else [
-            JourneyDocument(requirementId=r["id"], name=r["name"], status=enums.DocumentStatus.MISSING)
-            for r in required
-        ]
+        else []
     )
-    # Complète les documents manquants de la procédure (état réel côté serveur, stateless).
+    # Complète les documents manquants de la procédure (état réel côté serveur).
     known = {d.requirementId for d in docs}
     for r in required:
         if r["id"] not in known:
             docs.append(JourneyDocument(requirementId=r["id"], name=r["name"], status=enums.DocumentStatus.MISSING))
-    # Contrat de sortie : `name` ALWAYS présent (le serveur est propriétaire de la donnée).
+    # Contrat de sortie : `name` TOUJOURS présent (le serveur est propriétaire de la donnée).
     name_by_id = {r["id"]: r["name"] for r in required}
     for d in docs:
         if not d.name:
@@ -119,7 +70,7 @@ def resolve(req: JourneyRequest) -> JourneyResponse:
     required_count = len(required)
 
     # Statut — priorité explicite (jamais plus optimiste que la vérité).
-    if _first_doc(docs, *(_SUSPECT_STATUSES)):
+    if _first_doc(docs, *SUSPECT_STATUSES):
         status = enums.JourneyStatus.NEEDS_REVIEW
     elif _first_doc(docs, enums.DocumentStatus.MISSING):
         status = enums.JourneyStatus.NEEDS_DOCUMENT
@@ -130,9 +81,9 @@ def resolve(req: JourneyRequest) -> JourneyResponse:
 
     steps = [
         JourneyStep(id=s["id"], name=s["name"], order=s["order"], status=_step_status(s["order"], docs, required))
-        for s in sorted(procedure["steps"], key=lambda s: s["order"])
+        for s in steps_of(procedure)
     ]
-    next_action, next_requirement = _next_action(docs, required)
+    next_action, next_requirement = resolve_next_action(docs, required)
 
     # Cas READY : le moteur déduit CONTACT_SERVICE (procédure complète).
     if status == enums.JourneyStatus.READY_FOR_NEXT_STEP:
@@ -147,6 +98,6 @@ def resolve(req: JourneyRequest) -> JourneyResponse:
         documents=docs,
         nextAction=next_action,
         nextActionRequirement=next_requirement,
-        nextActionLabel=_label_of(enums.NextActionLabel, next_action),
-        nextActionReason=_label_of(enums.NextActionReason, next_action),
+        nextActionLabel=label_of(enums.NextActionLabel, next_action),
+        nextActionReason=label_of(enums.NextActionReason, next_action),
     )

@@ -1,4 +1,9 @@
-"""Evidence Engine — lookup déterministe dans data/evidence (C §66)."""
+"""Domaine Evidence — relie une exigence à sa source et à ses limites (C §66).
+
+Répond à « pourquoi Sama Agent affirme cela ? » : Requirement → Claim → Source.
+La preuve vient de la donnée (data/evidence + sources), jamais d'une justification
+inventée par le LLM après coup.
+"""
 from __future__ import annotations
 
 import json

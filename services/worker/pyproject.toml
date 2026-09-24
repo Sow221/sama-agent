@@ -22,7 +22,11 @@ dependencies = [
 tts = ["TTS>=0.22"]
 
 [tool.setuptools]
-packages = ["serve", "agent", "agent.engines", "agent.stt", "agent.tts", "agent.llm", "agent.voice"]
+# Découverte automatique des paquets du worker (architecture hexagonale :
+# agent.domain, agent.application, agent.infrastructure, agent.api, agent.voice…).
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

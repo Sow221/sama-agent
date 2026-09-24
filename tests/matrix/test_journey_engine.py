@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "services" / "worker"))
 sys.path.insert(0, str(REPO_ROOT / "packages" / "shared" / "gen"))
 
-from agent.engines import journey_engine
+from agent.domain import journey_engine
 from agent.schemas import JourneyRequest, JourneyDocument
 import enums
 

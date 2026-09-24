@@ -1,1 +1,0 @@
-"""LLM — client NVIDIA (GLM-5.3-Flash) : JSON + multimodal (ADR-005)."""

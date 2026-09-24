@@ -1,13 +1,17 @@
-"""
-ASR wolof — Kiriku-Wolof-ASR (AIHubSN / IA Hub Sénégal), fine-tune whisper-large-v2,
+"""ASR wolof — Kiriku-Wolof-ASR (AIHubSN / IA Hub Sénégal), fine-tune whisper-large-v2,
 SOTA wolof (WER 20,7 %). Chargé fp16 sur GPU Brev (ADR-002).
 En mode deterministic : ASR indisponible → lever une erreur lisible (le front bascule texte).
+Fournisseur interchangeable (référence §5.5) : le domaine ne dépend pas de cette classe.
 """
 from __future__ import annotations
 
 import os
 
 from agent import mode as app_mode
+
+
+class KirikuUnavailableError(RuntimeError):
+    pass
 
 
 class _LazyKiriku:
@@ -37,7 +41,9 @@ class _LazyKiriku:
 
     def transcribe(self, audio_wav_bytes: bytes) -> str:
         if not app_mode.is_live():
-            raise RuntimeError("ASR non disponible en mode deterministic (Version B : saisie texte)")
+            raise KirikuUnavailableError(
+                "ASR non disponible en mode deterministic (Version B : saisie texte)"
+            )
         pipe = self._load()
         result = pipe(audio_wav_bytes)
         return str(result.get("text", "")).strip()

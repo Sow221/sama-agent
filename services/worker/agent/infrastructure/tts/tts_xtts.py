@@ -1,5 +1,4 @@
-"""
-TTS wolof — galsenai/xTTS-v2-wolof (ADR-003) : clonage vocal 6 s, chargé fp16 GPU Brev.
+"""TTS wolof — galsenai/xTTS-v2-wolof (ADR-003) : clonage vocal 6 s, chargé fp16 GPU Brev.
 Attribution GalsenAI obligatoire (audible à la démo) — licence xTTS/Coqui à vérifier (jour J).
 En mode deterministic : TTS indisponible → RuntimeError lisible (front bascule texte).
 """
@@ -9,6 +8,10 @@ import io
 import os
 
 from agent import mode as app_mode
+
+
+class XttsUnavailableError(RuntimeError):
+    pass
 
 
 class _LazyXtTS:
@@ -27,7 +30,9 @@ class _LazyXtTS:
 
     def synth(self, text: str, speaker_wav: str | None, sample_rate: int = 24000) -> bytes:
         if not app_mode.is_live():
-            raise RuntimeError("TTS non disponible en mode deterministic (Version B : saisie texte)")
+            raise XttsUnavailableError(
+                "TTS non disponible en mode deterministic (Version B : saisie texte)"
+            )
         tts = self._load()
         out = io.BytesIO()
         tts.tts_to_file(

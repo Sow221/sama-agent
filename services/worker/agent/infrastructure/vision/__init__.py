@@ -1,0 +1,1 @@
+"""Vision (multimodal) — provider d'observation des documents fournis."""

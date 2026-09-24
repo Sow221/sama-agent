@@ -6,7 +6,7 @@ Document opérationnel du nœud GPU Brev. Il fait foi pour l'exécution du scén
 
 | Service | Image / process | Port | Notes |
 |---|---|---|---|
-| API worker (FastAPI) | `services/worker` (`serve.fastapi`) | 8000 | `SAMA_MODE=live` au jour J |
+| API worker (FastAPI) | `services/worker` (`agent.api.fastapi`) | 8000 | `SAMA_MODE=live` au jour J |
 | Agent voix (LiveKit) | `services/worker` (`agent.voice.main`) | — | se connecte au SFU LiveKit |
 | SFU LiveKit | `livekit-server` auto-hébergé | 7880 (WS) / 7881 (TCP/UDP) | transport audio temps réel |
 
@@ -51,7 +51,7 @@ Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICEN
 livekit-server --config livekit.yaml &
 
 # 2. API worker
-cd services/worker && pip install -e . && python -m serve.fastapi &
+cd services/worker && pip install -e . && python -m agent.api.fastapi &
 
 # 3. Agent voix (boucle vocale réelle)
 python -m agent.voice.main &
