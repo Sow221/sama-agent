@@ -3,8 +3,8 @@
 Séparation IA / déterministe :
   - infrastructure (VisionProvider, GLM multimodal) OBSERVE l'image ;
   - le domaine CLASSE l'observation en statuts DocumentStatus + observations factuelles.
-JAMAIS de certification : ANALYZED ≠ VALIDATED (G11) ; le statut « validé par l'IA »
-n'existe nulle part (le contrat le rejette en 422 — test C).
+JAMAIS de certification ; le statut « validé par l'IA » n'existe nulle part
+(G11 : ANALYZED ≠ VALIDATED — le contrat le rejette en 422, test C).
 """
 from __future__ import annotations
 
