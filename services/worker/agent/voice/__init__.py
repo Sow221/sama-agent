@@ -1,0 +1,1 @@
+"""Agent vocale LiveKit (boucle réelle ADR-004/005)."""

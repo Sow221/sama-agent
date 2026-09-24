@@ -1,0 +1,33 @@
+{
+  "intent": ["driving_license"],
+  "intent_action": ["new_application", "renewal", "unknown"],
+  "language": ["fr", "wo"],
+  "candidate_type": ["new", "renewal"],
+  "journey_status": [
+    "NOT_STARTED",
+    "IN_PROGRESS",
+    "NEEDS_INFORMATION",
+    "NEEDS_DOCUMENT",
+    "NEEDS_REVIEW",
+    "READY_FOR_NEXT_STEP",
+    "OUT_OF_SCOPE"
+  ],
+  "document_status": [
+    "MISSING",
+    "PROVIDED",
+    "ANALYZED",
+    "NEEDS_REVIEW",
+    "UNEXPECTED",
+    "UNKNOWN"
+  ],
+  "next_action": [
+    "PROVIDE_DOCUMENT",
+    "REVIEW_DOCUMENT",
+    "READ_INFORMATION",
+    "CONTACT_SERVICE",
+    "CLARIFY",
+    "PROVIDE_PHOTOS"
+  ],
+  "document_type": ["identity_document", "medical_certificate", "photo"],
+  "_source": "panning/ADR/ADR-006-gaps-contenu.md (24/09/2026) — source unique, ne pas éditer à la main ailleurs"
+}

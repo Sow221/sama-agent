@@ -1,0 +1,13 @@
+{
+  "requirement": "identity",
+  "procedureId": "driving_license_new",
+  "source": "CAPP Karangë",
+  "sourceUrl": "https://www.cappkarange.sn",
+  "retrievedAt": "2026-09-27",
+  "description": "Pièce d'identité valide pour la première demande de permis de conduire.",
+  "limitations": [
+    "L'analyse d'un document par Sama Agent ne constitue pas une validation administrative officielle.",
+    "La vérification définitive relève du service compétent (CAPP)."
+  ],
+  "_ref": "C §16 / C §66"
+}

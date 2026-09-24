@@ -1,0 +1,1 @@
+"""TTS wolof — xTTS-v2-wolof (GalsenAI), xTTS v2 Coqui, attribution GalsenAI exigée (ADR-003)."""

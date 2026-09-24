@@ -1,0 +1,1266 @@
+BLUEPRINT TECHNIQUE — SAMA AGENT
+1. Architecture finale
+                         SAMA AGENT
+                              │
+             ┌────────────────┴────────────────┐
+             │                                 │
+          TEXT INPUT                       VOICE INPUT
+             │                                 │
+             │                         Speech-to-Text
+             │                                 │
+             └────────────────┬────────────────┘
+                              ↓
+                     INTENT ENGINE
+                              ↓
+                  PROCEDURE RESOLUTION
+                              ↓
+                       JOURNEY ENGINE
+                    ┌─────────┼─────────┐
+                    ↓         ↓         ↓
+              Procedure   User State   Sources
+                 DB           │          │
+                    └─────────┼──────────┘
+                              ↓
+                       JOURNEY STATE
+                              ↓
+                  ┌───────────┴───────────┐
+                  ↓                       ↓
+           DOCUMENT ENGINE          EVIDENCE ENGINE
+                  │                       │
+                  ↓                       ↓
+            Vision / OCR             Source / RAG
+                  │                       │
+                  └───────────┬───────────┘
+                              ↓
+                     NEXT BEST ACTION
+                              ↓
+                         FRONTEND
+Le point important est que le LLM n'est pas l'architecture.
+
+Le LLM est un composant de l'architecture.
+
+Le véritable produit est :
+
+Intent Engine + Procedure Engine + Journey Engine + Evidence Engine.
+
+2. Stack recommandée
+Couche	Technologie
+Frontend	Next.js + React + TypeScript
+UI	Tailwind CSS
+Backend	Next.js API / Node.js
+Validation	Zod
+Données prototype	PostgreSQL ou SQLite
+Procédures	JSON structuré
+IA texte	NVIDIA NIM / NVIDIA Build
+Vision	modèle multimodal NVIDIA
+RAG	embeddings + retrieval
+Speech	NVIDIA NIM ASR si disponible
+Déploiement	Vercel + backend/API ou instance Brev
+IA locale / infrastructure	NVIDIA Brev
+Tests	Vitest
+E2E	Playwright
+Pourquoi Next.js plutôt qu'une architecture frontend/backend séparée ?
+
+Parce que le hackathon ne récompense pas le nombre de microservices.
+
+Il récompense un prototype fonctionnel.
+
+Donc :
+
+Next.js
+ ├── UI
+ ├── API
+ ├── Journey Engine
+ ├── validation
+ └── orchestration
+est préférable à :
+
+React
++
+Node
++
+FastAPI
++
+PostgreSQL
++
+Redis
++
+Vector DB
++
+Docker
++
+Kubernetes
+pour 11 heures.
+
+3. Modèles NVIDIA
+Il faut distinguer le modèle principal et les modèles spécialisés.
+
+NVIDIA Build propose actuellement notamment glm-5-3-flash, un modèle multimodal avec raisonnement, compréhension image/texte et tool use, ainsi que muse-glimmer-30b, également multimodal avec raisonnement et tool calling. (NVIDIA NIM APIs)
+
+Pour le prototype, je partirais sur :
+
+Modèle principal
+GLM-5.3-Flash
+
+Rôle :
+
+Intent
+Reasoning
+Structured output
+Conversation
+Image understanding si nécessaire
+Il a l'avantage d'être multimodal et orienté raisonnement/tool use. (NVIDIA NIM APIs)
+
+Document / OCR
+Pour un traitement documentaire spécialisé, NVIDIA propose nemotron-parse-2.0, orienté extraction de texte et métadonnées depuis des images, ainsi que llama-nemotron-embed-vl-1b-v2 et llama-nemotron-rerank-vl-1b-v2 pour le retrieval multimodal. (NVIDIA NIM APIs)
+
+Mais ne les intégrez que si le temps le permet.
+
+Pour la démo principale :
+
+GLM-5.3-Flash
+        ↓
+analyse texte
+        +
+analyse image
+peut suffire.
+
+Voice
+NVIDIA référence également canary-1b-asr, destiné à la reconnaissance vocale multilingue et à la traduction automatique de la parole. (NVIDIA NIM APIs)
+
+Mais là encore :
+
+Voice = P1, pas P0.
+
+4. Arborescence exacte
+sama-agent/
+│
+├── app/
+│   │
+│   ├── page.tsx
+│   │
+│   ├── journey/
+│   │   └── [id]/
+│   │       └── page.tsx
+│   │
+│   ├── dossier/
+│   │   └── [id]/
+│   │       └── page.tsx
+│   │
+│   ├── evidence/
+│   │   └── [id]/
+│   │       └── page.tsx
+│   │
+│   └── api/
+│       │
+│       ├── intent/
+│       │   └── route.ts
+│       │
+│       ├── journey/
+│       │   └── route.ts
+│       │
+│       ├── documents/
+│       │   └── analyze/
+│       │       └── route.ts
+│       │
+│       ├── evidence/
+│       │   └── route.ts
+│       │
+│       └── voice/
+│           └── route.ts
+│
+├── components/
+│   │
+│   ├── chat/
+│   │   ├── ChatInput.tsx
+│   │   ├── VoiceButton.tsx
+│   │   └── MessageBubble.tsx
+│   │
+│   ├── journey/
+│   │   ├── JourneyHeader.tsx
+│   │   ├── JourneySteps.tsx
+│   │   ├── JourneyProgress.tsx
+│   │   └── NextAction.tsx
+│   │
+│   ├── dossier/
+│   │   ├── DocumentList.tsx
+│   │   ├── DocumentCard.tsx
+│   │   ├── DocumentUpload.tsx
+│   │   └── DocumentStatus.tsx
+│   │
+│   ├── evidence/
+│   │   ├── EvidencePanel.tsx
+│   │   └── SourceCard.tsx
+│   │
+│   └── ui/
+│
+├── lib/
+│   │
+│   ├── ai/
+│   │   ├── client.ts
+│   │   ├── intent.ts
+│   │   ├── reasoning.ts
+│   │   ├── vision.ts
+│   │   └── voice.ts
+│   │
+│   ├── journey/
+│   │   ├── engine.ts
+│   │   ├── state.ts
+│   │   ├── rules.ts
+│   │   └── next-action.ts
+│   │
+│   ├── procedures/
+│   │   ├── loader.ts
+│   │   └── resolver.ts
+│   │
+│   ├── rag/
+│   │   ├── retrieve.ts
+│   │   └── sources.ts
+│   │
+│   ├── documents/
+│   │   ├── analyzer.ts
+│   │   └── classifier.ts
+│   │
+│   └── validation/
+│       └── schemas.ts
+│
+├── data/
+│   │
+│   ├── procedures/
+│   │   └── driving-license.json
+│   │
+│   ├── sources/
+│   │   └── sources.json
+│   │
+│   └── demo/
+│       ├── identity-valid.jpg
+│       ├── medical-valid.jpg
+│       ├── photos-missing.json
+│       └── blurry-document.jpg
+│
+├── tests/
+│   ├── intent.test.ts
+│   ├── journey.test.ts
+│   ├── documents.test.ts
+│   └── safety.test.ts
+│
+├── public/
+│
+├── .env.example
+├── README.md
+├── package.json
+├── tsconfig.json
+└── next.config.ts
+5. Le modèle de données central
+Le cœur de Sama Agent doit être Journey.
+
+type Journey = {
+  id: string;
+
+  userContext: UserContext;
+
+  procedure: Procedure;
+
+  requirements: Requirement[];
+
+  documents: DocumentEvidence[];
+
+  steps: JourneyStep[];
+
+  evidence: Evidence[];
+
+  status: JourneyStatus;
+
+  nextAction: NextAction;
+};
+6. UserContext
+type UserContext = {
+  language: "fr" | "wo";
+
+  candidateType?: "new" | "renewal";
+
+  licenseCategory?: string;
+
+  location?: string;
+};
+Ne mettez pas 40 champs.
+
+On ajoute uniquement ce qui est réellement utilisé.
+
+7. Procedure
+type Procedure = {
+  id: string;
+
+  name: string;
+
+  description: string;
+
+  jurisdiction: string;
+
+  sourceIds: string[];
+
+  requirements: Requirement[];
+
+  steps: JourneyStep[];
+};
+8. Requirement
+type Requirement = {
+  id: string;
+
+  label: string;
+
+  description?: string;
+
+  required: boolean;
+
+  sourceIds: string[];
+
+  acceptedTypes: string[];
+};
+9. DocumentEvidence
+type DocumentEvidence = {
+  id: string;
+
+  requirementId: string;
+
+  filename?: string;
+
+  detectedType?: string;
+
+  status:
+    | "MISSING"
+    | "PROVIDED"
+    | "ANALYZED"
+    | "NEEDS_REVIEW"
+    | "UNEXPECTED"
+    | "UNKNOWN";
+
+  confidence?: number;
+
+  observations?: string[];
+
+  requiresHumanReview: boolean;
+};
+10. JourneyStep
+type JourneyStep = {
+  id: string;
+
+  order: number;
+
+  title: string;
+
+  description: string;
+
+  status:
+    | "LOCKED"
+    | "CURRENT"
+    | "COMPLETED";
+};
+11. Evidence
+type Evidence = {
+  id: string;
+
+  requirementId?: string;
+
+  sourceId: string;
+
+  claim: string;
+
+  retrievedAt: string;
+
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+
+  limitation?: string;
+};
+12. NextAction
+type NextAction = {
+  type:
+    | "PROVIDE_DOCUMENT"
+    | "REVIEW_DOCUMENT"
+    | "READ_INFORMATION"
+    | "CONTACT_SERVICE"
+    | "CLARIFY";
+
+  label: string;
+
+  requirementId?: string;
+
+  reason: string;
+};
+13. La procédure JSON
+Le premier fichier :
+
+data/procedures/driving-license.json
+Structure :
+
+{
+  "id": "driving_license_new",
+  "name": "Première demande de permis de conduire",
+  "jurisdiction": "Senegal",
+
+  "sources": [
+    "capp_karangue"
+  ],
+
+  "requirements": [
+    {
+      "id": "identity",
+      "label": "Pièce d'identité",
+      "required": true,
+      "acceptedTypes": [
+        "identity_document"
+      ],
+      "sourceIds": [
+        "capp_karangue"
+      ]
+    },
+    {
+      "id": "medical",
+      "label": "Certificat médical",
+      "required": true,
+      "acceptedTypes": [
+        "medical_certificate"
+      ],
+      "sourceIds": [
+        "capp_karangue"
+      ]
+    },
+    {
+      "id": "photos",
+      "label": "Photographies",
+      "required": true,
+      "acceptedTypes": [
+        "photo"
+      ],
+      "sourceIds": [
+        "capp_karangue"
+      ]
+    }
+  ],
+
+  "steps": [
+    {
+      "id": "understand",
+      "order": 1,
+      "title": "Comprendre"
+    },
+    {
+      "id": "prepare",
+      "order": 2,
+      "title": "Préparer"
+    },
+    {
+      "id": "verify",
+      "order": 3,
+      "title": "Vérifier"
+    },
+    {
+      "id": "act",
+      "order": 4,
+      "title": "Agir"
+    }
+  ]
+}
+Important : les exigences exactes doivent être vérifiées contre les sources utilisées avant le hackathon. Le JSON n'est pas une licence pour inventer ou figer des exigences administratives.
+
+14. Sources JSON
+{
+  "id": "capp_karangue",
+  "name": "CAPP Karangë",
+  "type": "official_service",
+  "url": "SOURCE_URL",
+  "retrievedAt": "2026-09-27",
+  "jurisdiction": "Senegal"
+}
+15. Intent Engine
+Le pipeline doit être :
+
+User message
+      ↓
+NVIDIA model
+      ↓
+JSON structured output
+      ↓
+Zod validation
+      ↓
+Intent
+Jamais :
+
+User
+ ↓
+LLM
+ ↓
+réponse libre
+16. Schéma Intent
+const IntentSchema = z.object({
+  intent: z.string(),
+
+  action: z.string(),
+
+  language: z.enum(["fr", "wo"]),
+
+  confidence: z.number()
+    .min(0)
+    .max(1),
+
+  needsClarification: z.boolean(),
+
+  clarificationQuestion: z.string().optional()
+});
+17. Intent principal
+Pour le prototype :
+
+driving_license
+Actions :
+
+new_application
+renewal
+unknown
+Mais la démo doit rester centrée sur :
+
+driving_license
++
+new_application
+18. Prompt définitif d'intention
+SYSTEM
+
+You are the intent extraction component of Sama Agent.
+
+Your task is NOT to answer the user.
+
+Your task is to convert the user's message into a structured
+administrative intent.
+
+Supported procedure:
+
+- driving_license
+
+Supported actions:
+
+- new_application
+- renewal
+- unknown
+
+Supported languages:
+
+- fr
+- wo
+
+Rules:
+
+1. Never invent an intent.
+2. If the user's request is ambiguous, set needsClarification=true.
+3. Do not provide administrative requirements.
+4. Do not answer factual administrative questions.
+5. Return valid JSON only.
+
+Output:
+
+{
+  "intent": "...",
+  "action": "...",
+  "language": "...",
+  "confidence": 0,
+  "needsClarification": false,
+  "clarificationQuestion": ""
+}
+19. Journey Engine
+C'est ici que le projet devient intéressant.
+
+Le moteur prend :
+
+procedure
++
+userContext
++
+documents
+et calcule :
+
+status
+completion
+nextAction
+20. Règles du Journey Engine
+Exemple :
+
+function calculateJourney(journey: Journey) {
+
+  const required = journey.requirements
+    .filter(r => r.required);
+
+  const completed = required.filter(requirement => {
+
+    const document = journey.documents
+      .find(d => d.requirementId === requirement.id);
+
+    return document?.status === "ANALYZED";
+  });
+
+  const completion =
+    Math.round(
+      (completed.length / required.length) * 100
+    );
+
+  return {
+    completion,
+    nextAction: resolveNextAction(journey)
+  };
+}
+21. Next Best Action
+Ordre :
+
+1. Clarification nécessaire
+2. Document obligatoire manquant
+3. Document à revoir
+4. Information manquante
+5. Parcours prêt
+6. Prochaine étape administrative
+Donc :
+
+if (needsClarification)
+    return CLARIFY;
+
+if (missingDocument)
+    return PROVIDE_DOCUMENT;
+
+if (needsReview)
+    return REVIEW_DOCUMENT;
+
+return CONTACT_SERVICE;
+22. Le RAG
+Il ne faut surtout pas construire un gros système RAG le jour du hackathon.
+
+Pour un seul parcours :
+
+Official source
+       ↓
+small documents
+       ↓
+chunks
+       ↓
+embedding
+       ↓
+retrieval
+       ↓
+relevant evidence
+Mais pour la première version, une approche encore plus robuste est :
+
+Procedure JSON
++
+Source JSON
++
+Evidence
+Puis utiliser le RAG uniquement pour les informations narratives.
+
+23. Pourquoi ?
+Parce que :
+
+LLM → RAG → réponse
+peut halluciner.
+
+Alors que :
+
+Procedure DB
+       ↓
+Rule Engine
+       ↓
+Journey
+est beaucoup plus contrôlable.
+
+Le RAG devient donc :
+
+un outil de recherche de preuve, pas le moteur métier.
+
+24. Document Engine
+Le document engine doit retourner quelque chose de très simple.
+
+Exemple :
+
+{
+  "detectedType": "identity_document",
+  "status": "ANALYZED",
+  "confidence": 0.94,
+  "observations": [
+    "Document lisible",
+    "Type apparent correspondant à la pièce attendue"
+  ],
+  "requiresHumanReview": false
+}
+25. Document flou
+{
+  "detectedType": "identity_document",
+  "status": "NEEDS_REVIEW",
+  "confidence": 0.51,
+  "observations": [
+    "Image insuffisamment lisible"
+  ],
+  "requiresHumanReview": true
+}
+26. Mauvais document
+{
+  "detectedType": "unknown",
+  "status": "UNEXPECTED",
+  "confidence": 0.91,
+  "requiresHumanReview": true
+}
+27. Architecture IA documentaire
+NVIDIA Build propose actuellement des modèles spécifiquement orientés document parsing et retrieval multimodal, notamment nemotron-parse-2.0, llama-nemotron-embed-vl-1b-v2 et llama-nemotron-rerank-vl-1b-v2. (NVIDIA NIM APIs)
+
+Donc si le temps le permet :
+
+Document
+   ↓
+NVIDIA document model
+   ↓
+Extract
+   ↓
+Classification
+   ↓
+Journey Engine
+Sinon :
+
+Document
+   ↓
+GLM-5.3-Flash
+   ↓
+Structured JSON
+28. Voice
+Architecture :
+
+Microphone
+    ↓
+Audio
+    ↓
+NVIDIA ASR
+    ↓
+Text
+    ↓
+Intent Engine
+canary-1b-asr est actuellement référencé par NVIDIA pour la reconnaissance vocale et la traduction de la parole. (NVIDIA NIM APIs)
+
+Mais attention :
+
+Ne construisez pas tout le produit autour du wolof vocal.
+Le prototype doit fonctionner même si la reconnaissance vocale wolof n'est pas suffisamment fiable.
+
+29. Stratégie Wolof
+La démonstration peut être :
+
+Wolof
+ ↓
+transcription
+ ↓
+français interne
+ ↓
+Intent Engine
+ ↓
+Journey
+ ↓
+réponse
+Le moteur métier reste indépendant de la langue.
+
+C'est important pour l'architecture future.
+
+30. API /api/intent
+export async function POST(req: Request) {
+
+  const body = await req.json();
+
+  const result = await detectIntent(body.message);
+
+  const validated =
+    IntentSchema.parse(result);
+
+  return Response.json(validated);
+}
+31. API /api/journey
+export async function POST(req: Request) {
+
+  const body = await req.json();
+
+  const procedure =
+    await resolveProcedure(body.intent);
+
+  const journey =
+    createJourney({
+      procedure,
+      userContext: body.userContext
+    });
+
+  return Response.json(journey);
+}
+32. API /api/documents/analyze
+export async function POST(req: Request) {
+
+  const formData = await req.formData();
+
+  const file =
+    formData.get("file");
+
+  const expectedType =
+    formData.get("expectedType");
+
+  const result =
+    await analyzeDocument(
+      file,
+      expectedType
+    );
+
+  return Response.json(result);
+}
+33. Interface principale
+La page d'accueil doit être extrêmement simple.
+
+┌──────────────────────────────────────────┐
+│                                          │
+│              Sama Agent                 │
+│                                          │
+│     Votre démarche. Votre parcours.     │
+│                                          │
+│        Que souhaitez-vous faire ?       │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ Écrivez votre demande...           │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│                🎙 Parler                 │
+│                                          │
+└──────────────────────────────────────────┘
+Mais visuellement, évitez les interfaces qui donnent immédiatement l'impression :
+
+« encore un chatbot ».
+
+34. Après la demande
+Sama Agent
+
+J'ai compris.
+
+Vous souhaitez effectuer une
+première demande de permis de conduire.
+
+┌──────────────────────────────┐
+│ Voir mon parcours →          │
+└──────────────────────────────┘
+35. Journey screen
+Permis de conduire
+Première demande
+
+COMPRENDRE ─── PRÉPARER ─── VÉRIFIER ─── AGIR
+     ✓              ●
+Puis :
+
+Votre dossier
+
+3 éléments disponibles
+1 élément à fournir
+36. Document cards
+┌───────────────────────────────────┐
+│ Pièce d'identité                  │
+│                                   │
+│ ✓ Analysée                        │
+│                                   │
+│ Voir l'analyse                    │
+└───────────────────────────────────┘
+et :
+
+┌───────────────────────────────────┐
+│ Photographies                     │
+│                                   │
+│ ! Manquantes                      │
+│                                   │
+│ Ajouter                            │
+└───────────────────────────────────┘
+37. Evidence panel
+Quand l'utilisateur clique :
+
+Pourquoi ?
+
+Afficher :
+
+Cette information provient de :
+
+CAPP Karangë
+
+Source consultée :
+27 septembre 2026
+
+Ce que Sama Agent peut vérifier :
+présence et correspondance apparente.
+
+Ce que Sama Agent ne peut pas vérifier :
+validité administrative officielle.
+38. Écran final
+┌─────────────────────────────────────┐
+│                                     │
+│       Votre prochaine action        │
+│                                     │
+│       Ajouter les photographies     │
+│                                     │
+│       ┌─────────────────────────┐   │
+│       │ Ajouter un document     │   │
+│       └─────────────────────────┘   │
+│                                     │
+│       Pourquoi ?                    │
+│       Voir la source                │
+│                                     │
+└─────────────────────────────────────┘
+39. Scénario de démonstration définitif
+Nous allons utiliser un seul utilisateur.
+
+Pas trois.
+
+Pas cinq.
+
+Pas une succession de fonctionnalités.
+
+Personnage
+Awa.
+
+Elle veut obtenir son permis.
+
+Elle ne sait pas exactement comment commencer.
+
+00–08 s
+Voix :
+
+« Dama bëgg def permis, waaye xamuma lan laa wara def. »
+
+08–18 s
+Sama Agent :
+
+« J'ai compris que vous souhaitez faire une première demande de permis de conduire. »
+
+18–30 s
+Journey :
+
+Comprendre ✓
+Préparer ●
+Vérifier
+Agir
+30–45 s
+Dossier :
+
+Pièce d'identité ✓
+Certificat médical ✓
+Photographies !
+45–58 s
+Upload.
+
+Le modèle analyse le document.
+
+58–68 s
+Résultat :
+
+Document correspondant à l'élément attendu.
+
+68–78 s
+Sama Agent :
+
+« Il manque encore les photographies. »
+
+78–86 s
+Source :
+
+CAPP Karangë
+
+86–90 s
+Logo :
+
+Sama Agent
+
+Comprendre. Préparer. Vérifier. Agir.
+
+40. Ce qu'il ne faut surtout pas montrer
+Ne montrez pas :
+
+code ;
+
+terminal ;
+
+prompt ;
+
+dashboard technique ;
+
+JSON ;
+
+architecture ;
+
+logs ;
+
+longue conversation ;
+
+10 écrans ;
+
+5 démarches.
+
+Le jury doit voir :
+
+problème → intelligence → résultat.
+
+41. Démonstration technique après la démo
+Si les juges demandent :
+
+« Où est l'IA ? »
+
+Réponse :
+
+1. compréhension de l'intention
+2. raisonnement sur le parcours
+3. multimodalité pour les documents
+4. interaction vocale
+5. récupération de preuves
+6. orchestration du Journey Engine
+Puis :
+
+« Nous avons volontairement séparé la couche IA du moteur métier afin que le modèle ne puisse pas inventer une exigence administrative. »
+
+Cette phrase est importante.
+
+42. Ce qui rend l'architecture intéressante
+Ce n'est pas :
+
+LLM + RAG + chatbot
+C'est :
+
+Natural Language
+       ↓
+Intent
+       ↓
+Procedure
+       ↓
+Journey State
+       ↓
+Evidence
+       ↓
+Document State
+       ↓
+Next Best Action
+C'est cela qu'il faut défendre.
+
+43. Test de robustesse numéro 1
+Utilisateur :
+
+« Je veux faire un permis. »
+
+Le système ne doit pas immédiatement inventer un parcours.
+
+Il doit demander :
+
+« S'agit-il d'une première demande ou d'un renouvellement ? »
+
+44. Test numéro 2
+Utilisateur :
+
+« Je veux renouveler mon permis. »
+
+Le système répond :
+
+procédure non disponible dans le prototype.
+
+Pas de fabrication.
+
+45. Test numéro 3
+Utilisateur :
+
+« Quelle est la procédure pour obtenir un passeport ? »
+
+Réponse :
+
+« Cette démarche n'est pas encore couverte par mon parcours vérifié. »
+
+C'est une démonstration de fiabilité.
+
+46. Test numéro 4
+Utilisateur :
+
+« Est-ce que ce document est officiellement valide ? »
+
+Réponse :
+
+« Je peux analyser certains éléments visibles du document, mais je ne peux pas confirmer sa validité administrative officielle. »
+
+Excellent test Responsible AI.
+
+47. Test numéro 5
+Document flou.
+
+Résultat :
+
+NEEDS_REVIEW
+et non :
+
+VALID
+48. Test numéro 6
+Information absente de la source.
+
+Résultat :
+
+UNKNOWN
+et non une réponse inventée.
+
+49. README GitHub
+Le README doit avoir :
+
+Sama Agent
+AI Citizen Journey Orchestrator
+
+1. Problem
+2. Solution
+3. How it works
+4. Architecture
+5. NVIDIA integration
+6. Responsible AI
+7. Demo
+8. Tech stack
+9. Limitations
+10. Team
+Pas un README de 3000 lignes.
+
+50. NVIDIA dans le README
+Il faut expliquer exactement :
+
+NVIDIA AI is used for:
+
+- natural language understanding
+- reasoning
+- multimodal document analysis
+- speech processing
+
+NVIDIA Brev is used as part of the hackathon
+infrastructure for AI inference.
+Ne dites pas :
+
+« Powered by NVIDIA »
+
+si vous ne pouvez pas expliquer quelle partie l'est.
+
+51. Plan de construction avant le 27 septembre
+J-3 / J-2
+Préparer :
+
+GitHub
+Next.js
+Tailwind
+JSON
+UI
+Journey model
+Sources
+Demo documents
+Prompts
+J-1
+Faire fonctionner :
+
+message
+ ↓
+intent
+ ↓
+procedure
+ ↓
+journey
+Puis :
+
+document
+ ↓
+analysis
+ ↓
+status
+52. Matériel de secours
+Préparez deux versions.
+
+Version A
+Live AI.
+
+NVIDIA
+ ↓
+real inference
+Version B
+Fallback.
+
+predefined demo
+ ↓
+same UI
+Le jury ne doit jamais voir un écran cassé parce qu'une API tombe.
+
+53. Variable d'environnement
+NVIDIA_API_KEY=
+NVIDIA_MODEL=
+NVIDIA_BASE_URL=
+
+DATABASE_URL=
+
+NEXT_PUBLIC_APP_URL=
+Ne jamais mettre la clé dans GitHub.
+
+54. Sécurité GitHub
+Avant le hackathon :
+
+.gitignore
+.env
+.env.local
+*.pem
+*.key
+Et :
+
+git secrets
+ou un scanner équivalent.
+
+Aucune clé NVIDIA ne doit apparaître dans l'historique public.
+
+55. Architecture finale simplifiée
+Si vous devez l'expliquer au jury en 20 secondes :
+
+« L'utilisateur parle naturellement à Sama Agent. Un modèle NVIDIA comprend son intention. Notre moteur sélectionne ensuite une procédure structurée, maintient l'état de son parcours et détermine ce qu'il lui manque. Les modèles multimodaux peuvent analyser les documents fournis, tandis que chaque exigence importante est reliée à une source. L'IA comprend et orchestre, mais les règles métier déterminent l'état du dossier. »
+
+C'est la formulation technique à retenir.
+
+56. Décision stratégique finale
+À ce stade, ne rajoutez pas :
+
+paiement ;
+
+WhatsApp ;
+
+USSD ;
+
+toutes les démarches ;
+
+compte citoyen ;
+
+agent autonome ;
+
+intégration gouvernementale fictive ;
+
+reconnaissance faciale ;
+
+signature électronique ;
+
+blockchain ;
+
+dashboard administration ;
+
+marketplace.
+
+Tout cela dilue le produit.
+
+Le prototype gagnant doit rester :
+
+UNE PERSONNE
+      ↓
+UNE DEMANDE
+      ↓
+UNE PROCÉDURE
+      ↓
+UN DOSSIER
+      ↓
+UNE PREUVE
+      ↓
+UNE PROCHAINE ACTION
+C'est la colonne vertébrale de Sama Agent.
+
+57. Le produit en une phrase
+Sama Agent comprend ce que le citoyen veut faire, construit son parcours, regarde ce qu'il possède déjà, identifie ce qui lui manque et lui indique, preuves à l'appui, ce qu'il doit faire ensuite.
+
+C'est cette phrase qui doit guider chaque ligne de code et chaque écran.
+
+Sources techniques NVIDIA
+NVIDIA Build — catalogue des modèles
+NVIDIA Brev — déploiement des NIM

@@ -1,0 +1,13 @@
+{
+  "journeyId": "driving_license_new",
+  "status": "NEEDS_DOCUMENT",
+  "documents": [
+    { "requirementId": "identity", "name": "Pièce d'identité", "status": "ANALYZED" },
+    { "requirementId": "medical", "name": "Certificat médical", "status": "ANALYZED" },
+    { "requirementId": "photos", "name": "Photographies", "status": "MISSING" }
+  ],
+  "completion": { "provided": 2, "required": 3, "ratio": 0.6666666666666666 },
+  "nextAction": "PROVIDE_PHOTOS",
+  "nextActionRequirement": "photos",
+  "_ref": "G3 (ADR-006) : compteur TOUJOURS dérivé — 2/3 (B §39) · G13 : PROVIDE_PHOTOS"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "driving_license_new",
+  "name": "Première demande de permis de conduire",
+  "jurisdiction": "Senegal",
+  "sources": ["capp_karangue"],
+  "requirements": [
+    { "id": "identity", "name": "Pièce d'identité", "required": true, "acceptedTypes": ["identity_document"] },
+    { "id": "medical", "name": "Certificat médical", "required": true, "acceptedTypes": ["medical_certificate"] },
+    { "id": "photos", "name": "Photographies", "required": true, "acceptedTypes": ["photo"] }
+  ],
+  "steps": [
+    { "id": "understand", "name": "Comprendre", "order": 1 },
+    { "id": "prepare", "name": "Préparer", "order": 2 },
+    { "id": "verify", "name": "Vérifier", "order": 3 },
+    { "id": "act", "name": "Agir", "order": 4 }
+  ],
+  "_ref": "B §13 — exigences exactes à re-vérifier contre la source CAPP avant le jour J"
+}

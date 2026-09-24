@@ -1,0 +1,29 @@
+[project]
+name = "sama-worker"
+version = "0.1.0"
+description = "Sama Agent — worker IA (ASR Kiriku, LLM NVIDIA, Journey déterministe, TTS xTTS wolof)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.28",
+    "python-multipart>=0.0.19",
+    "livekit-api>=0.9",
+    "livekit-agents>=0.6",
+    "torch>=2.4",
+    "transformers>=4.46",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# xTTS (GalsenAI wolof) — lourd, installé sur le nœud GPU Brev
+tts = ["TTS>=0.22"]
+
+[tool.setuptools]
+packages = ["serve", "agent", "agent.engines", "agent.stt", "agent.tts", "agent.llm", "agent.voice"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

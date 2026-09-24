@@ -1,0 +1,1 @@
+"""API FastAPI (D1) — contrat C §62."""

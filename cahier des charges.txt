@@ -1,0 +1,1984 @@
+CAHIER DES CHARGES
+Sama Agent — AI Citizen Journey Orchestrator
+Version : 1.0
+Projet : Hackathon GOMYCODE × NVIDIA — 27 septembre 2026
+Pays : Sénégal
+Catégorie d’inspiration : Society & Impact / Wildcard
+Nature : Prototype fonctionnel d’intelligence artificielle
+Durée de conception du prototype : 1 journée de hackathon
+Équipe maximale : 5 personnes
+
+1. Présentation du projet
+1.1. Nom du projet
+Sama Agent
+
+1.2. Positionnement
+Sama Agent est un agent citoyen multicanal qui transforme une demande administrative exprimée naturellement en un parcours personnalisé, puis aide le citoyen à préparer et vérifier son dossier avant la prochaine action.
+
+Sama Agent ne cherche pas à remplacer les plateformes publiques existantes.
+
+Il constitue une couche d’intelligence citoyenne capable de rendre leur utilisation plus compréhensible, personnalisée et actionnable.
+
+Le principe central du produit est le suivant :
+
+Comprendre → Identifier → Préparer → Vérifier → Agir
+
+L’objectif n’est donc pas simplement de répondre à une question administrative.
+
+L’objectif est de faire progresser concrètement le citoyen dans sa démarche.
+
+2. Contexte
+De nombreux services administratifs sont progressivement numérisés au Sénégal. Le développement de services numériques publics vise notamment à simplifier l'accès aux démarches administratives et à réduire les difficultés liées à leur compréhension et à leur réalisation.
+
+Dans ce contexte, l'information peut exister sans que l'utilisateur sache nécessairement :
+
+quelle démarche correspond exactement à son besoin ;
+
+quelles conditions s'appliquent à sa situation ;
+
+quels documents préparer ;
+
+quels documents sont déjà disponibles ;
+
+ce qui manque dans son dossier ;
+
+quelle est la prochaine action à effectuer ;
+
+auprès de quel service effectuer cette action ;
+
+quelle information est officiellement vérifiée et quelle information doit encore être confirmée.
+
+Le hackathon GOMYCODE × NVIDIA demande précisément aux équipes de construire en une journée un prototype fonctionnel, avec une démonstration de 90 secondes et une utilisation obligatoire des crédits NVIDIA Brev. Le jury évalue notamment la valeur utilisateur, l'exécution fonctionnelle, la qualité de l'utilisation de l'IA et de Brev, les tests, l'expérience de démonstration et l'IA responsable.
+
+Sama Agent est conçu pour répondre à ces critères par une expérience courte, concrète et démontrable.
+
+3. Problématique
+3.1. Problème général
+Le problème traité n'est pas uniquement :
+
+« Où trouver l'information administrative ? »
+
+Le problème est plutôt :
+
+« Comment permettre à un citoyen de comprendre quelle démarche correspond à sa situation, de préparer correctement son dossier et de savoir précisément quelle action effectuer ensuite ? »
+
+3.2. Difficultés ciblées
+Le citoyen peut rencontrer plusieurs difficultés :
+
+Formuler correctement sa demande.
+
+Identifier la bonne procédure.
+
+Comprendre les conditions applicables.
+
+Identifier les pièces nécessaires.
+
+Savoir quelles pièces il possède déjà.
+
+Identifier les pièces manquantes.
+
+Détecter une pièce potentiellement illisible ou inadéquate.
+
+Comprendre l'ordre des étapes.
+
+Identifier la prochaine action.
+
+Retrouver la source officielle de l'information.
+
+Comprendre les limites de ce que l'IA peut vérifier.
+
+4. Vision du produit
+Sama Agent doit évoluer à terme vers une infrastructure d'accompagnement citoyen capable de fonctionner au-dessus des différents services numériques administratifs.
+
+La vision est :
+
+Passer d'une administration numérique centrée sur l'accès à l'information à une expérience centrée sur l'accomplissement du parcours citoyen.
+
+Sama Agent ne remplace donc pas le service administratif.
+
+Il aide l'utilisateur à arriver devant ce service avec un dossier mieux préparé et une compréhension claire de la prochaine étape.
+
+5. Objectifs
+5.1. Objectif principal
+Construire un prototype fonctionnel démontrant qu'une demande exprimée naturellement peut être transformée en un parcours administratif personnalisé et vérifiable.
+
+5.2. Objectifs fonctionnels
+Le prototype doit permettre de :
+
+recevoir une demande en langage naturel ;
+
+comprendre l'intention de l'utilisateur ;
+
+identifier une procédure ;
+
+demander des précisions lorsque nécessaire ;
+
+générer un parcours structuré ;
+
+afficher les exigences de la procédure ;
+
+gérer l'état du dossier ;
+
+analyser quelques documents fournis par l'utilisateur ;
+
+identifier les documents manquants ;
+
+détecter les documents nécessitant une vérification humaine ;
+
+présenter la source de l'information ;
+
+indiquer la prochaine action ;
+
+fonctionner en français ;
+
+démontrer une interaction en wolof ;
+
+utiliser NVIDIA Brev de manière fonctionnelle ;
+
+gérer les erreurs et les situations incertaines.
+
+6. Objectifs spécifiques du prototype hackathon
+Le prototype du 27 septembre ne doit pas chercher à couvrir toutes les démarches administratives.
+
+Il doit démontrer un seul parcours extrêmement bien exécuté.
+
+Parcours retenu
+Première demande de permis de conduire
+Ce choix permet de démontrer :
+
+compréhension de l'intention ;
+
+personnalisation ;
+
+collecte d'informations ;
+
+présentation d'une procédure ;
+
+gestion de documents ;
+
+analyse multimodale ;
+
+progression du dossier ;
+
+recommandations de prochaine action ;
+
+traçabilité des sources.
+
+Le site officiel du CAPP Karangë présente notamment un formulaire de demande de permis comportant des informations telles que l'identité, la catégorie de permis, le type de candidat, certaines pièces et des informations de rendez-vous. Ces informations seront utilisées comme base de référence du prototype, avec conservation de la source et de sa date de consultation.
+
+Le prototype ne devra toutefois pas présenter son jeu de données comme une reproduction exhaustive ou juridiquement définitive de toutes les exigences administratives.
+
+7. Utilisateurs cibles
+7.1. Utilisateur principal
+Citoyen sénégalais souhaitant effectuer une démarche administrative mais ne sachant pas précisément :
+
+quelle procédure choisir ;
+
+comment la préparer ;
+
+quelles pièces fournir ;
+
+quelle étape effectuer ensuite.
+
+7.2. Utilisateurs secondaires futurs
+À terme :
+
+citoyens ruraux ;
+
+citoyens ayant une faible maîtrise des services numériques ;
+
+personnes utilisant principalement la voix ;
+
+personnes préférant les langues nationales ;
+
+personnes utilisant des smartphones ;
+
+personnes utilisant des canaux conversationnels ;
+
+agents d'accompagnement ou relais communautaires.
+
+Ces utilisateurs secondaires ne constituent pas le périmètre fonctionnel principal du prototype du hackathon.
+
+8. Proposition de valeur
+Pour le citoyen
+Sama Agent répond à la question :
+
+« Qu'est-ce que je dois faire maintenant, avec ce que j'ai déjà ? »
+
+Plutôt que :
+
+« Voici une longue liste d'informations administratives. »
+
+Différence fondamentale
+Une plateforme administrative :
+
+met à disposition une procédure.
+
+Un chatbot administratif :
+
+explique une procédure.
+
+Sama Agent :
+
+transforme la demande du citoyen en parcours et l'aide à préparer le dossier jusqu'à la prochaine action.
+
+9. Concept central : Journey Intelligence
+Le cœur du produit est une couche appelée :
+
+Journey Intelligence
+Elle maintient l'état du parcours du citoyen.
+
+Elle sait notamment :
+
+ce que l'utilisateur veut faire ;
+
+quelle procédure a été identifiée ;
+
+quelles informations ont été fournies ;
+
+quelles conditions sont applicables ;
+
+quelles pièces sont requises ;
+
+quelles pièces ont été fournies ;
+
+quelles pièces sont manquantes ;
+
+quelles pièces nécessitent une vérification ;
+
+quelle étape est terminée ;
+
+quelle étape est en cours ;
+
+quelle est la prochaine action.
+
+Le système ne doit donc pas être conçu comme un simple système de questions-réponses.
+
+10. Parcours utilisateur principal
+Étape 1 — Expression de la demande
+L'utilisateur écrit ou parle.
+
+Exemple :
+
+« Dama bëgg def permis, waaye xamuma lan laa wara def. »
+
+Le système doit comprendre que l'utilisateur souhaite obtenir un permis de conduire et qu'il demande une orientation.
+
+Étape 2 — Compréhension
+Le moteur IA extrait :
+
+intent = "driving_license"
+action = "new_application"
+language = "wolof"
+confidence = high
+Si l'intention n'est pas suffisamment claire, le système demande une précision.
+
+Exemple :
+
+« S'agit-il d'une première demande de permis ou d'un renouvellement ? »
+
+11. Étape 3 — Identification de la procédure
+Le système sélectionne :
+
+Première demande de permis de conduire
+Il ne doit pas laisser le modèle inventer librement le nom de la procédure.
+
+La procédure est sélectionnée depuis une base structurée.
+
+12. Étape 4 — Personnalisation
+Le système demande uniquement les informations nécessaires.
+
+Exemples :
+
+première demande ou renouvellement ;
+
+catégorie souhaitée ;
+
+situation du candidat ;
+
+informations nécessaires à la procédure.
+
+Le principe UX est :
+
+ne pas demander à l'utilisateur ce qui n'est pas nécessaire pour son parcours.
+
+13. Étape 5 — Construction du parcours
+Le système génère une vue structurée :
+
+Permis de conduire — Première demande
+1. Comprendre
+
+Procédure identifiée.
+
+2. Préparer
+
+Documents nécessaires.
+
+3. Vérifier
+
+État du dossier.
+
+4. Agir
+
+Prochaine action.
+
+14. Étape 6 — Préparation du dossier
+Le système affiche les documents attendus.
+
+Exemple :
+
+Document	État
+Pièce d'identité	Disponible
+Certificat médical	Disponible
+Photographies	Manquant
+Justificatif requis	À vérifier
+Les statuts possibles sont :
+
+MISSING
+PROVIDED
+VALIDATED_BY_AI
+NEEDS_REVIEW
+UNEXPECTED
+UNKNOWN
+15. Étape 7 — Analyse documentaire
+L'utilisateur peut fournir un document.
+
+Le module IA analyse uniquement ce que le prototype est capable de vérifier.
+
+L'IA peut notamment vérifier
+présence du document ;
+
+type apparent ;
+
+lisibilité ;
+
+présence de certains éléments visibles ;
+
+cohérence basique avec le contexte ;
+
+correspondance avec le document attendu.
+
+L'IA ne doit pas prétendre vérifier
+authenticité juridique ;
+
+validité officielle ;
+
+falsification avancée ;
+
+statut administratif réel ;
+
+conformité définitive auprès de l'administration.
+
+L'interface doit clairement afficher :
+
+« Cette analyse est indicative. Seule l'autorité compétente peut confirmer la validité officielle du document. »
+
+16. Étape 8 — Evidence Engine
+Chaque information importante doit pouvoir être reliée à une source.
+
+L'utilisateur doit pouvoir sélectionner :
+
+« Pourquoi cette pièce est-elle demandée ? »
+
+Le système affiche :
+
+Exigence :
+Photographie
+
+Source :
+CAPP Karangë
+
+Date de consultation :
+27/09/2026
+
+Type :
+Source administrative
+
+Limitation :
+La présence d'une exigence dans la source ne constitue
+pas une validation automatique du dossier.
+17. Étape 9 — Progression
+Le système calcule une progression indicative.
+
+Exemple :
+
+Dossier préparé
+
+3 / 4 éléments disponibles
+
+75 %
+La progression ne doit pas être présentée comme un pourcentage officiel de l'administration.
+
+Elle représente uniquement l'état du dossier dans Sama Agent.
+
+18. Étape 10 — Next Best Action
+Le système détermine la prochaine action.
+
+Exemple :
+
+Votre prochaine étape
+
+Ajouter les photographies requises.
+
+Puis :
+
+« Une fois cette pièce disponible, votre dossier pourra être revu avant la prochaine démarche. »
+
+L'objectif est de terminer chaque interaction avec une action claire.
+
+19. Fonctionnalités fonctionnelles
+F01 — Saisie textuelle
+L'utilisateur peut saisir une demande en langage naturel.
+
+Entrées
+français ;
+
+wolof dans le scénario de démonstration.
+
+Sortie
+Une intention structurée.
+
+F02 — Interaction vocale
+L'utilisateur peut parler au système.
+
+Pipeline :
+
+Audio
+↓
+Speech-to-Text
+↓
+Intent extraction
+↓
+Journey Engine
+↓
+Réponse structurée
+La voix constitue une interface d'accessibilité.
+
+Elle ne constitue pas le cœur logique du produit.
+
+20. F03 — Compréhension de l'intention
+Le système doit extraire :
+
+{
+  "intent": "driving_license",
+  "action": "new_application",
+  "language": "wo",
+  "confidence": 0.94
+}
+Si la confiance est insuffisante :
+
+{
+  "status": "clarification_required"
+}
+21. F04 — Gestion des procédures
+Les procédures doivent être stockées sous forme structurée.
+
+Exemple :
+
+{
+  "id": "driving_license_new",
+  "name": "Première demande de permis de conduire",
+  "jurisdiction": "Senegal",
+  "source": {
+    "name": "CAPP Karangë",
+    "url": "...",
+    "last_verified": "2026-09-27"
+  },
+  "requirements": [],
+  "steps": []
+}
+22. F05 — Moteur de parcours
+Le Journey Engine est responsable de l'état de la démarche.
+
+Il reçoit :
+
+User Context
++
+Procedure
++
+Requirements
++
+Documents
++
+Evidence
+Il retourne :
+
+Journey Status
++
+Completion
++
+Missing Items
++
+Next Action
+23. F06 — Gestion des documents
+Le système doit permettre d'ajouter des documents de démonstration.
+
+Types de fichiers ciblés :
+
+image ;
+
+photographie ;
+
+document PDF si supporté par l'implémentation.
+
+Pour le hackathon, les documents seront fictifs ou préparés pour la démonstration.
+
+Aucune donnée personnelle réelle ne doit être nécessaire.
+
+24. F07 — Analyse multimodale
+Le système doit utiliser un modèle NVIDIA adapté pour l'analyse d'image/document lorsque cela est pertinent.
+
+Exemple :
+
+Document fourni
+↓
+Vision model
+↓
+Classification
+↓
+Structured output
+↓
+Evidence Engine
+↓
+Journey Engine
+25. F08 — Gestion de l'incertitude
+Le système doit pouvoir dire :
+
+« Je ne peux pas confirmer cette information. »
+
+au lieu d'inventer.
+
+Cas concernés :
+
+source absente ;
+
+source contradictoire ;
+
+document illisible ;
+
+intention ambiguë ;
+
+information insuffisante ;
+
+demande hors périmètre.
+
+26. F09 — Gestion des sources
+Chaque procédure doit conserver :
+
+source_name
+source_url
+source_type
+retrieved_at
+last_verified
+content_reference
+La priorité doit être donnée aux sources officielles.
+
+Ordre de confiance :
+
+administration compétente ;
+
+gouvernement ;
+
+établissement public compétent ;
+
+source institutionnelle ;
+
+source secondaire clairement identifiée.
+
+27. F10 — Recherche documentaire / RAG
+Le RAG ne doit pas constituer le produit.
+
+Il doit servir de couche de récupération documentaire.
+
+Architecture :
+
+User question
+↓
+Intent
+↓
+Procedure selection
+↓
+Relevant source retrieval
+↓
+Evidence
+↓
+Journey Engine
+↓
+Answer
+Le LLM ne doit jamais être la source primaire de vérité administrative.
+
+28. F11 — Réponse structurée
+Les réponses du modèle doivent utiliser des formats structurés.
+
+Exemple :
+
+{
+  "intent": "...",
+  "procedure": "...",
+  "confidence": "...",
+  "requirements": [],
+  "missing_documents": [],
+  "next_action": "...",
+  "sources": [],
+  "warning": null
+}
+29. F12 — Gestion des erreurs
+Le système doit gérer au minimum :
+
+Erreur 1 — Demande ambiguë
+Réponse :
+
+« Pouvez-vous préciser si vous souhaitez faire une première demande ou renouveler votre permis ? »
+
+Erreur 2 — Demande hors périmètre
+Réponse :
+
+« Je peux actuellement vous accompagner pour ce parcours. Pour cette autre démarche, je ne dispose pas d'une procédure vérifiée. »
+
+Erreur 3 — Document illisible
+Réponse :
+
+« Le document est difficile à lire. Veuillez fournir une image plus nette ou faire vérifier la pièce par le service compétent. »
+
+Erreur 4 — Source insuffisante
+Réponse :
+
+« Je ne peux pas confirmer cette information à partir d'une source suffisamment fiable. »
+
+30. Architecture technique
+30.1. Architecture globale
+                    UTILISATEUR
+                         │
+             ┌───────────┴───────────┐
+             │                       │
+           TEXTE                   VOIX
+             │                       │
+             └───────────┬───────────┘
+                         ↓
+                NVIDIA AI LAYER
+                         ↓
+                INTENT ENGINE
+                         ↓
+                 JOURNEY ENGINE
+                  /      |      \
+                 /       |       \
+                ↓        ↓        ↓
+        Procedure DB   User State  RAG
+                \       |       /
+                 \      |      /
+                    ↓
+              JOURNEY STATE
+                    ↓
+             DOCUMENT ENGINE
+                    ↓
+             EVIDENCE ENGINE
+                    ↓
+            NEXT BEST ACTION
+                    ↓
+                 FRONTEND
+31. Architecture applicative
+Frontend
+Technologies proposées :
+
+Next.js ;
+
+React ;
+
+TypeScript ;
+
+Tailwind CSS ;
+
+composants UI réutilisables.
+
+Backend
+Technologies proposées :
+
+Node.js ;
+
+TypeScript ;
+
+API REST ;
+
+éventuellement Next.js API routes pour réduire la complexité.
+
+Données
+Pour le prototype :
+
+PostgreSQL ou SQLite selon la vitesse d'implémentation ;
+
+JSON structuré pour les procédures statiques ;
+
+stockage local ou objet pour les documents de démonstration.
+
+IA
+NVIDIA Build ;
+
+NVIDIA Brev ;
+
+modèle de raisonnement / texte ;
+
+modèle multimodal pour documents ;
+
+modèle vocal si disponible et pertinent.
+
+L'environnement officiel du hackathon prévoit l'utilisation de NVIDIA Build, avec accès à des modèles, endpoints d'inférence, Blueprints et Agentic Skills. L'utilisation des crédits NVIDIA Brev attribués à l'équipe est obligatoire.
+
+32. NVIDIA : principe d'utilisation
+NVIDIA ne doit pas être ajouté artificiellement au projet.
+
+L'IA doit être nécessaire à plusieurs étapes du parcours.
+
+Utilisation prévue
+1. Compréhension
+Comprendre une demande exprimée naturellement.
+
+2. Raisonnement
+Identifier le parcours correspondant.
+
+3. Multimodalité
+Analyser les documents fournis.
+
+4. Interaction
+Permettre une interface conversationnelle.
+
+5. Voix
+Démontrer une interaction vocale lorsque la chaîne technique est suffisamment fiable.
+
+33. Rôle du LLM
+Le LLM doit être utilisé pour :
+
+comprendre l'intention ;
+
+extraire les informations ;
+
+reformuler ;
+
+demander des précisions ;
+
+produire des réponses naturelles ;
+
+interpréter les résultats du moteur ;
+
+dialoguer avec l'utilisateur.
+
+Le LLM ne doit pas :
+
+inventer une procédure ;
+
+décider seul qu'une pièce est officiellement valide ;
+
+inventer une exigence ;
+
+remplacer une source officielle ;
+
+déclarer une démarche accomplie sans preuve.
+
+34. Rôle du Journey Engine
+Le Journey Engine constitue le composant métier central.
+
+Il doit être déterministe autant que possible.
+
+Exemple :
+
+if document.identity.status == PROVIDED
+and document.medical.status == PROVIDED
+and document.photos.status == MISSING
+
+then next_action = "provide_photos"
+Cette logique réduit la dépendance aux hallucinations du LLM.
+
+35. Modèle de données
+Journey
+{
+  "id": "journey_001",
+  "user_context": {},
+  "procedure": {},
+  "requirements": [],
+  "steps": [],
+  "documents": [],
+  "evidence": [],
+  "status": {},
+  "next_action": {}
+}
+User Context
+{
+  "language": "wo",
+  "candidate_type": "new",
+  "license_category": "B"
+}
+Requirement
+{
+  "id": "identity_document",
+  "label": "Pièce d'identité",
+  "required": true,
+  "source_id": "source_001"
+}
+Document
+{
+  "id": "document_001",
+  "type": "identity_document",
+  "status": "PROVIDED",
+  "confidence": 0.96,
+  "requires_human_review": false
+}
+Evidence
+{
+  "requirement_id": "identity_document",
+  "source_id": "source_001",
+  "reason": "Requirement found in source",
+  "verified_at": "2026-09-27"
+}
+36. États du dossier
+Le dossier peut avoir les états :
+
+NOT_STARTED
+IN_PROGRESS
+NEEDS_INFORMATION
+NEEDS_DOCUMENT
+NEEDS_REVIEW
+READY_FOR_NEXT_STEP
+OUT_OF_SCOPE
+37. États des documents
+MISSING
+PROVIDED
+ANALYZED
+NEEDS_REVIEW
+UNEXPECTED
+UNKNOWN
+Le terme VALIDATED_BY_AI ne doit être utilisé que si son sens est clairement défini comme une validation technique limitée.
+
+Il ne doit jamais être présenté comme une validation administrative officielle.
+
+38. Base documentaire
+Pour le hackathon, la base documentaire sera volontairement réduite.
+
+Elle contiendra :
+
+la procédure ciblée ;
+
+les exigences ;
+
+les étapes ;
+
+les informations de localisation ;
+
+les informations de contact pertinentes ;
+
+les sources ;
+
+les limites connues.
+
+Objectif :
+
+peu de données, mais des données maîtrisées.
+
+39. Interface utilisateur
+Écran 1 — Accueil
+Titre :
+
+Que souhaitez-vous faire ?
+
+Deux options principales :
+
+Parler
+
+Écrire
+
+Exemple :
+
+« Dama bëgg def permis… »
+
+40. Écran 2 — Compréhension
+Affichage :
+
+Nous avons compris que vous souhaitez effectuer une première demande de permis de conduire.
+
+Bouton :
+
+Continuer
+
+41. Écran 3 — Parcours
+Permis de conduire
+Première demande
+
+✓ Comprendre
+● Préparer
+○ Vérifier
+○ Agir
+42. Écran 4 — Dossier
+Exemple :
+
+Votre dossier
+
+3 éléments disponibles
+1 élément manquant
+
+Pièce d'identité       ✓
+Certificat médical     ✓
+Photographies          !
+Justificatif            ?
+43. Écran 5 — Preuve
+Pour chaque exigence :
+
+Pourquoi ?
+
+Cette exigence est associée à la procédure
+selon la source consultée.
+
+Source :
+CAPP Karangë
+
+Dernière consultation :
+27 septembre 2026
+44. Écran 6 — Prochaine action
+Grand bloc :
+
+Votre prochaine action
+
+Puis :
+
+Ajoutez les photographies nécessaires à votre dossier.
+
+Bouton :
+
+Ajouter un document
+
+45. Écran 7 — Limites
+Une section discrète mais visible :
+
+Important
+
+Sama Agent fournit une assistance à la préparation du parcours. Il ne remplace pas la validation de l'administration.
+
+46. UX/UI
+Les principes sont :
+
+simplicité ;
+
+faible charge cognitive ;
+
+hiérarchie claire ;
+
+peu de texte ;
+
+actions visibles ;
+
+progression explicite ;
+
+sources accessibles ;
+
+erreurs compréhensibles ;
+
+absence de jargon technique.
+
+Le produit ne doit pas ressembler à une interface de chatbot générique.
+
+L'écran principal doit ressembler à un assistant de parcours, pas à une simple fenêtre de conversation.
+
+47. Multilinguisme
+Langues du prototype
+Français
+Langue principale de l'interface.
+
+Wolof
+Langue utilisée pour démontrer l'accessibilité conversationnelle.
+
+Le wolof ne doit pas être présenté comme une fonctionnalité superficielle.
+
+Il doit démontrer que l'utilisateur peut exprimer son intention naturellement avant d'être ramené vers un parcours structuré.
+
+48. WhatsApp
+WhatsApp n'est pas le cœur du prototype.
+
+Il pourra constituer une extension future.
+
+Raison :
+
+Le différenciateur principal de Sama Agent n'est pas le canal de communication.
+
+Le différenciateur est le moteur de parcours.
+
+Le produit doit donc rester différenciable même si le canal change :
+
+Web
+Mobile
+WhatsApp
+Voice
+USSD
+Le même Journey Engine pourrait alimenter ces interfaces.
+
+49. Sécurité et confidentialité
+Données personnelles
+Le prototype doit utiliser des données fictives.
+
+Ne pas utiliser :
+
+vrais numéros d'identité ;
+
+vrais documents administratifs ;
+
+vraies données biométriques ;
+
+vrais numéros de téléphone ;
+
+informations personnelles inutiles.
+
+Stockage
+Les documents de démonstration doivent être supprimés ou isolés après la démonstration lorsque cela est possible.
+
+50. IA responsable
+Le projet doit intégrer :
+
+transparence ;
+
+traçabilité des sources ;
+
+gestion de l'incertitude ;
+
+limitation des hallucinations ;
+
+contrôle humain ;
+
+confidentialité ;
+
+minimisation des données ;
+
+refus des demandes hors périmètre.
+
+Ces éléments sont directement cohérents avec le critère « Responsible AI + Data » du hackathon, qui compte pour 10 points.
+
+51. Limites fonctionnelles
+Le prototype ne réalisera pas :
+
+authentification officielle ;
+
+connexion aux bases gouvernementales ;
+
+paiement administratif réel ;
+
+signature électronique ;
+
+validation juridique ;
+
+vérification biométrique ;
+
+vérification d'authenticité d'une pièce ;
+
+dépôt officiel réel du dossier ;
+
+prise de rendez-vous officielle ;
+
+suivi réel d'un dossier administratif.
+
+Ces fonctionnalités pourront être envisagées ultérieurement via des intégrations officielles.
+
+52. Hors périmètre du hackathon
+Les éléments suivants sont explicitement exclus :
+
+Multi-procédures complètes
+Une seule procédure principale est nécessaire.
+
+Application mobile native
+Non nécessaire pour la première version.
+
+Infrastructure nationale
+Hors périmètre.
+
+Intégration gouvernementale
+Hors périmètre.
+
+Base documentaire exhaustive
+Hors périmètre.
+
+Support de toutes les langues nationales
+Hors périmètre.
+
+OCR universel
+Hors périmètre.
+
+Agent autonome effectuant des démarches administratives
+Hors périmètre.
+
+53. Tests
+Le prototype doit être testé avec une matrice minimale.
+
+Test	Résultat attendu
+Question française claire	Bonne procédure
+Question wolof claire	Bonne procédure
+Question ambiguë	Demande de clarification
+Première demande	Bon parcours
+Document attendu	Document reconnu
+Document flou	NEEDS_REVIEW
+Mauvais document	UNEXPECTED
+Document manquant	MISSING
+Question hors sujet	Refus propre
+Source absente	Incertitude
+Source contradictoire	Priorisation / signalement
+Erreur IA	Fallback
+Réponse non structurée	Rejet / retry
+Document réel non requis	Alerte
+54. Fiabilité
+Chaque composant critique doit disposer d'un fallback.
+
+LLM indisponible
+Afficher une réponse structurée préconfigurée pour le scénario de démonstration.
+
+Vision indisponible
+Permettre une sélection manuelle de document pour poursuivre la démonstration.
+
+Voice indisponible
+Basculer vers le texte.
+
+RAG indisponible
+Utiliser les données structurées locales validées.
+
+Le produit doit toujours pouvoir terminer la démonstration principale.
+
+55. Observabilité
+Le prototype doit enregistrer au minimum :
+
+request_id
+timestamp
+intent
+model
+latency
+confidence
+journey_state
+document_status
+error
+fallback_used
+Ces données permettront de démontrer que l'équipe a réellement réfléchi à la fiabilité.
+
+56. Critères de succès techniques
+Le prototype sera considéré fonctionnel si :
+
+Critère 1
+Une demande utilisateur peut être comprise.
+
+Critère 2
+La procédure correcte peut être identifiée.
+
+Critère 3
+Le parcours peut être généré.
+
+Critère 4
+Les documents peuvent être associés aux exigences.
+
+Critère 5
+Un document manquant peut être identifié.
+
+Critère 6
+Une analyse documentaire peut être démontrée.
+
+Critère 7
+La source d'une exigence peut être affichée.
+
+Critère 8
+Une prochaine action peut être proposée.
+
+Critère 9
+Une interaction en français fonctionne.
+
+Critère 10
+Une interaction en wolof est démontrable.
+
+Critère 11
+NVIDIA Brev est réellement utilisé.
+
+Critère 12
+Le parcours fonctionne même lorsqu'une fonction secondaire échoue.
+
+57. Critères de succès produit
+Le prototype doit répondre à trois questions en moins de 90 secondes :
+
+1. Quel problème ?
+Le citoyen ne sait pas toujours quelle démarche faire ni comment préparer son dossier.
+
+2. Qu'est-ce que Sama Agent change ?
+Il transforme une demande naturelle en parcours personnalisé.
+
+3. Quelle preuve ?
+Il identifie la démarche, vérifie les éléments disponibles, détecte ce qui manque et donne la prochaine action avec ses sources.
+
+58. Démonstration de 90 secondes
+0–10 secondes
+Utilisateur en wolof :
+
+« Dama bëgg def permis, waaye xamuma lan laa wara def. »
+
+Sama Agent comprend.
+
+10–25 secondes
+L'interface affiche :
+
+Première demande de permis de conduire
+
+Puis :
+
+Voici le parcours correspondant à votre situation.
+
+25–40 secondes
+Le parcours apparaît :
+
+Comprendre ✓
+Préparer ●
+Vérifier ○
+Agir ○
+40–55 secondes
+L'utilisateur ajoute des documents fictifs.
+
+Le système affiche :
+
+Pièce d'identité       ✓
+Certificat médical     ✓
+Photographies          !
+55–68 secondes
+Le module documentaire analyse une pièce.
+
+Résultat :
+
+Document lisible et correspondant au type attendu.
+
+Puis :
+
+Cette analyse ne constitue pas une validation officielle.
+
+68–80 secondes
+Le système détecte :
+
+Photographies manquantes.
+
+80–90 secondes
+Écran final :
+
+Votre prochaine action
+
+Ajoutez les photographies requises.
+
+Puis :
+
+Sama Agent
+
+Understand. Prepare. Verify. Act.
+
+59. Fiche projet
+Nom
+Sama Agent
+
+One-liner
+Sama Agent transforme une demande administrative exprimée naturellement en un parcours personnalisé, puis aide le citoyen à préparer et vérifier son dossier avant la prochaine action.
+
+Problème
+Les informations administratives peuvent être disponibles sans que le citoyen sache quelle procédure correspond à sa situation, quelles pièces préparer ou quelle action effectuer ensuite.
+
+Solution
+Un agent IA qui comprend la demande, identifie la procédure, construit le parcours, suit l'état du dossier, analyse certains documents et fournit une prochaine action accompagnée de sources.
+
+Innovation
+Sama Agent ne se limite pas à un chatbot de questions-réponses.
+
+Il introduit une logique de Journey Intelligence centrée sur l'état réel du parcours citoyen.
+
+IA
+compréhension du langage naturel ;
+
+raisonnement ;
+
+récupération documentaire ;
+
+analyse multimodale ;
+
+interaction vocale.
+
+NVIDIA
+NVIDIA Build et NVIDIA Brev sont utilisés pour les composants IA du prototype, conformément aux exigences du hackathon.
+
+Limitation
+Le prototype ne réalise aucune validation administrative officielle.
+
+60. Répartition de l'équipe
+Responsable produit / Lead
+Responsabilités :
+
+vision ;
+
+scénario ;
+
+parcours utilisateur ;
+
+sources ;
+
+pitch ;
+
+démonstration ;
+
+coordination.
+
+Développeur frontend
+Responsabilités :
+
+interface ;
+
+parcours ;
+
+dossier ;
+
+progression ;
+
+responsive ;
+
+intégration API.
+
+Développeur IA / Backend
+Responsabilités :
+
+NVIDIA ;
+
+LLM ;
+
+orchestration ;
+
+API ;
+
+Journey Engine ;
+
+RAG.
+
+Responsable Vision / Voice
+Responsabilités :
+
+analyse documentaire ;
+
+OCR si nécessaire ;
+
+voice input ;
+
+traitement multimodal.
+
+QA / Intégration
+Responsabilités :
+
+tests ;
+
+gestion des erreurs ;
+
+données ;
+
+intégration ;
+
+déploiement ;
+
+vidéo.
+
+Si l'équipe compte trois personnes :
+
+Personne 1 : Produit + QA
+Personne 2 : Frontend + UX
+Personne 3 : Backend + IA + Vision
+61. Organisation du dépôt
+sama-agent/
+│
+├── app/
+│   ├── page.tsx
+│   ├── journey/
+│   ├── dossier/
+│   ├── evidence/
+│   └── demo/
+│
+├── components/
+│   ├── chat/
+│   ├── journey/
+│   ├── documents/
+│   ├── progress/
+│   └── evidence/
+│
+├── lib/
+│   ├── ai/
+│   ├── journey/
+│   ├── rag/
+│   ├── documents/
+│   └── sources/
+│
+├── data/
+│   ├── procedures/
+│   ├── sources/
+│   └── demo/
+│
+├── api/
+│   ├── intent/
+│   ├── journey/
+│   ├── documents/
+│   └── evidence/
+│
+├── tests/
+│   ├── intent/
+│   ├── journey/
+│   ├── documents/
+│   └── safety/
+│
+├── public/
+│   ├── demo-documents/
+│   └── assets/
+│
+├── README.md
+├── .env.example
+└── package.json
+62. API principales
+POST /api/intent
+Entrée :
+
+{
+  "message": "Dama bëgg def permis",
+  "language": "wo"
+}
+Sortie :
+
+{
+  "intent": "driving_license",
+  "action": "new_application",
+  "confidence": 0.94
+}
+POST /api/journey
+Entrée :
+
+{
+  "procedure": "driving_license_new",
+  "user_context": {
+    "category": "B"
+  }
+}
+Sortie :
+
+{
+  "journey_id": "journey_001",
+  "status": "IN_PROGRESS",
+  "completion": 50,
+  "next_action": "provide_photos"
+}
+POST /api/documents/analyze
+Entrée :
+
+document
++
+expected_type
+Sortie :
+
+{
+  "status": "ANALYZED",
+  "classification": "identity_document",
+  "confidence": 0.95,
+  "requires_human_review": false
+}
+GET /api/evidence/:requirement
+Retour :
+
+{
+  "requirement": "...",
+  "source": "...",
+  "source_url": "...",
+  "retrieved_at": "...",
+  "limitations": "..."
+}
+63. Prompts
+Prompt système principal
+Le modèle doit respecter les règles suivantes :
+
+Tu es le moteur conversationnel de Sama Agent.
+
+Ton rôle est de comprendre la demande de l'utilisateur
+et de l'orienter vers un parcours administratif structuré.
+
+Tu ne dois jamais inventer une exigence administrative.
+
+Tu dois utiliser uniquement les procédures et informations
+fournies par les sources disponibles.
+
+Si l'information est insuffisante, indique-le.
+
+Si la demande est ambiguë, demande une précision.
+
+Tu ne dois jamais déclarer qu'un document est officiellement
+valide ou authentique.
+
+Tu peux uniquement signaler une correspondance apparente,
+une lisibilité ou une information nécessitant une vérification.
+
+Toute validation administrative définitive relève de
+l'autorité compétente.
+
+Retourne toujours une structure exploitable par le système.
+64. Prompt d'intention
+Identifie l'intention administrative de l'utilisateur.
+
+Retourne uniquement :
+
+{
+  "intent": "...",
+  "action": "...",
+  "language": "...",
+  "confidence": 0.0,
+  "needs_clarification": false
+}
+65. Prompt documentaire
+Analyse le document fourni uniquement selon le contexte
+de la procédure.
+
+Détermine :
+
+1. le type apparent du document ;
+2. sa lisibilité ;
+3. sa correspondance avec le document attendu ;
+4. les éléments visibles pertinents ;
+5. si une vérification humaine est nécessaire.
+
+Ne conclus jamais à l'authenticité officielle du document.
+66. Gestion des sources
+Chaque source doit avoir :
+
+ID
+Nom
+URL
+Type
+Date de récupération
+Date de vérification
+Procédure associée
+Information extraite
+Limites
+Exemple :
+
+{
+  "id": "source_capp_001",
+  "name": "CAPP Karangë",
+  "type": "official_service",
+  "retrieved_at": "2026-09-27",
+  "procedure": "driving_license_new"
+}
+67. Stratégie de données
+Le projet doit privilégier la qualité plutôt que la quantité.
+
+Le dataset de démonstration comprendra :
+
+Utilisateur A
+Dossier presque complet.
+
+Utilisateur B
+Dossier incomplet.
+
+Utilisateur C
+Document illisible.
+
+Utilisateur D
+Document inattendu.
+
+Utilisateur E
+Demande ambiguë.
+
+Ces cas permettront de démontrer les capacités de fiabilité.
+
+68. Préparation avant le hackathon
+Le jour du hackathon ne doit pas commencer avec une page blanche.
+
+Avant 09:00, doivent idéalement être prêts :
+
+dépôt GitHub ;
+
+structure du projet ;
+
+UI de base ;
+
+design ;
+
+composants ;
+
+données fictives ;
+
+procédures ;
+
+sources ;
+
+architecture ;
+
+schémas JSON ;
+
+prompts ;
+
+environnement ;
+
+README ;
+
+scénario de démonstration ;
+
+documents fictifs ;
+
+tests de base.
+
+Le hackathon ne prévoit qu'une journée de construction, avec plusieurs sessions obligatoires ; le dépôt et la soumission doivent être finalisés avant 17:30 heure de Tunis.
+
+69. Plan d'exécution du 27 septembre
+09:00–10:15
+équipe ;
+
+environnement ;
+
+activation Brev ;
+
+validation architecture ;
+
+test NVIDIA.
+
+10:15–11:30
+Objectif :
+
+Texte → Intent → Procédure → Journey
+
+À 11:30, ce parcours doit fonctionner.
+
+11:45–13:00
+Objectif :
+
+Documents → Analyse → Dossier
+
+À 13:00, le prototype doit pouvoir détecter un document manquant ou nécessitant une vérification.
+
+13:45–15:30
+Ajouter :
+
+voix ;
+
+wolof ;
+
+sources ;
+
+evidence ;
+
+erreurs ;
+
+fallback.
+
+15:30–15:45
+Freeze fonctionnel.
+
+À partir de ce moment :
+
+on n'ajoute plus de fonctionnalités majeures.
+
+15:45–17:00
+tests ;
+
+correction des bugs ;
+
+optimisation UX ;
+
+répétition de la démo ;
+
+préparation vidéo.
+
+17:00–17:30
+Uniquement :
+
+soumission ;
+
+vidéo ;
+
+fiche projet ;
+
+liens ;
+
+déclaration des outils IA ;
+
+déclaration NVIDIA Brev ;
+
+vérification finale.
+
+Le calendrier officiel prévoit précisément la soumission finale à 17:30 heure de Tunis, puis l'évaluation par pays de 17:45 à 19:15.
+
+70. Priorités de développement
+P0 — Obligatoire
+Intent ;
+
+procédure ;
+
+Journey Engine ;
+
+dossier ;
+
+documents ;
+
+prochaine action ;
+
+sources ;
+
+NVIDIA ;
+
+interface fonctionnelle ;
+
+scénario complet.
+
+P1 — Important
+Wolof ;
+
+voice ;
+
+RAG ;
+
+analyse documentaire avancée ;
+
+gestion des erreurs.
+
+P2 — Bonus
+animation ;
+
+historique ;
+
+plusieurs procédures ;
+
+WhatsApp ;
+
+compte utilisateur ;
+
+analytics.
+
+Si P0 n'est pas terminé :
+
+aucun P2 ne doit être développé.
+
+71. Definition of Done
+Une fonctionnalité est considérée terminée uniquement si :
+
+elle fonctionne ;
+
+elle est intégrée à l'interface ;
+
+elle est testée ;
+
+elle possède un comportement en cas d'erreur ;
+
+elle ne casse pas le parcours principal.
+
+72. Critères d'acceptation du prototype
+Le prototype sera accepté si un utilisateur peut :
+
+ouvrir Sama Agent ;
+
+exprimer sa demande ;
+
+être compris ;
+
+voir la procédure identifiée ;
+
+voir son parcours ;
+
+voir les documents attendus ;
+
+ajouter un document ;
+
+obtenir une analyse ;
+
+voir un élément manquant ;
+
+consulter la source ;
+
+recevoir une prochaine action ;
+
+comprendre les limites de l'IA.
+
+73. Critères d'évaluation du hackathon
+Le cahier des charges doit être directement aligné avec la grille officielle.
+
+Critère officiel	Réponse de Sama Agent
+Problème + valeur utilisateur — 20	Parcours administratif concret
+Réalisation fonctionnelle — 20	Journey complet démontrable
+IA + NVIDIA Brev — 20	LLM + multimodalité + Brev
+Tests + fiabilité — 15	Matrice de tests + fallback
+Expérience + démo — 15	Journey visuel + démonstration 90 s
+IA responsable + données — 10	Sources + limites + données fictives
+La grille officielle totalise 100 points et précise que l'utilisation de Brev est obligatoire, tandis que la quantité de crédits dépensés ne rapporte pas de points supplémentaires.
+
+74. Risques
+Risque 1 — Hallucination administrative
+Réponse
+Sources structurées + RAG + règles déterministes.
+
+Risque 2 — Mauvaise analyse documentaire
+Réponse
+Statut NEEDS_REVIEW.
+
+Risque 3 — Dépendance à une API
+Réponse
+Fallback local.
+
+Risque 4 — Trop de fonctionnalités
+Réponse
+Un seul parcours principal.
+
+Risque 5 — Démo trop technique
+Réponse
+Commencer par le problème utilisateur.
+
+Risque 6 — Confusion avec un chatbot
+Réponse
+Mettre le Journey Engine au centre de l'interface.
+
+Risque 7 — Données administratives obsolètes
+Réponse
+Afficher source + date de consultation + limites.
+
+75. Architecture de sécurité
+USER
+ ↓
+Input validation
+ ↓
+AI interpretation
+ ↓
+Structured output validation
+ ↓
+Business rules
+ ↓
+Source verification
+ ↓
+Journey Engine
+ ↓
+Safe response
+Le modèle ne doit pas pouvoir écrire directement une décision administrative.
+
+76. Principe de confiance
+Chaque réponse doit pouvoir être classée :
+
+VERIFIED_SOURCE
+AI_INTERPRETATION
+USER_PROVIDED
+NEEDS_HUMAN_REVIEW
+UNKNOWN
+Cela permet de distinguer :
+
+ce que l'administration indique ;
+
+ce que l'utilisateur a fourni ;
+
+ce que l'IA interprète ;
+
+ce qui reste incertain.
+
+77. Évolutions futures
+Après le hackathon, Sama Agent pourrait évoluer vers :
+
+Phase 2
+Plusieurs procédures :
+
+état civil ;
+
+permis ;
+
+documents administratifs ;
+
+démarches sociales ;
+
+autres services publics.
+
+Phase 3
+Intégration avec les plateformes existantes.
+
+Phase 4
+Canaux :
+
+WhatsApp ;
+
+mobile ;
+
+web ;
+
+voix ;
+
+SMS ;
+
+USSD.
+
+Phase 5
+Compte citoyen et historique des parcours.
+
+Phase 6
+Interopérabilité avec des services administratifs autorisés.
+
+Phase 7
+Agent capable de préparer automatiquement certaines démarches, toujours avec validation humaine ou institutionnelle lorsque nécessaire.
+
+78. Vision long terme
+Sama Agent ne doit pas devenir simplement :
+
+« un chatbot administratif sénégalais ».
+
+Cette position serait trop étroite.
+
+La vision produit est :
+
+une infrastructure d'intelligence de parcours permettant aux services numériques de transformer une intention citoyenne en parcours compréhensible, vérifiable et actionnable.
+
+Le même moteur pourrait ensuite être adapté à :
+
+services publics ;
+
+services sociaux ;
+
+assurance ;
+
+banque ;
+
+santé administrative ;
+
+éducation ;
+
+services professionnels.
+
+79. Positionnement concurrentiel
+Le projet ne doit pas affirmer :
+
+« personne ne fait cela ».
+
+Il doit affirmer précisément :
+
+« Les plateformes existantes donnent accès aux services. Les assistants conversationnels expliquent les démarches. Sama Agent ajoute une couche de Journey Intelligence qui suit l'état du parcours, prépare le dossier et identifie la prochaine action. »
+
+Cette formulation évite de prétendre remplacer les acteurs existants.
+
+80. Message central pour le jury
+Le jury doit retenir une seule idée :
+
+Sama Agent ne répond pas seulement à la question du citoyen. Il l'aide à avancer dans sa démarche.
+
+Et une deuxième :
+
+Le résultat attendu n'est pas une réponse correcte. C'est un dossier mieux préparé et une prochaine action clairement identifiée.
+
+81. Phrase finale de présentation
+Sama Agent — Understand. Prepare. Verify. Act.
+
+Ou en français :
+
+Sama Agent — Comprendre. Préparer. Vérifier. Agir.
+
+82. Résumé exécutif
+Sama Agent est un agent citoyen multicanal conçu pour simplifier l'accès aux démarches administratives.
+
+L'utilisateur exprime naturellement son besoin, en français ou en wolof, par texte ou par voix.
+
+Le système comprend son intention, identifie la procédure correspondante, construit un parcours personnalisé, présente les éléments nécessaires, analyse certains documents, détecte les éléments manquants et indique la prochaine action.
+
+Contrairement à un chatbot administratif classique, Sama Agent ne se limite pas à fournir de l'information.
+
+Il maintient l'état du parcours.
+
+Son unité de valeur n'est donc pas :
+
+le nombre de questions auxquelles l'IA répond.
+
+Mais :
+
+la progression du citoyen vers un dossier prêt pour la prochaine étape.
+
+Le prototype du hackathon se concentre sur la première demande de permis de conduire afin de démontrer cette approche de manière concrète, contrôlée et réalisable dans le temps imparti.
+
+Le système utilise NVIDIA Brev et les capacités IA disponibles dans l'environnement NVIDIA pour la compréhension du langage, le raisonnement, l'analyse multimodale et, lorsque techniquement pertinent, la voix. Le hackathon exige l'utilisation des crédits Brev et évalue explicitement la qualité de cette intégration.
+
+Le prototype ne prétend pas effectuer ou valider officiellement une démarche administrative. Il constitue une couche d'assistance destinée à rendre le parcours citoyen plus compréhensible, mieux préparé et plus actionnable.
+
+--
