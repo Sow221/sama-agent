@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from livekit import api as livekit_api
 
 from agent.engines import document_engine, evidence_engine, intent_engine, journey_engine
+from agent import mode as app_mode
 from agent.schemas import (
     DocumentAnalysis,
     Evidence,
@@ -64,13 +65,19 @@ async def trace_middleware(request: Request, call_next):
     try:
         response: Response = await call_next(request)
         trace.latencyMs = round((time.perf_counter() - started) * 1000, 1)
-        response.headers["x-request-id"] = request_id
-        return response
     except Exception as exc:  # log systématique (C §55) même en cas d'erreur
         trace.latencyMs = round((time.perf_counter() - started) * 1000, 1)
         trace.error = str(exc)
         log.warning("trace=%s", trace.model_dump())
         raise
+    # Champs métier renseignés par les routes (pas de valeurs inventées).
+    fields: dict | None = getattr(request.state, "trace_fields", None)
+    if fields:
+        for key, value in fields.items():
+            setattr(trace, key, value)
+    response.headers["x-request-id"] = request_id
+    log.info("trace=%s", trace.model_dump())
+    return response
 
 
 @app.get("/healthz")
@@ -79,16 +86,33 @@ def healthz() -> dict:
 
 
 @app.post("/api/intent", response_model=IntentResponse)
-def intent(req: IntentRequest) -> IntentResponse:
+def intent(req: IntentRequest, request: Request) -> IntentResponse:
     try:
-        return intent_engine.infer_intent(req)
+        result = intent_engine.infer_intent(req)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"intent indisponible : {exc}")
+    request.state.trace_fields = {
+        "intent": result.intent,
+        "confidence": result.confidence,
+        # Honnête : le fallback est utilisé en mode deterministic (règles) ; en live ce
+        # n'est pas le cas (l'échec LLM → clarification confiance 0, jamais fabriqué).
+        "fallbackUsed": not app_mode.is_live(),
+        "model": "glm-5.3-flash" if app_mode.is_live() else "regles-c",
+    }
+    return result
 
 
 @app.post("/api/journey", response_model=JourneyResponse)
-def journey(req: JourneyRequest) -> JourneyResponse:
-    return journey_engine.resolve(req)
+def journey(req: JourneyRequest, request: Request) -> JourneyResponse:
+    try:
+        result = journey_engine.resolve(req)
+    except KeyError as exc:
+        # Procédure inconnue : 404 métier, jamais 500.
+        raise HTTPException(status_code=404, detail=f"procédure inconnue : {exc}")
+    request.state.trace_fields = {
+        "journeyState": result.status,
+    }
+    return result
 
 
 @app.post("/api/documents/analyze", response_model=DocumentAnalysis)
@@ -96,10 +120,11 @@ async def analyze(
     requirementId: str = Form(...),
     journeyId: str = Form(...),
     file: UploadFile = File(...),
+    request: Request = None,
 ) -> DocumentAnalysis:
     try:
         content = await file.read()
-        return document_engine.analyze(
+        analysis = document_engine.analyze(
             requirement_id=requirementId,
             file_name=file.filename or "fichier",
             file_bytes=content,
@@ -107,6 +132,11 @@ async def analyze(
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"analyse indisponible : {exc}")
+    request.state.trace_fields = {
+        "documentStatus": analysis.status,
+        "journeyState": journeyId,
+    }
+    return analysis
 
 
 @app.get("/api/evidence/{requirement}", response_model=Evidence)
@@ -123,10 +153,23 @@ def voice_token() -> VoiceToken:
     key = os.getenv("LIVEKIT_API_KEY", "devkey")
     secret = os.getenv("LIVEKIT_API_SECRET", "devsecret")
     room = os.getenv("LIVEKIT_ROOM", "sama-demo")
-    at = livekit_api.AccessToken(key, secret)
-    at.identity = f"awa-{uuid.uuid4().hex[:8]}"
-    at.add_grant(room_join=True, room=room)
-    return VoiceToken(url=LIVEKIT_URL, token=at.to_jwt())
+    identity = f"awa-{uuid.uuid4().hex[:8]}"
+    if hasattr(livekit_api, "VideoGrants"):
+        # livekit-api ≥ 1.x : pattern builder (grants déclarés)
+        grants = livekit_api.VideoGrants(room_join=True, room=room)
+        token = (
+            livekit_api.AccessToken(key, secret)
+            .with_identity(identity)
+            .with_grants(grants)
+            .to_jwt()
+        )
+    else:
+        # livekit-api 0.x (legacy)
+        at = livekit_api.AccessToken(key, secret)
+        at.identity = identity
+        at.add_grant(room_join=True, room=room)
+        token = at.to_jwt()
+    return VoiceToken(url=LIVEKIT_URL, token=token)
 
 
 if __name__ == "__main__":

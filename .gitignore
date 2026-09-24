@@ -8,6 +8,12 @@ node_modules/
 out/
 build/
 dist/
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
 
 # Python
 __pycache__/

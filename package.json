@@ -10,6 +10,12 @@
   "scripts": {
     "gen:enums": "node scripts/gen-enums.mjs",
     "parity": "node scripts/parity-check.mjs",
+    "gen:documents": "node scripts/gen-test-documents.mjs",
+    "check:terminology": "node scripts/check-terminology.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "smoke": "node scripts/smoke-api.mjs",
+    "latency": "node scripts/latency.mjs",
+    "verify": "npm run parity && npm run check:terminology && npm run check:secrets && npm test",
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "test": "npm run test -w apps/web"

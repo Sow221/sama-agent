@@ -5,11 +5,24 @@
 "use client";
 
 import { create } from "zustand";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+import { useEffect, useState } from "react";
 import type {
   Completion,
   DocumentAnalysis,
   JourneyResponse,
 } from "@/lib/schemas";
+
+/** Storage no-op quand window est absent (SSR/prérendu) — sessionStorage sinon. */
+const noopStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+};
+
+function sessionSafe(): StateStorage {
+  return typeof window !== "undefined" ? sessionStorage : noopStorage;
+}
 
 export type VoicePhase = "connecting" | "idle" | "listening" | "thinking" | "speaking";
 export type MessageRole = "agent" | "user";
@@ -29,11 +42,21 @@ interface JourneyState {
   clear: () => void;
 }
 
-export const useJourneyStore = create<JourneyState>((set) => ({
-  response: null,
-  setResponse: (response) => set({ response }),
-  clear: () => set({ response: null }),
-}));
+export const useJourneyStore = create<JourneyState>()(
+  persist(
+    (set) => ({
+      response: null,
+      setResponse: (response) => set({ response }),
+      clear: () => set({ response: null }),
+    }),
+    {
+      name: "sama:journey",
+      // Le dossier de la session survit à un rechargement (scénario démo réel, point 25).
+      storage: createJSONStorage(sessionSafe),
+      partialize: (s) => ({ response: s.response }),
+    }
+  )
+);
 
 /* ── dossierStore : analyses réelles reçues pour le dossier ── */
 interface DossierState {
@@ -41,11 +64,52 @@ interface DossierState {
   setAnalysis: (requirementId: string, a: DocumentAnalysis) => void;
 }
 
-export const useDossierStore = create<DossierState>((set) => ({
-  analyses: {},
-  setAnalysis: (requirementId, analysis) =>
-    set((s) => ({ analyses: { ...s.analyses, [requirementId]: analysis } })),
-}));
+export const useDossierStore = create<DossierState>()(
+  persist(
+    (set) => ({
+      analyses: {},
+      setAnalysis: (requirementId, analysis) =>
+        set((s) => ({ analyses: { ...s.analyses, [requirementId]: analysis } })),
+    }),
+    {
+      name: "sama:dossier",
+      storage: createJSONStorage(sessionSafe),
+      partialize: (s) => ({ analyses: s.analyses }),
+    }
+  )
+);
+
+/**
+ * zustand v5 : l'hydratation persist arrive APRÈS le premier rendu. Les pages ne
+ * décident de refetcher qu'une fois les stores hydratés — sinon un effet « vide »
+ * écraserait un dossier porteur d'analyses (point 6, dossier de session réel).
+ */
+export function usePersistReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const mark = () => {
+      if (mounted) setReady(true);
+    };
+    const unsubs = [
+      useJourneyStore.persist.onFinishHydration(mark),
+      useDossierStore.persist.onFinishHydration(mark),
+    ];
+    if (
+      typeof useJourneyStore.persist.hasHydrated === "function" &&
+      typeof useDossierStore.persist.hasHydrated === "function" &&
+      useJourneyStore.persist.hasHydrated() &&
+      useDossierStore.persist.hasHydrated()
+    ) {
+      mark();
+    }
+    return () => {
+      mounted = false;
+      unsubs.forEach((u) => u());
+    };
+  }, []);
+  return ready;
+}
 
 /* ── chatStore : conversation textuelle (écran Conversation) ── */
 interface ChatState {

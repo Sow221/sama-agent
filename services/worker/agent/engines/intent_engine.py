@@ -100,8 +100,8 @@ def infer_intent(req: IntentRequest, llm: GlmLlm | None = None) -> IntentRespons
         except ValidationError:
             # Sortie LLM invalide → clarification honnête, pas de fabrication.
             return IntentResponse(
-                intent=enums.Intent.DRIVING_LICENSE,
-                action=enums.IntentAction.UNKNOWN,
+                intent=enums.Intent.driving_license,
+                action=enums.IntentAction.unknown,
                 language=req.language or enums.Language.WO,
                 confidence=0.0,
                 needsClarification=True,
@@ -112,15 +112,15 @@ def infer_intent(req: IntentRequest, llm: GlmLlm | None = None) -> IntentRespons
     hit = next((k for k in _KEYWORDS if k in t), None)
     if hit:
         return IntentResponse(
-            intent=enums.Intent.DRIVING_LICENSE,
-            action=enums.IntentAction.NEW_APPLICATION,
+            intent=enums.Intent.driving_license,
+            action=enums.IntentAction.new_application,
             language=req.language or enums.Language.FR,
             confidence=0.6,
             needsClarification=False,
         )
     return IntentResponse(
-        intent=enums.Intent.DRIVING_LICENSE,
-        action=enums.IntentAction.UNKNOWN,
+        intent=enums.Intent.driving_license,
+        action=enums.IntentAction.unknown,
         language=req.language or enums.Language.FR,
         confidence=0.2,
         needsClarification=True,

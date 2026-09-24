@@ -11,8 +11,8 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Card, Spinner } from "@/components/ui";
 import { EvidencePanel } from "@/components/journey/EvidencePanel";
-import { useEvidence, useAnalyzeMutation } from "@/lib/query/hooks";
-import { useDossierStore } from "@/lib/state/stores";
+import { useEvidence, useAnalyzeMutation, useJourneyMutation } from "@/lib/query/hooks";
+import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
 
 export default function PreuvePage() {
   const params = useParams<{ requirement: string }>();
@@ -24,8 +24,13 @@ export default function PreuvePage() {
   const [file, setFile] = useState<File | null>(null);
   const evidence = useEvidence(requirement);
   const setAnalysis = useDossierStore((s) => s.setAnalysis);
+  const { response: journey, setResponse } = useJourneyStore();
 
   const analyze = useAnalyzeMutation();
+  /** Point 6 : l'état du dossier change → le Journey Engine est re-questionné (jamais de valeur locale).
+      Pas de navigation automatique : le résultat d'analyse reste visible, puis l'utilisateur
+      revient au dossier (bouton « Retourner au dossier »). */
+  const recomputeJourney = useJourneyMutation((r) => setResponse(r));
 
   const result = useDossierStore((s) => s.analyses[requirement]);
 
@@ -38,6 +43,11 @@ export default function PreuvePage() {
     form.append("journeyId", journeyId);
     const analysis = await analyze.mutateAsync(form);
     setAnalysis(requirement, analysis);
+    // Point 6 : l'état du dossier change → le Journey Engine est re-questionné (jamais de valeur locale).
+    const docs = (journey?.documents ?? []).map((d) =>
+      d.requirementId === requirement ? { ...d, status: analysis.status } : d
+    );
+    recomputeJourney.mutate({ journeyId, documents: docs });
   }
 
   return (
@@ -53,6 +63,17 @@ export default function PreuvePage() {
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : evidence.data ? (
         <EvidencePanel evidence={evidence.data} />
+      ) : evidence.isError ? (
+        <div
+          role="alert"
+          className="rounded-card bg-warning/10 border border-warning/30 p-4 text-sm text-text1"
+        >
+          <p className="font-semibold text-warning">Information à confirmer</p>
+          <p className="mt-1">
+            Cette information ne peut pas être confirmée avec les sources disponibles.
+            Vérifiez auprès du service compétent.
+          </p>
+        </div>
       ) : null}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-3">
@@ -78,9 +99,22 @@ export default function PreuvePage() {
       {result ? (
         <Card>
           <p className="font-semibold">
-            Résultat de l'analyse {result.status === "ANALYZED" ? "✓ conforme" : `— ${result.status}`}
+            Résultat de l'analyse{" "}
+            {result.status === "ANALYZED" ? "✓ semble correspondre" : `— ${result.status}`}
           </p>
           {result.reason ? <p className="mt-1 text-sm text-text2">{result.reason}</p> : null}
+          {result.observations?.length ? (
+            <ul className="mt-2 space-y-1 text-sm text-text2">
+              {result.observations.map((o, i) => (
+                <li key={i}>• {o}</li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-2 text-sm text-text2">
+            {result.requiresHumanReview
+              ? "Une vérification humaine peut être nécessaire avant toute utilisation officielle."
+              : "Analyse automatique : pas de certification officielle."}
+          </p>
           <Button
             className="mt-3 w-full"
             variant="ghost"

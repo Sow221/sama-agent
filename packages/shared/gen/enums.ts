@@ -22,5 +22,27 @@ export type DOCUMENT_STATUS = (typeof DOCUMENT_STATUS)[number];
 export const NEXT_ACTION = ["PROVIDE_DOCUMENT", "REVIEW_DOCUMENT", "READ_INFORMATION", "CONTACT_SERVICE", "CLARIFY", "PROVIDE_PHOTOS"] as const;
 export type NEXT_ACTION = (typeof NEXT_ACTION)[number];
 
+export const NEXT_ACTION_LABEL = {
+  PROVIDE_DOCUMENT: "Fournir un document",
+  PROVIDE_PHOTOS: "Fournir les photographies",
+  REVIEW_DOCUMENT: "Vérifier un document",
+  READ_INFORMATION: "Lire les informations",
+  CONTACT_SERVICE: "Contacter le service",
+  CLARIFY: "Préciser la demande",
+} as const;
+export type NextActionLabel = keyof typeof NEXT_ACTION_LABEL;
+export type NextActionLabelValue = (typeof NEXT_ACTION_LABEL)[NextActionLabel];
+
+export const NEXT_ACTION_REASON = {
+  PROVIDE_DOCUMENT: "Cette exigence est encore manquante : fournissez le document pour continuer.",
+  PROVIDE_PHOTOS: "Les photographies exigées sont encore manquantes : ajoutez-les pour continuer.",
+  REVIEW_DOCUMENT: "Un document analysé nécessite une vérification manuelle.",
+  READ_INFORMATION: "Lisez les informations pour comprendre la démarche.",
+  CONTACT_SERVICE: "Toutes les exigences sont fournies : contactez le service CAPP.",
+  CLARIFY: "La demande nécessite une précision.",
+} as const;
+export type NextActionReason = keyof typeof NEXT_ACTION_REASON;
+export type NextActionReasonValue = (typeof NEXT_ACTION_REASON)[NextActionReason];
+
 export const DOCUMENT_TYPE = ["identity_document", "medical_certificate", "photo"] as const;
 export type DOCUMENT_TYPE = (typeof DOCUMENT_TYPE)[number];

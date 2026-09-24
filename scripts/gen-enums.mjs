@@ -27,6 +27,20 @@ function toTS() {
   for (const [key, values] of Object.entries(enums)) {
     if (skipKeys.has(key)) continue;
     const typeName = key.toUpperCase();
+    if (!Array.isArray(values)) {
+      // Dictionnaire (ex. next_action_label) : const object + types clé/valeur
+      const entryLines = Object.entries(values)
+        .map(([k, v]) => `  ${k}: ${JSON.stringify(v)},`)
+        .join("\n");
+      const pascal = "".concat(
+        ...key.split("_").map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+      );
+      lines.push(`export const ${typeName} = {\n${entryLines}\n} as const;`);
+      lines.push(`export type ${pascal} = keyof typeof ${typeName};`);
+      lines.push(`export type ${pascal}Value = (typeof ${typeName})[${pascal}];`);
+      lines.push("");
+      continue;
+    }
     const literal = values.map((v) => JSON.stringify(v)).join(", ");
     lines.push(`export const ${typeName} = [${literal}] as const;`);
     lines.push(`export type ${typeName} = (typeof ${typeName})[number];`);
@@ -50,8 +64,14 @@ function toPy() {
       ...key.split("_").map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
     );
     lines.push(`class ${className}(str, Enum):`);
-    for (const v of values) {
-      lines.push(`    ${v} = "${v}"`);
+    if (!Array.isArray(values)) {
+      for (const [k, v] of Object.entries(values)) {
+        lines.push(`    ${k} = ${JSON.stringify(v)}`);
+      }
+    } else {
+      for (const v of values) {
+        lines.push(`    ${v} = "${v}"`);
+      }
     }
     lines.push("");
   }
@@ -65,5 +85,11 @@ writeFileSync(join(outDir, "enums.py"), py);
 
 console.log(`gen-enums OK : ${Object.keys(enums).length - skipKeys.size} enums`);
 for (const [k, v] of Object.entries(enums)) {
-  if (!skipKeys.has(k)) console.log(`  ${k}: ${v.join(", ")}`);
+  if (skipKeys.has(k)) {
+    console.log(`  ${k}: (source)`);
+  } else if (Array.isArray(v)) {
+    console.log(`  ${k}: ${v.join(", ")}`);
+  } else {
+    console.log(`  ${k}: {${Object.keys(v).length} entrées de terminologie}`);
+  }
 }

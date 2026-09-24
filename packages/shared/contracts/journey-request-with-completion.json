@@ -1,0 +1,5 @@
+{
+  "journeyId": "driving_license_new",
+  "documents": [{ "requirementId": "identity", "status": "ANALYZED" }],
+  "completion": { "provided": 5, "required": 3, "ratio": 0.1 }
+}

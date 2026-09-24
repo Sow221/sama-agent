@@ -16,34 +16,39 @@ import {
 
 /* ── Entrée ─────────────────────────────────────────────── */
 
-export const intentRequestSchema = z.object({
-  /** Retranscription réelle (ASR via voix, ou saisie texte) */
-  transcript: z.string().min(1),
-  /** Langue de l'utilisateur : wo (voix) ou fr (texte) */
-  language: z.enum(LANGUAGE).optional(),
-  context: z
-    .object({
-      journeyId: z.string().optional(),
-      stepId: z.string().optional(),
-    })
-    .optional(),
-});
+export const intentRequestSchema = z
+  .object({
+    /** Retranscription réelle (ASR via voix, ou saisie texte) */
+    transcript: z.string().min(1),
+    /** Langue de l'utilisateur : wo (voix) ou fr (texte) */
+    language: z.enum(LANGUAGE).optional(),
+    context: z
+      .object({
+        journeyId: z.string().optional(),
+        stepId: z.string().optional(),
+      })
+      .optional(),
+  })
+  .strict();
 export type IntentRequest = z.infer<typeof intentRequestSchema>;
 
-export const journeyRequestSchema = z.object({
-  journeyId: z.string().min(1),
-  procedureId: z.string().optional(),
-  documents: z
-    .array(
-      z.object({
-        requirementId: z.string(),
-        name: z.string().optional(),
-        status: z.enum(DOCUMENT_STATUS),
-      })
-    )
-    .optional(),
-  /* G3 : la completion est TOUJOURS dérivée par le moteur, jamais envoyée brute */
-});
+const journeyDocumentInputSchema = z
+  .object({
+    requirementId: z.string(),
+    name: z.string().optional(),
+    status: z.enum(DOCUMENT_STATUS),
+  })
+  .strict();
+
+export const journeyRequestSchema = z
+  .object({
+    journeyId: z.string().min(1),
+    procedureId: z.string().optional(),
+    documents: z.array(journeyDocumentInputSchema).optional(),
+    /* G3 : la completion est TOUJOURS dérivée par le moteur, jamais envoyée brute.
+       Le contrat est strict : tout champ inconnu (dont completion) est rejeté. */
+  })
+  .strict();
 export type JourneyRequest = z.infer<typeof journeyRequestSchema>;
 
 export const analyzeRequestSchema = z.object({
@@ -75,6 +80,9 @@ export const documentAnalysisSchema = z.object({
   confidence: z.number().min(0).max(1).nullish(),
   reason: z.string().nullish(),
   fileName: z.string().nullish(),
+  /* G11 : observations factuelles de la vision + recommandation (pas une certification) */
+  observations: z.array(z.string()),
+  requiresHumanReview: z.boolean(),
 });
 export type DocumentAnalysis = z.infer<typeof documentAnalysisSchema>;
 
@@ -109,6 +117,9 @@ export const journeyResponseSchema = z.object({
   documents: z.array(journeyDocumentSchema),
   nextAction: z.enum(NEXT_ACTION).nullish(),
   nextActionRequirement: z.string().nullish(),
+  /* label + raison dérivés par le moteur (source unique enums.json) — jamais reconstruits ici */
+  nextActionLabel: z.string().nullish(),
+  nextActionReason: z.string().nullish(),
 });
 export type JourneyResponse = z.infer<typeof journeyResponseSchema>;
 

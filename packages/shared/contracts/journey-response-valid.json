@@ -1,0 +1,21 @@
+{
+  "journeyId": "driving_license_new",
+  "procedureId": "driving_license_new",
+  "status": "NEEDS_DOCUMENT",
+  "steps": [
+    { "id": "understand", "name": "Comprendre", "order": 1, "status": "done" },
+    { "id": "prepare", "name": "Préparer", "order": 2, "status": "active" },
+    { "id": "verify", "name": "Vérifier", "order": 3, "status": "todo" },
+    { "id": "act", "name": "Agir", "order": 4, "status": "todo" }
+  ],
+  "completion": { "provided": 2, "required": 3, "ratio": 0.6666666666666666 },
+  "documents": [
+    { "requirementId": "identity", "name": "Pièce d'identité", "status": "ANALYZED" },
+    { "requirementId": "medical", "name": "Certificat médical", "status": "ANALYZED" },
+    { "requirementId": "photos", "name": "Photographies", "status": "MISSING" }
+  ],
+  "nextAction": "PROVIDE_PHOTOS",
+  "nextActionRequirement": "photos",
+  "nextActionLabel": "Fournir les photographies",
+  "nextActionReason": "Les photographies exigées sont encore manquantes : ajoutez-les pour continuer."
+}

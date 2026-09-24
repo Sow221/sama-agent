@@ -44,6 +44,22 @@ class NextAction(str, Enum):
     CLARIFY = "CLARIFY"
     PROVIDE_PHOTOS = "PROVIDE_PHOTOS"
 
+class NextActionLabel(str, Enum):
+    PROVIDE_DOCUMENT = "Fournir un document"
+    PROVIDE_PHOTOS = "Fournir les photographies"
+    REVIEW_DOCUMENT = "Vérifier un document"
+    READ_INFORMATION = "Lire les informations"
+    CONTACT_SERVICE = "Contacter le service"
+    CLARIFY = "Préciser la demande"
+
+class NextActionReason(str, Enum):
+    PROVIDE_DOCUMENT = "Cette exigence est encore manquante : fournissez le document pour continuer."
+    PROVIDE_PHOTOS = "Les photographies exigées sont encore manquantes : ajoutez-les pour continuer."
+    REVIEW_DOCUMENT = "Un document analysé nécessite une vérification manuelle."
+    READ_INFORMATION = "Lisez les informations pour comprendre la démarche."
+    CONTACT_SERVICE = "Toutes les exigences sont fournies : contactez le service CAPP."
+    CLARIFY = "La demande nécessite une précision."
+
 class DocumentType(str, Enum):
     identity_document = "identity_document"
     medical_certificate = "medical_certificate"

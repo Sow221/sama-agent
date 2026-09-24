@@ -9,21 +9,31 @@ import { useParams } from "next/navigation";
 import { Spinner } from "@/components/ui";
 import { DocumentCard } from "@/components/journey/DocumentCard";
 import { useJourneyMutation } from "@/lib/query/hooks";
-import { useJourneyStore } from "@/lib/state/stores";
+import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
 
 export default function DossierPage() {
   const params = useParams<{ id: string }>();
   const journeyId = params.id;
   const { response, setResponse } = useJourneyStore();
+  const analyses = useDossierStore((s) => s.analyses);
+  const persistReady = usePersistReady();
 
   const mutation = useJourneyMutation(setResponse);
 
   useEffect(() => {
-    if (journeyId && !response) {
-      mutation.mutate({ journeyId });
+    // Attendre l'hydratation : un effet « vide (pas de réponse) » ne doit jamais
+    // écraser un dossier porteur d'analyses (point 6 — état serveur dérivé).
+    if (journeyId && !response && persistReady) {
+      // Point 6 : même principe que Parcours — le refetch ne peut pas effacer d'analyses,
+      // il les embarque pour que le moteur serveur dérive le même état.
+      const known = Object.entries(analyses).map(([requirementId, a]) => ({
+        requirementId,
+        status: a.status,
+      }));
+      mutation.mutate(known.length ? { journeyId, documents: known } : { journeyId });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, response]);
+  }, [journeyId, response, analyses, persistReady]);
 
   if (!response) {
     return (

@@ -1,0 +1,6 @@
+{
+  "journeyId": "driving_license_new",
+  "documents": [
+    { "requirementId": "identity", "status": "VALIDATED_BY_AI" }
+  ]
+}

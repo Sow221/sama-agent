@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "services" / "worker"))
 sys.path.insert(0, str(REPO_ROOT / "packages" / "shared" / "gen"))
 
@@ -76,11 +76,31 @@ def test_needs_review_wins_over_document() -> None:
 
 
 def test_unknown_documents_are_not_counted() -> None:
+    """UNKNOWN/PROVIDED jamais comptés comme fournis ; l'exigence absente de la liste
+    est rétablie MISSING par le moteur (état réel côté serveur) → NEEDS_DOCUMENT honnête."""
     r = journey_engine.resolve(
         _req(
             [
                 _doc("identity", enums.DocumentStatus.PROVIDED),
                 _doc("medical", enums.DocumentStatus.UNKNOWN),
+            ]
+        )
+    )
+    assert r.completion.provided == 0
+    assert r.status == enums.JourneyStatus.NEEDS_DOCUMENT
+    # photos (non fournie) réapparaît MISSING — jamais un état inventé.
+    photos = next(d for d in r.documents if d.requirementId == "photos")
+    assert photos.status == enums.DocumentStatus.MISSING
+
+
+def test_in_progress_when_nothing_missing_and_nothing_analyzed() -> None:
+    """Aucune exigence manquante mais rien d'analysé → IN_PROGRESS (pas de blocage)."""
+    r = journey_engine.resolve(
+        _req(
+            [
+                _doc("identity", enums.DocumentStatus.PROVIDED),
+                _doc("medical", enums.DocumentStatus.PROVIDED),
+                _doc("photos", enums.DocumentStatus.PROVIDED),
             ]
         )
     )

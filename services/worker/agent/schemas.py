@@ -5,7 +5,7 @@ Convention : camelCase — même contrat côté TS.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent import bootstrap  # noqa: F401  (prépare le sys.path)
 import enums
@@ -13,23 +13,35 @@ import enums
 
 # ── Entrées ────────────────────────────────────────────────
 class Context(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     journeyId: str | None = None
     stepId: str | None = None
 
 
 class IntentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     transcript: str = Field(min_length=1)
     language: enums.Language | None = None
     context: Context | None = None
 
 
 class JourneyDocument(BaseModel):
+    """Document de dossier — entrée (client) et sortie (moteur). Strict des deux côtés."""
+
+    model_config = ConfigDict(extra="forbid")
+
     requirementId: str
     name: str | None = None
     status: enums.DocumentStatus
 
 
 class JourneyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    """Contrat strict (point 14) : la completion est TOUJOURS dérivée — tout champ
+    inconnu (dont completion) est rejeté avant d'atteindre le moteur."""
+
     journeyId: str
     procedureId: str | None = None
     documents: list[JourneyDocument] | None = None
@@ -53,6 +65,9 @@ class DocumentAnalysis(BaseModel):
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     reason: str | None = None
     fileName: str | None = None
+    # G11 : observations factuelles de la vision (pas une certification), + recommandation.
+    observations: list[str] = Field(default_factory=list)
+    requiresHumanReview: bool = True
 
 
 class JourneyStep(BaseModel):
@@ -65,7 +80,8 @@ class JourneyStep(BaseModel):
 class Completion(BaseModel):
     provided: int = Field(ge=0)
     required: int = Field(ge=1)
-    ratio: float = Field(ge=0.0, le=1.0)
+    # G3 : ratio TOUJOURS dérivé — valeur par défaut acceptée mais écrasée par le validator.
+    ratio: float = Field(default=0.0, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def _ratio_is_derived(self) -> "Completion":
@@ -83,6 +99,10 @@ class JourneyResponse(BaseModel):
     documents: list[JourneyDocument]
     nextAction: enums.NextAction | None = None
     nextActionRequirement: str | None = None
+    # G (point 12) : label + raison déterminés par le moteur (source unique enums.json),
+    # jamais reconstruits côté front. FR = langue de l'application (la voix reformule en wolof).
+    nextActionLabel: str | None = None
+    nextActionReason: str | None = None
 
 
 class Evidence(BaseModel):
