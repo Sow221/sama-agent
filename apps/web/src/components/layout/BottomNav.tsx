@@ -7,11 +7,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mic } from "@/components/icons";
+import { useJourneyStore } from "@/lib/state/stores";
 import { memo } from "react";
 
 export const BottomNav = memo(function BottomNav() {
   const pathname = usePathname();
   const inVoice = pathname.startsWith("/voice");
+  // Le lien Dossier pointe sur LE dossier de l'usager (journeyId par-usager),
+  // jamais vers un identifiant partagé (appropriation serveur journeys.user_id).
+  const journeyId = useJourneyStore((s) => s.response?.journeyId);
+  const dossierHref = journeyId ? `/dossier/${journeyId}` : "/";
 
   return (
     <nav
@@ -36,7 +41,7 @@ export const BottomNav = memo(function BottomNav() {
           <Mic className="h-7 w-7" />
         </Link>
         <NavItem
-          href="/dossier/driving_license_new"
+          href={dossierHref}
           label="Dossier"
           active={pathname.startsWith("/dossier")}
           emoji="📁"

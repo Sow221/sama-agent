@@ -3,14 +3,19 @@
 /**
  * Écran 2 — Compréhension : ce que la demande implique (en français),
  * avec les 3 exigences officielles puis le bouton « Voir mon parcours → » (G1).
+ * L'identifiant de parcours est PAR-USAGER (journeyIdFor) : deux usagers ne
+ * partagent jamais le même dossier (appropriation serveur journeys.user_id).
  */
 import { useRouter } from "next/navigation";
 import { Button, Card, Spinner } from "@/components/ui";
 import { useJourneyMutation } from "@/lib/query/hooks";
 import { useJourneyStore } from "@/lib/state/stores";
+import { useAuth } from "@/lib/auth/auth-context";
+import { journeyIdFor } from "@/lib/auth/journey-id";
 
 export default function CompréhensionPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const setJourneyResponse = useJourneyStore((s) => s.setResponse);
   const journeyMutation = useJourneyMutation((r) => {
     setJourneyResponse(r);
@@ -18,7 +23,7 @@ export default function CompréhensionPage() {
   });
 
   const run = () =>
-    journeyMutation.mutate({ journeyId: "driving_license_new" });
+    journeyMutation.mutate({ journeyId: journeyIdFor("driving_license_new", user?.id) });
 
   return (
     <section className="flex flex-col gap-6 pt-4">

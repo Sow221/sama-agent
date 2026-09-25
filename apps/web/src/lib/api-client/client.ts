@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { newTraceId } from "@/lib/trace";
+import { authBearerHeaders } from "@/lib/auth/supabase";
 import {
   documentAnalysisSchema,
   evidenceSchema,
@@ -34,6 +35,9 @@ async function request<T>(
   init?: RequestInit
 ): Promise<T> {
   const requestId = newTraceId();
+  // Authentification réelle : Bearer <access_token Supabase> si session active
+  // (rien à joindre en harnais — l'identité de service du worker s'applique).
+  const auth = await authBearerHeaders();
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
@@ -41,6 +45,7 @@ async function request<T>(
       ...(init?.body instanceof FormData
         ? {}
         : { "content-type": "application/json" }),
+      ...auth,
       ...(init?.headers ?? {}),
     },
   });

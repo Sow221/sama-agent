@@ -8,9 +8,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui";
 import { NextActionCard } from "@/components/journey/NextActionCard";
 import { useJourneyStore } from "@/lib/state/stores";
+import { useAuth } from "@/lib/auth/auth-context";
+import { journeyIdFor } from "@/lib/auth/journey-id";
 
 export default function ProchaineActionPage() {
   const { response } = useJourneyStore();
+  const { user } = useAuth();
 
   return (
     <section className="flex flex-col gap-6 pt-4">
@@ -30,7 +33,7 @@ export default function ProchaineActionPage() {
           ) : null}
         </>
       ) : (
-        <Link href="/journey/driving_license_new">
+        <Link href={`/journey/${journeyIdFor("driving_license_new", user?.id)}`}>
           <Button className="w-full" variant="ghost">
             Voir mon parcours
           </Button>

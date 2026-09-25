@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
+import { AuthProvider } from "@/lib/auth/auth-context";
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Suspense } from "react";
@@ -22,13 +23,15 @@ export default function RootLayout({
   return (
     <html lang="fr" className={inter.variable}>
       <body className="min-h-dvh bg-bg text-text1 antialiased">
-        <Providers>
-          <Suspense fallback={null}>
-            <Header />
-          </Suspense>
-          <main className="container-page">{children}</main>
-          <BottomNav />
-        </Providers>
+        <AuthProvider>
+          <Providers>
+            <Suspense fallback={null}>
+              <Header />
+            </Suspense>
+            <main className="container-page">{children}</main>
+            <BottomNav />
+          </Providers>
+        </AuthProvider>
       </body>
     </html>
   );
