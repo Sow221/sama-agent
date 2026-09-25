@@ -156,6 +156,9 @@ async def analyze(
     try:
         persist_document_analysis(journeyId, analysis, file.filename or "fichier",
                                   file.content_type or "application/octet-stream")
+    except KeyError as exc:
+        # Le parcours doit exister avant tout document (FK PostgreSQL vérifiées).
+        raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"persistance indisponible : {exc}")
     request.state.trace_fields = {

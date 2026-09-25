@@ -35,6 +35,17 @@ if _url.startswith("sqlite"):
         Path(file_part).parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(_url, **_engine_kwargs)
+
+if _url.startswith("sqlite"):
+    # SQLite ne vérifie PAS les FK par défaut : on les active pour attraper en dev
+    # tout ordre d'insertion parents>enfants qui échouerait sur PostgreSQL (jour J).
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_fk_on(dbapi_conn, _record):  # noqa: ANN001
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 _ready = False

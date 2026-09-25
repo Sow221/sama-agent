@@ -48,6 +48,9 @@ def _seed_procedure(session, data: dict) -> None:
     if session.get(ProcedureVersion, version_id) is None:
         session.add(ProcedureVersion(id=version_id, procedure_id=pid, version="1",
                                      effective_from=_utcnow(), status="active"))
+    # Pour PostgreSQL (FK toujours vérifiées) : le parent doit exister avant ses
+    # enfants — autoflush off impose un flush explicite entre les niveaux.
+    session.flush()
     for i, step in enumerate(data.get("steps", [])):
         sid = f"{pid}:v1:s{step['order']}"
         if session.get(ProcedureStep, sid) is None:
@@ -58,6 +61,7 @@ def _seed_procedure(session, data: dict) -> None:
         if session.get(Requirement, rid) is None:
             session.add(Requirement(id=rid, procedure_version_id=version_id, code=req["id"],
                                     label=req.get("name", req["id"]), required=bool(req.get("required", True))))
+    session.flush()
 
 
 def _seed_evidence_sources(session) -> None:
@@ -78,12 +82,15 @@ def _seed_evidence_sources(session) -> None:
         source_id = f"src-{requirement}"
         _add_source(source_id, title=data.get("source", "Source enregistrée"),
                     url=data.get("sourceUrl"), retrieved_at=_utcnow(), status="active")
-        if session.get(RequirementSource, (requirement, source_id)) is None:
-            session.add(RequirementSource(requirement_id=requirement, source_id=source_id,
-                                          claim=data.get("description", "")))
         # La source officielle citée par les procédures (ex. capp_karangue).
         _add_source("capp_karangue", title=data.get("source", "CAPP Karangë"),
                     url=data.get("sourceUrl"), status="active")
+        # requirement_sources référence requirements + sources : les deux parents
+        # doivent exister côté PostgreSQL (FK toujours vérifiées) avant l'enfant.
+        session.flush()
+        if session.get(RequirementSource, (requirement, source_id)) is None:
+            session.add(RequirementSource(requirement_id=requirement, source_id=source_id,
+                                          claim=data.get("description", "")))
 
 
 def seed_from_data(session) -> None:

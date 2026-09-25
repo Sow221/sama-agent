@@ -71,15 +71,28 @@ def test_F_analyze_without_file_rejected() -> None:
 
 def test_G_other_format_is_honest_needs_review() -> None:
     """Un fichier pas en image → 200, statut honnête NEEDS_REVIEW (jamais fabriqué)."""
+    jid = "g-needs-review"
+    client.post("/api/journey", json={"journeyId": jid, "procedureId": "driving_license_new"})
     r = client.post(
         "/api/documents/analyze",
-        data={"requirementId": "identity", "journeyId": "driving_license_new"},
+        data={"requirementId": "identity", "journeyId": jid},
         files={"file": ("notes.txt", b"pas une image", "text/plain")},
     )
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "NEEDS_REVIEW"
     assert body["requiresHumanReview"] is True
+
+
+def test_analyze_unknown_journey_is_404() -> None:
+    """Parcours inconnu → 404 honest (un document ne peut pas naître sans dossier)."""
+    r = client.post(
+        "/api/documents/analyze",
+        data={"requirementId": "identity", "journeyId": "parcours_inexistant"},
+        files={"file": ("notes.txt", b"pas une image", "text/plain")},
+    )
+    assert r.status_code == 404
+    assert "parcours inconnu" in r.json()["detail"]
 
 
 def test_trace_header_present_on_success_and_error() -> None:
