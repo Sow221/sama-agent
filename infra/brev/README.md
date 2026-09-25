@@ -32,6 +32,15 @@ LIVEKIT_ROOM=sama-demo
 ALLOWED_ORIGINS=http://localhost:3000,https://<domaine-brev>
 ```
 
+## Base de données : PostgreSQL managé (Supabase) — validé 25/09/2026
+
+Choix retenu pour la production : **Supabase** (PostgreSQL managé, pooler Supavisor port **6543**).
+
+- `SAMA_DATABASE_URL=postgresql+psycopg://<user>:<mot-de-passe-encodé>@<région>.pooler.supabase.com:6543/postgres`
+- Un mot de passe avec caractères spéciaux doit être **encodé en URL** (`@`→`%40`, `/`→`%2F`, `:`→`%3A`, `*`→`%2A`) — le secret ne vit qu'en secret Brev.
+- `python -m alembic upgrade head` **exécutée sur la base réelle** : 16 tables + `alembic_version` (révision `091542dcf94b`, PostgreSQL 17.6).
+- Corrections embarquées au repo : `alembic/env.py` échappe `%` (ConfigParser Alembic interprèterait `%2F…` comme interpolation).
+
 ## Modèles GPU à valider le jour J (directive point B0 : catalogue réel, VRAM)
 
 Pas de supposition : les modèles sont re-vérifiés la veille dans le catalogue NVIDIA/Brev réel.

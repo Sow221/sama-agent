@@ -29,10 +29,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option(
-    "sqlalchemy.url",
-    os.getenv("SAMA_DATABASE_URL", "sqlite:///./var/alembic.db"),
-)
+# ConfigParser interpole % …% : une URL avec des séquences encodées (%2F, %40…)
+# ferait échouer Alembic. On échappe % en %% (la lecture désinterpole proprement).
+_url = os.getenv("SAMA_DATABASE_URL", "sqlite:///./var/alembic.db")
+config.set_main_option("sqlalchemy.url", _url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
