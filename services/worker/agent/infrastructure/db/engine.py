@@ -43,6 +43,19 @@ elif _url.startswith("postgresql"):
 
 engine = create_engine(_url, **_engine_kwargs)
 
+if _url.startswith("postgresql"):
+    # VERROU de sécurité : SQLAlchemy ne forward pas toujours connect_args vers
+    # psycopg.connect ; on impose prepare_threshold=0 sur CHAQUE connexion
+    # physique (prouvé : défaut 5 → DuplicatePreparedStatement sur le pooler,
+    # 0 → aucune préparation, aucun conflit). Un simple attribut, toujours appliqué.
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _no_auto_prepare(dbapi_conn, _record):  # noqa: ANN001
+        threshold = getattr(dbapi_conn, "prepare_threshold", None)
+        if threshold not in (None, 0):
+            dbapi_conn.prepare_threshold = 0
+
 if _url.startswith("sqlite"):
     # SQLite ne vérifie PAS les FK par défaut : on les active pour attraper en dev
     # tout ordre d'insertion parents>enfants qui échouerait sur PostgreSQL (jour J).
