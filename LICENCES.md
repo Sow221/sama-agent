@@ -10,7 +10,7 @@ Les libellés **« à vérifier »** doivent être confirmés le jour J sur la p
 |---|---|---|---|---|
 | Kiriku-Wolof-ASR | AIHubSN / IA Hub Sénégal | — (fiche modèle à lire) | **à vérifier** | Oui — citez AIHubSN (ADR-002) |
 | xTTS-v2-wolof | GalsenAI (base Coqui xTTS-v2) | Coqui Public Model License (base) ; adaptation GalsenAI | **à vérifier** (page GalsenAI + repo Coqui) | **Obligatoire à la démo** — annonce vocale GalsenAI (ADR-003) |
-| GLM-5.3-Flash | Zhipu via API NVIDIA Build | conditions d'utilisation API NVIDIA Build | à vérifier dans le contrat Build | Oui — source = NVIDIA Build |
+| GLM z-ai/glm-5.3 | Zhipu via API NVIDIA Build | conditions d'utilisation API NVIDIA Build | validé dans le catalogue Build (25/09/2026) | Oui — source = NVIDIA Build |
 | whisper-large-v2 | OpenAI (base du fine-tune Kiriku) | MIT (poids OpenAI) | confirmé | — |
 
 Usage : 100 % à des fins de démonstration hackathon (non commercial). Tout déploiement

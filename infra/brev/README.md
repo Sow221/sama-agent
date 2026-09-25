@@ -20,7 +20,7 @@ SAMA_MODE=live
 SAMA_DEVICE=cuda
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_API_KEY=<secret Brev>
-NVIDIA_MODEL=glm-5.3-flash
+NVIDIA_MODEL=z-ai/glm-5.3
 SAMA_DATABASE_URL=postgresql+psycopg://<user>:<secret>@<host>:5432/sama
 KIRIKU_MODEL=AIHubSN/Kiriku-Wolof-ASR
 XTTS_MODEL=galsenai/xTTS-v2-wolof
@@ -40,7 +40,7 @@ Budget VRAM attendu : **Kiriku ≈ 10 Go** (fine-tune whisper-large-v2, fp16) + 
 | Modèle | Source (ADR) | Rôle | VRAM estimée |
 |---|---|---|---|
 | Kiriku-Wolof-ASR | ADR-002 (AIHubSN) | ASR wolof | ~10 Go |
-| GLM-5.3-Flash | NVIDIA catalogue | intent + JSON | — (API) |
+| GLM z-ai/glm-5.3 | NVIDIA catalogue | intent + JSON | — (API) |
 | xTTS-v2-wolof | ADR-003 (GalsenAI) | TTS wolof | ~2 Go |
 
 Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICENCES.md`).

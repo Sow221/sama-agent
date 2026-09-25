@@ -6,6 +6,7 @@ Chaque appel ouvre sa propre transaction via db_session() (commit automatique).
 """
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime, timezone
 
@@ -123,7 +124,7 @@ def record_document(journey_id: str, analysis: DocumentAnalysis, file_name: str,
             readability=analysis.status == enums.DocumentStatus.ANALYZED,
             observations=list(analysis.observations or []),
             confidence=analysis.confidence,
-            model="live:glm-5.3-flash" if app_mode.is_live() else "deterministic",
+            model=f"live:{os.getenv('NVIDIA_MODEL', 'z-ai/glm-5.3')}" if app_mode.is_live() else "deterministic",
         ))
         # L'état du dossier suit l'observation (source de vérité journeys côté lecture).
         existing = session.execute(

@@ -11,7 +11,7 @@ Worker IA + API (D1) : `FastAPI` (contrat C §62) + agent `livekit-agents` (bouc
 | `agent/application/use_cases/` | Cas d'utilisation : `process_intent`, `get_journey`, `analyze_document`, `get_evidence`, `process_voice` |
 | `agent/application/dialogue.py` | Formulation de la NextAction (moteur décide, template formule) |
 | `agent/application/orchestration/` | Orchestrateur de la boucle vocale (assemble les use cases) |
-| `agent/infrastructure/llm/glm.py` | LLM GLM-5.3-Flash (NVIDIA) — `chat_json` validé, lazy en deterministic |
+| `agent/infrastructure/llm/glm.py` | LLM GLM (NVIDIA) — `chat_json` validé, lazy en deterministic |
 | `agent/infrastructure/vision/glm.py` | Vision multimodal réelle des documents (provider → `DocumentObservation`, jamais « validé par l'IA ») |
 | `agent/infrastructure/stt/asr_kiriku.py` | ASR wolof **Kiriku-Wolof-ASR** (ADR-002) — GPU Brev |
 | `agent/infrastructure/tts/tts_xtts.py` | TTS wolof **xTTS-v2-wolof** (ADR-003) — GPU Brev, attribution GalsenAI |
@@ -24,7 +24,7 @@ Worker IA + API (D1) : `FastAPI` (contrat C §62) + agent `livekit-agents` (bouc
 ## Lancer (jour J, nœud GPU Brev)
 ```bash
 export SAMA_MODE=live            # deterministic = Version B (sans LLM/audio)
-export NVIDIA_BASE_URL=... NVIDIA_API_KEY=... NVIDIA_MODEL=glm-5.3-flash
+export NVIDIA_BASE_URL=... NVIDIA_API_KEY=... NVIDIA_MODEL=z-ai/glm-5.3
 export LIVEKIT_URL=ws://localhost:7880 LIVEKIT_API_KEY=... LIVEKIT_API_SECRET=...
 cd services/worker && pip install -e .
 python -m agent.api.fastapi      # API :8000

@@ -104,7 +104,7 @@ def intent(req: IntentRequest, request: Request) -> IntentResponse:
         # Honnête : le fallback est utilisé en mode deterministic (règles) ; en live ce
         # n'est pas le cas (l'échec LLM → clarification confiance 0, jamais fabriqué).
         "fallbackUsed": not app_mode.is_live(),
-        "model": "glm-5.3-flash" if app_mode.is_live() else "regles-c",
+        "model": os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3") if app_mode.is_live() else "regles-c",
     }
     return result
 

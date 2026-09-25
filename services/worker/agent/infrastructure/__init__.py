@@ -1,6 +1,6 @@
 """Infrastructure — adaptateurs et providers remplaçables (référence §5.5, model-agnostic).
 
-  llm/glm.py        provider LLM (GLM-5.3-Flash, HTTP compatible OpenAI / NIM)
+  llm/glm.py        provider LLM (GLM z-ai, HTTP compatible OpenAI / NIM)
   vision/glm.py     provider Vision (multimodal) → DocumentObservation
   stt/asr_kiriku.py ASR wolof (Kiriku-Wolof-ASR, GPU Brev), chargement paresseux
   tts/tts_xtts.py   TTS wolof (xTTS-v2-wolof GalsenAI), chargement paresseux

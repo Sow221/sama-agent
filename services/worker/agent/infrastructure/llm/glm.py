@@ -1,4 +1,4 @@
-"""LLM provider (infrastructure) — GLM-5.3-Flash via endpoint HTTP compatible OpenAI (NIM).
+"""LLM provider (infrastructure) — GLM via endpoint HTTP compatible OpenAI (NIM).
 
 Le provider ne décide RIEN : il transpose un prompt en JSON. La validation du contrat
 et la politique (fallback honnête) vivent dans l'application / le domaine.
@@ -19,7 +19,7 @@ class GlmLlm:
     def __init__(self) -> None:
         self.base_url = os.getenv("NVIDIA_BASE_URL", "").rstrip("/")
         self.api_key = os.getenv("NVIDIA_API_KEY", "")
-        self.model = os.getenv("NVIDIA_MODEL", "glm-5.3-flash")
+        self.model = os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3")
         self._httpx = httpx.Client(timeout=60)
 
     def _request(self, messages: list[dict]) -> dict:

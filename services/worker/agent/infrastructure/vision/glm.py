@@ -1,4 +1,4 @@
-"""Vision provider (infrastructure) — GLM-5.3-Flash multimodal → DocumentObservation.
+"""Vision provider (infrastructure) — GLM multimodal → DocumentObservation.
 
 Le provider OBSERVE (contenu, lisibilité, correspondance) ; il ne classe pas :
 la classification (statuts, ANALYZED ≠ VALIDATED) vit dans le domaine (document.py).

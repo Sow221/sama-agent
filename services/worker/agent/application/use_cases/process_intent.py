@@ -1,6 +1,6 @@
 """Use case : comprendre une demande libre → intention structurée (contrat C §64).
 
-Live : GLM-5.3-Flash (provider, prompt versionné intent:v2 / system:v1), sortie validée
+Live : GLM (z-ai/glm-5.3, provider, prompt versionné intent:v2 / system:v1), sortie validée
 Pydantic ; sortie invalide → clarification honnête (confiance 0.0, jamais fabriquée).
 Deterministic (Version B, C §54) : règles FR/wolof sur mots-clés, confiance explicite.
 """
