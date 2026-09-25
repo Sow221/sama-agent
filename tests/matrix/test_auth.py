@@ -45,6 +45,7 @@ def _mint(payload: dict, secret: str = SECRET) -> str:
 def _valid_claims(sub: str = "a2b3c4d5-0000-0000-0000-000000000001") -> dict:
     return {
         "sub": sub,
+        "aud": "authenticated",  # audience réelle des Access Tokens Supabase
         "exp": int(time.time()) + 3600,
         "email": "usager@sama.sn",
         "app_metadata": {"provider": "email"},
