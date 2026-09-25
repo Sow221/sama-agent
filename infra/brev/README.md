@@ -21,6 +21,9 @@ SAMA_DEVICE=cuda
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_API_KEY=<secret Brev>
 NVIDIA_MODEL=z-ai/glm-5.3
+# Le NIM GLM démarre froid (1re inférence lente) : timeout généreux côté httpx.
+LLM_TIMEOUT_SECS=300
+# Pensez à pré-chauffer le modèle avant la démo (1 appel trivial ~15 min avant).
 SAMA_DATABASE_URL=postgresql+psycopg://<user>:<secret>@<host>:5432/sama
 KIRIKU_MODEL=AIHubSN/Kiriku-Wolof-ASR
 XTTS_MODEL=galsenai/xTTS-v2-wolof

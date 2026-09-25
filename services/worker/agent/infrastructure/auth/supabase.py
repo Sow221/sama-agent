@@ -49,6 +49,10 @@ def verify_access_token(access_token: str) -> AuthContext:
             access_token,
             secret,
             algorithms=[JWT_ALGO],
+            # PyJWT rejette tout jeton portant `aud` si l'audience d'attente n'est
+            # pas fournie. Les Access Tokens Supabase portent `aud="authenticated"` :
+            # sans cette option, TOUT login réel serait refusé (Invalid audience).
+            audience="authenticated",
             options={"require": ["exp", "sub"]},
         )
     except jwt.InvalidTokenError as exc:

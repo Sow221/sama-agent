@@ -20,7 +20,10 @@ class GlmLlm:
         self.base_url = os.getenv("NVIDIA_BASE_URL", "").rstrip("/")
         self.api_key = os.getenv("NVIDIA_API_KEY", "")
         self.model = os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3")
-        self._httpx = httpx.Client(timeout=60)
+        # Le NIM NVIDIA peut démarrer froid (première inférence lente) : timeout
+        # généreux et configurable, sinon on fabriquerait une panne à la démo.
+        timeout_s = float(os.getenv("LLM_TIMEOUT_SECS", "180"))
+        self._httpx = httpx.Client(timeout=timeout_s)
 
     def _request(self, messages: list[dict]) -> dict:
         if not self.base_url or not self.api_key:

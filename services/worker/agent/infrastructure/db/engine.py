@@ -33,6 +33,13 @@ if _url.startswith("sqlite"):
     file_part = _url.removeprefix("sqlite:///")
     if file_part and file_part != ":memory:":
         Path(file_part).parent.mkdir(parents=True, exist_ok=True)
+elif _url.startswith("postgresql"):
+    # psycopg3 auto-prépare une requête au serveur après ~5 exécutions (noms
+    # "_pg3_N"). Avec le pooler transactionnel Supabase (PgBouncer, 6543), ce
+    # prepared statement nommé entre en collision d'un backend à l'autre
+    # ("prepared statement _pg3_0 already exists") → échecs intermittents.
+    # Désactivation explicite : sans impact de perf à notre échelle (obs.).
+    _engine_kwargs["connect_args"] = {"prepare_threshold": 0}
 
 engine = create_engine(_url, **_engine_kwargs)
 

@@ -28,7 +28,10 @@ def _resolve_version(kind: str, version: str | None) -> str:
     if version is not None and not version.startswith("v"):
         version = f"v{version}"
     if version and version != "latest":
-        return version
+        # Version explicite → nom de FICHIER : toujours l'extension .md (le glob
+        # "latest" renvoie déjà "<v>.md" ; une version nue "v2" ferait échouer la
+        # lecture sur "<kind>/v2" sans extension).
+        return version if version.endswith(".md") else f"{version}.md"
     candidates = []
     for path in (PROMPTS_DIR / kind).glob("*.md"):
         m = _VERSION_RE.match(path.name)
