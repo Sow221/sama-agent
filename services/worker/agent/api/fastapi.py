@@ -15,11 +15,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from livekit import api as livekit_api
 
 from agent import mode as app_mode
+from agent.infrastructure.auth.supabase import AuthContext, require_user
 # Use cases — importés depuis leur module (pas via le façade `__init__`, qui ré-exporte
 # les fonctions : les noms de modules et de fonctions cohabiteraient de façon ambiguë).
 from agent.application.use_cases.process_intent import infer_intent
@@ -93,7 +94,8 @@ def healthz() -> dict:
 
 
 @app.post("/api/intent", response_model=IntentResponse)
-def intent(req: IntentRequest, request: Request) -> IntentResponse:
+def intent(req: IntentRequest, request: Request,
+           user: AuthContext = Depends(require_user)) -> IntentResponse:
     try:
         result = infer_intent(req)
     except Exception as exc:
@@ -110,12 +112,16 @@ def intent(req: IntentRequest, request: Request) -> IntentResponse:
 
 
 @app.post("/api/journey", response_model=JourneyResponse)
-def journey(req: JourneyRequest, request: Request) -> JourneyResponse:
+def journey(req: JourneyRequest, request: Request,
+            user: AuthContext = Depends(require_user)) -> JourneyResponse:
     try:
-        result = apply_journey(req)
+        result = apply_journey(req, user_id=user.user_id)
     except KeyError as exc:
         # Procédure inconnue : 404 métier, jamais 500.
         raise HTTPException(status_code=404, detail=f"procédure inconnue : {exc}")
+    except PermissionError as exc:
+        # Appropriation : un parcours d'un autre usager n'est pas modifiable.
+        raise HTTPException(status_code=403, detail=str(exc))
     request.state.trace_fields = {
         "journeyState": result.status,
     }
@@ -123,10 +129,11 @@ def journey(req: JourneyRequest, request: Request) -> JourneyResponse:
 
 
 @app.get("/api/journey/{journey_id}", response_model=JourneyResponse)
-def resume_journey_endpoint(journey_id: str, request: Request) -> JourneyResponse:
+def resume_journey_endpoint(journey_id: str, request: Request,
+                            user: AuthContext = Depends(require_user)) -> JourneyResponse:
     """Reprise d'un dossier (GET resume) : l'état vient du serveur, jamais du navigateur."""
     try:
-        result = resume_journey(journey_id)
+        result = resume_journey(journey_id, user_id=user.user_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"parcours inconnu : {exc}")
     request.state.trace_fields = {
@@ -141,6 +148,7 @@ async def analyze(
     journeyId: str = Form(...),
     file: UploadFile = File(...),
     request: Request = None,
+    user: AuthContext = Depends(require_user),
 ) -> DocumentAnalysis:
     try:
         content = await file.read()
@@ -155,7 +163,8 @@ async def analyze(
     # Persistance réelle (documents + observations + audit) — l'état du dossier suit.
     try:
         persist_document_analysis(journeyId, analysis, file.filename or "fichier",
-                                  file.content_type or "application/octet-stream")
+                                  file.content_type or "application/octet-stream",
+                                  user_id=user.user_id)
     except KeyError as exc:
         # Le parcours doit exister avant tout document (FK PostgreSQL vérifiées).
         raise HTTPException(status_code=404, detail=str(exc))
@@ -177,7 +186,7 @@ def evidence(requirement: str) -> Evidence:
 
 
 @app.post("/api/voice/token", response_model=VoiceToken)
-def voice_token() -> VoiceToken:
+def voice_token(user: AuthContext = Depends(require_user)) -> VoiceToken:
     """Token LiveKit réel (ADR-004) — le worker est l'autorité de la room."""
     key = os.getenv("LIVEKIT_API_KEY", "devkey")
     secret = os.getenv("LIVEKIT_API_SECRET", "devsecret")

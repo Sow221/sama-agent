@@ -5,12 +5,30 @@
  * Usage : node scripts/smoke-api.mjs   (API attendue sur API_URL, défaut http://127.0.0.1:8000)
  * Sortie : PASS/FAIL par vérification ; code 1 si un échec.
  */
+import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.API_URL ?? "http://127.0.0.1:8000";
+
+// ── Authentification réelle (live) ─────────────────────────────────────────
+// En production (SAMA_MODE=live) chaque route protégée exige un JWT Supabase.
+// Le smoke mine LE MÊME JWT que Supabase (HMAC-HS256, SUPABASE_JWT_SECRET) :
+// aucune dérogation, on passe la vraie vérification du worker. En déterministe
+// (local, aucun secret) l'identité de service du harnais s'applique d'elle-même.
+const JWT_SECRET = process.env.SUPABASE_JWT_SECRET ?? "";
+const _b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const authHeaders = JWT_SECRET
+  ? { authorization: (() => {
+      const now = Math.floor(Date.now() / 1000);
+      const head = _b64({ alg: "HS256", typ: "JWT" });
+      const payload = _b64({ sub: "smoke-usager", email: "smoke@sama.sn", exp: now + 3600, iat: now });
+      const sig = createHmac("sha256", JWT_SECRET).update(`${head}.${payload}`).digest("base64url");
+      return `Bearer ${head}.${payload}.${sig}`;
+    })() }
+  : {};
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -33,7 +51,7 @@ check("GET /healthz", health.status === 200 && health.json?.status === "ok", JSO
 // 2. Intent (mode deterministic : règles honnêtes)
 const intent = await req("/api/intent", {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...authHeaders },
   body: JSON.stringify({ transcript: "je veux demander un permis de conduire", language: "fr" }),
 });
 check(
@@ -47,7 +65,7 @@ check(
 // 3. Journey 2/3 — compteur TOUJOURS dérivé + label/raison moteur
 const journey = await req("/api/journey", {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...authHeaders },
   body: JSON.stringify({
     journeyId: "driving_license_new",
     documents: [
@@ -76,7 +94,7 @@ check(
 // 4. Rejet du contrat : statut interdit (point 8)
 const invalid = await req("/api/journey", {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...authHeaders },
   body: JSON.stringify({
     journeyId: "x",
     documents: [{ requirementId: "identity", status: "VALIDATED_BY_AI" }],
@@ -87,7 +105,7 @@ check("rejet statut VALIDATED_BY_AI (422)", invalid.status === 422);
 // 5. Rejet du contrat : completion en entrée (G3, point 5)
 const withCompletion = await req("/api/journey", {
   method: "POST",
-  headers: { "content-type": "application/json" },
+  headers: { "content-type": "application/json", ...authHeaders },
   body: JSON.stringify({
     journeyId: "x",
     documents: [{ requirementId: "identity", status: "ANALYZED" }],
@@ -102,7 +120,11 @@ const form = new FormData();
 form.append("requirementId", "identity");
 form.append("journeyId", "driving_license_new");
 form.append("file", new Blob([png], { type: "image/png" }), "document-clair.png");
-const analyzed = await req("/api/documents/analyze", { method: "POST", body: form });
+const analyzed = await req("/api/documents/analyze", {
+  method: "POST",
+  headers: authHeaders,
+  body: form,
+});
 check(
   "POST /api/documents/analyze → NEEDS_REVIEW honnête (deterministic)",
   analyzed.status === 200 && analyzed.json?.status === "NEEDS_REVIEW" && analyzed.json?.requiresHumanReview === true,
@@ -114,8 +136,11 @@ const ev = await req("/api/evidence/identity");
 check("GET /api/evidence/identity", ev.status === 200 && ev.json?.source?.length > 0, JSON.stringify(ev.json));
 
 // 8. Token LiveKit réel (ADR-004)
-const token = await req("/api/voice/token", { method: "POST" });
+const token = await req("/api/voice/token", { method: "POST", headers: authHeaders });
 check("POST /api/voice/token", token.status === 200 && typeof token.json?.token === "string" && token.json?.token.length > 20);
 
-console.log(failed === 0 ? `\nSMOKE OK (${BASE})` : `\nSMOKE FAILURE — ${failed} vérification(s) en échec`);
-process.exit(failed === 0 ? 0 : 1);
+const ok = failed === 0;
+console.log(ok ? `\nSMOKE OK (${BASE})` : `\nSMOKE FAILURE — ${failed} vérification(s) en échec`);
+// Sortie propre : process.exitCode (pas process.exit) pour laisser aux sockets
+// fetch le temps de se fermer — évite l'abort libuv sur Windows.
+process.exitCode = ok ? 0 : 1;

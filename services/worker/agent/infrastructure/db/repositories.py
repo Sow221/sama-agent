@@ -22,6 +22,7 @@ from agent.infrastructure.db.models import (
     JourneyRequirement,
     ProcedureVersion,
     ToolCall,
+    User,
 )
 from agent.schemas import DocumentAnalysis, JourneyDocument, JourneyResponse
 import enums
@@ -47,19 +48,37 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# ── Utilisateurs (Supabase Auth — identité réelle, jamais simulée) ─────────
+def upsert_user(user_id: str) -> None:
+    """Ancre l'usager authentifié en base (users.id ← sub du JWT). Idempotent."""
+    with db_session() as session:
+        if session.get(User, user_id) is None:
+            session.add(User(id=user_id, status="active"))
+
+
 # ── Journeys (source de vérité du dossier) ─────────────────────────────────
-def upsert_journey_state(journey: JourneyResponse) -> None:
-    """Persiste le parcours dérivé : journées + état par exigence (journey_requirements)."""
+def upsert_journey_state(journey: JourneyResponse, user_id: str | None = None) -> None:
+    """Persiste le parcours dérivé : journées + état par exigence (journey_requirements).
+
+    user_id (live) : approprie le dossier à l'usager — un parcours créé par un
+    autre utilisateur est refusé (PermissionError → 403). En mode déterministe
+    (harnais) user_id = identité de service, aucune restriction.
+    """
     with db_session() as session:
         previous = session.get(Journey, journey.journeyId)
         if previous is None:
             session.add(Journey(
                 id=journey.journeyId,
+                user_id=user_id,
                 procedure_version_id=_version_id_of(journey.procedureId),
                 status=journey.status,
                 completed_at=_now() if journey.status == enums.JourneyStatus.READY_FOR_NEXT_STEP else None,
             ))
         else:
+            if user_id and previous.user_id not in (None, user_id):
+                raise PermissionError(f"parcours {journey.journeyId} d'un autre usager")
+            if user_id and previous.user_id is None:
+                previous.user_id = user_id
             previous.status = journey.status
             previous.completed_at = _now() if journey.status == enums.JourneyStatus.READY_FOR_NEXT_STEP else None
             previous.updated_at = _now()
@@ -86,11 +105,17 @@ def upsert_journey_state(journey: JourneyResponse) -> None:
                 existing.updated_at = _now()
 
 
-def load_journey_state(journey_id: str) -> dict | None:
-    """État persisté du dossier : procedureId + documents connus (ou None si inconnu)."""
+def load_journey_state(journey_id: str, user_id: str | None = None) -> dict | None:
+    """État persisté du dossier : procedureId + documents connus (ou None si inconnu).
+
+    user_id (live) : approprie la lecture — un dossier d'un autre usager est
+    invisible (None → 404), exactement comme un dossier inconnu.
+    """
     with db_session() as session:
         row = session.get(Journey, journey_id)
         if row is None:
+            return None
+        if user_id and row.user_id and row.user_id != user_id:
             return None
         version = session.get(ProcedureVersion, row.procedure_version_id)
         reqs = session.execute(

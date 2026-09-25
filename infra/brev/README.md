@@ -30,7 +30,20 @@ LIVEKIT_API_KEY=<secret>
 LIVEKIT_API_SECRET=<secret>
 LIVEKIT_ROOM=sama-demo
 ALLOWED_ORIGINS=http://localhost:3000,https://<domaine-brev>
+# ── Authentification (Supabase Auth — email/mot de passe + Google) ─────────
+# SUPABASE_JWT_SECRET : « JWT secret » du projet Supabase (Dashboard → Settings →
+# API → JWT Secret). Vérifie chaque Access Token sur le worker (HMAC-HS256).
+SUPABASE_JWT_SECRET=<secret Supabase>
+# Côté front (Next.js) : URL + clé ANON publique du projet Supabase.
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<clé anon Supabase>
 ```
+
+> **Auth en live** : chaque route `/api/*` (sauf `/healthz` et `/api/evidence/*`) exige un
+> Access Token Supabase (`Authorization: Bearer …`). L'usager est ancré en base
+> (`users.id ← sub du JWT`) et les dossiers lui appartiennent (`journeys.user_id`) :
+> on ne consulte/modifie jamais le dossier d'un autre. Google demande un OAuth
+> Client dans Google Cloud ; sans lui, email/mot de passe fonctionne seul.
 
 ## Base de données : PostgreSQL managé (Supabase) — validé 25/09/2026
 
@@ -76,10 +89,15 @@ python -m agent.voice.main &
 ## Vérifications post-démarrage (aucune ne doit être « visuelle seule »)
 
 - `GET /healthz` → `{"status":"ok","mode":"live"}`
-- `POST /api/voice/token` → JWT valide (> 20 caractères)
+- `POST /api/voice/token` (avec `Authorization: Bearer <Access Token Supabase>`) → JWT valide (> 20 caractères)
+- `POST /api/journey` **sans** jeton → `401 « authentification requise »` ; **avec** jeton → `200`
 - Micro → Kiriku (wolof) → `/api/intent` → `/api/journey` → xTTS → haut-parleur : **barge-in réel** (le micro interrompt la voix IA)
 - `node scripts/latency.mjs 20` — mesures RÉELLES de la chaîne (point 17), pas la cible 1,2–1,5 s
 - `tests/matrix/test_validation_points.py` verts sur le nœud
+
+Le smoke (`node scripts/smoke-api.mjs`) passe les mêmes contrats : il mine un vrai JWT
+(client-side, HMAC du `SUPABASE_JWT_SECRET`) et l'envoie sur chaque route protégée —
+aucune dérogation à l'authentification en live.
 
 ## Ports et accès
 

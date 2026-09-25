@@ -15,18 +15,18 @@ from agent.schemas import JourneyRequest, JourneyResponse
 from agent.application.use_cases.get_journey import get_journey
 
 
-def apply_journey(req: JourneyRequest) -> JourneyResponse:
+def apply_journey(req: JourneyRequest, user_id: str | None = None) -> JourneyResponse:
     """Dérive l'état réel, le persiste (journey + journey_requirements) et l'audite."""
     journey = get_journey(req)  # KeyError = procédure inconnue (→ 404 métier)
-    upsert_journey_state(journey)
+    upsert_journey_state(journey, user_id=user_id)
     record_audit(JOURNEY_RECALCULATED, journey_id=req.journeyId,
                  payload={"status": journey.status, "nextAction": journey.nextAction})
     return journey
 
 
-def resume_journey(journey_id: str) -> JourneyResponse:
+def resume_journey(journey_id: str, user_id: str | None = None) -> JourneyResponse:
     """Reprise : relit l'état persisté puis re-dérive avec le moteur (jamais l'historique)."""
-    state = load_journey_state(journey_id)
+    state = load_journey_state(journey_id, user_id=user_id)
     if state is None:
         raise KeyError(f"parcours inconnu : {journey_id}")
     journey = get_journey(
