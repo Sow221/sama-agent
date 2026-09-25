@@ -8,7 +8,7 @@ Document opérationnel du nœud GPU Brev. Il fait foi pour l'exécution du scén
 |---|---|---|---|
 | API worker (FastAPI) | `services/worker` (`agent.api.fastapi`) | 8000 | `SAMA_MODE=live` au jour J |
 | Agent voix (LiveKit) | `services/worker` (`agent.voice.main`) | — | se connecte au SFU LiveKit |
-| SFU LiveKit | `livekit-server` auto-hébergé | 7880 (WS) / 7881 (TCP/UDP) | transport audio temps réel |
+| SFU LiveKit | **Cloud** (`wss://…livekit.cloud`) ou `livekit-server` auto-hébergé | 7880 (WS) / 7881 (TCP/UDP) | transport audio temps réel — `LIVEKIT_URL` dirige |
 
 Le worker (API + agent voix) et le SFU LiveKit vivent sur le nœud Brev demande ; le front (`apps/web`)
 peut être servi par la même machine (Brev expose le port 3000) ou par Vercel/Netlify.
@@ -47,8 +47,11 @@ Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICEN
 
 ## Ordre de démarrage
 
+Le tout-en-un versionné : `bash infra/brev/run-production.sh` (aucun secret dedans —
+les variables d'environnement Brev font foi). Équivalent manuel :
+
 ```bash
-# 1. SFU LiveKit (transports audio)
+# 1. SFU LiveKit (transports audio) — à sauter si LIVEKIT_URL = wss://…livekit.cloud (Cloud)
 livekit-server --config livekit.yaml &
 
 # 2. Base (PostgreSQL) — migrations restantes puis seed automatique au premier appel
