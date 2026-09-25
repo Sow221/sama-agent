@@ -13,13 +13,18 @@ import { Button, Card, Spinner } from "@/components/ui";
 import { EvidencePanel } from "@/components/journey/EvidencePanel";
 import { useEvidence, useAnalyzeMutation, useJourneyMutation } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
+import { useAuth } from "@/lib/auth/auth-context";
+import { journeyIdFor, procedureIdOf } from "@/lib/auth/journey-id";
 
 export default function PreuvePage() {
   const params = useParams<{ requirement: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
   const requirement = decodeURIComponent(params.requirement);
-  const journeyId = searchParams.get("journey") ?? "driving_license_new";
+  const { user } = useAuth();
+  // Repli : le dossier DE l'usager (jamais le slug partagé — appropriation serveur).
+  const journeyId =
+    searchParams.get("journey") ?? journeyIdFor("driving_license_new", user?.id);
 
   const [file, setFile] = useState<File | null>(null);
   const evidence = useEvidence(requirement);
@@ -47,7 +52,7 @@ export default function PreuvePage() {
     const docs = (journey?.documents ?? []).map((d) =>
       d.requirementId === requirement ? { ...d, status: analysis.status } : d
     );
-    recomputeJourney.mutate({ journeyId, documents: docs });
+    recomputeJourney.mutate({ journeyId, procedureId: procedureIdOf(journeyId), documents: docs });
   }
 
   return (

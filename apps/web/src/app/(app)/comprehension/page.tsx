@@ -13,6 +13,9 @@ import { useJourneyStore } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor } from "@/lib/auth/journey-id";
 
+/** Procédure de démonstration (report du référentiel officiel data/). */
+const PROCEDURE_ID = "driving_license_new";
+
 export default function CompréhensionPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -23,7 +26,12 @@ export default function CompréhensionPage() {
   });
 
   const run = () =>
-    journeyMutation.mutate({ journeyId: journeyIdFor("driving_license_new", user?.id) });
+    journeyMutation.mutate({
+      journeyId: journeyIdFor(PROCEDURE_ID, user?.id),
+      // Clé de procédure explicite : le dossier par-usager porte un suffixe qui
+      // n'est pas une procédure du référentiel (moteur : procedureId || journeyId).
+      procedureId: PROCEDURE_ID,
+    });
 
   return (
     <section className="flex flex-col gap-6 pt-4">

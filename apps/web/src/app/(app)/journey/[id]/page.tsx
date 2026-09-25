@@ -12,6 +12,7 @@ import { JourneySteps } from "@/components/journey/JourneySteps";
 import { NextActionCard } from "@/components/journey/NextActionCard";
 import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
+import { procedureIdOf } from "@/lib/auth/journey-id";
 
 /** Pourquoi un élément bloque (point 20 — « ce qui manque / pourquoi »). */
 const STATUS_WHY: Record<string, string> = {
@@ -49,7 +50,10 @@ export default function ParcoursPage() {
         requirementId,
         status: a.status,
       }));
-      mutation.mutate(known.length ? { journeyId, documents: known } : { journeyId });
+      // procedureId explicite : un dossier par-usager (journeyId suffixé) ne doit
+      // jamais être confondu avec une procédure du référentiel.
+      const base = { journeyId, procedureId: procedureIdOf(journeyId) };
+      mutation.mutate(known.length ? { ...base, documents: known } : base);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);

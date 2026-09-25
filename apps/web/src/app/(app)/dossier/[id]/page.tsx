@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui";
 import { DocumentCard } from "@/components/journey/DocumentCard";
 import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
+import { procedureIdOf } from "@/lib/auth/journey-id";
 
 export default function DossierPage() {
   const params = useParams<{ id: string }>();
@@ -36,7 +37,8 @@ export default function DossierPage() {
         requirementId,
         status: a.status,
       }));
-      mutation.mutate(known.length ? { journeyId, documents: known } : { journeyId });
+      const base = { journeyId, procedureId: procedureIdOf(journeyId) };
+      mutation.mutate(known.length ? { ...base, documents: known } : base);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);
