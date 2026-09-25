@@ -120,7 +120,7 @@ export default function ParcoursPage() {
               ))}
             </ul>
             <Link
-              href={`/dossier/${journeyId}`}
+              href={`/app/dossier/${journeyId}`}
               className="focus-visible mt-3 inline-block text-sm font-medium text-accent-ai"
             >
               Voir les documents concernés ›
@@ -131,7 +131,7 @@ export default function ParcoursPage() {
 
       <NextActionCard journey={response} />
 
-      <Link href={`/dossier/${journeyId}`} className="w-full">
+      <Link href={`/app/dossier/${journeyId}`} className="w-full">
         <Button className="w-full" size="lg" variant="gradient">
           Voir mon dossier
         </Button>

@@ -40,6 +40,12 @@ elif _url.startswith("postgresql"):
     # ("prepared statement _pg3_0 already exists") → échecs intermittents.
     # Désactivation explicite : sans impact de perf à notre échelle (obs.).
     _engine_kwargs["connect_args"] = {"prepare_threshold": 0}
+    # Le pooler ferme les connexions inactives (~30 s à quelques min) : sans
+    # pre_ping, la première requête après un temps mort 500 (OperationalError
+    # « server closed the connection unexpectedly »). pre_ping = SELECT 1 au
+    # checkout → connexion morte détectée et remplacée avant usage. Coût
+    # d'un round-trip par checkout, négligeable à notre échelle.
+    _engine_kwargs["pool_pre_ping"] = True
 
 engine = create_engine(_url, **_engine_kwargs)
 

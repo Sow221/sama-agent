@@ -4,7 +4,6 @@ import "@/styles/globals.css";
 import { Providers } from "./providers";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { Header } from "@/components/layout/Header";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -30,7 +29,6 @@ export default function RootLayout({
               <Header />
             </Suspense>
             <main className="container-page">{children}</main>
-            <BottomNav />
           </Providers>
         </AuthProvider>
       </body>

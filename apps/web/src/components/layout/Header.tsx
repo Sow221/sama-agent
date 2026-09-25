@@ -11,7 +11,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-surface-2 bg-[rgba(10,18,32,0.72)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-[480px] items-center justify-between px-4 py-3">
-        <Link href="/" className="focus-visible flex items-center gap-2">
+        <Link href={session ? "/app" : "/"} className="focus-visible flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-sm font-extrabold text-[#04211a] shadow-glow">
             SA
           </span>

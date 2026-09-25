@@ -114,7 +114,7 @@ export default function VoicePage() {
     setConnected(false);
     setActive(false);
     setPhase("idle");
-    router.push("/");
+    router.push("/app");
   }, [router, setConnected, setActive, setPhase]);
 
   useEffect(() => {

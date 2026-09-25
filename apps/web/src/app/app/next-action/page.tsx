@@ -30,7 +30,7 @@ export default function ProchaineActionPage() {
           <NextActionCard journey={response} />
           {response.nextActionRequirement ? (
             <Link
-              href={`/evidence/${encodeURIComponent(response.nextActionRequirement)}?journey=${response.journeyId}`}
+              href={`/app/evidence/${encodeURIComponent(response.nextActionRequirement)}?journey=${response.journeyId}`}
               className="w-full"
             >
               <Button className="w-full" size="lg" variant="gradient">
@@ -41,7 +41,7 @@ export default function ProchaineActionPage() {
           ) : null}
         </>
       ) : (
-        <Link href={`/journey/${journeyIdFor("driving_license_new", user?.id)}`}>
+        <Link href={`/app/journey/${journeyIdFor("driving_license_new", user?.id)}`}>
           <Button className="w-full" variant="ghost">
             Voir mon parcours
           </Button>

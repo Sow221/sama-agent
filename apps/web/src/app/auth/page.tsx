@@ -28,9 +28,9 @@ export default function AuthPage() {
     if (!configured && !loading) router.replace("/");
   }, [configured, loading, router]);
 
-  // Déjà connecté : on rentre.
+  // Déjà connecté : on rentre dans l'espace.
   useEffect(() => {
-    if (session) router.replace("/");
+    if (session) router.replace("/app");
   }, [session, router]);
 
   const submitDisabled = useMemo(

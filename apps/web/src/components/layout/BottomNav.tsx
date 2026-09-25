@@ -12,11 +12,11 @@ import { memo } from "react";
 
 export const BottomNav = memo(function BottomNav() {
   const pathname = usePathname();
-  const inVoice = pathname.startsWith("/voice");
+  const inVoice = pathname.startsWith("/app/voice");
   // Le lien Dossier pointe sur LE dossier de l'usager (journeyId par-usager),
   // jamais vers un identifiant partagé (appropriation serveur journeys.user_id).
   const journeyId = useJourneyStore((s) => s.response?.journeyId);
-  const dossierHref = journeyId ? `/dossier/${journeyId}` : "/";
+  const dossierHref = journeyId ? `/app/dossier/${journeyId}` : "/app";
 
   return (
     <nav
@@ -24,9 +24,9 @@ export const BottomNav = memo(function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[rgba(10,18,32,0.82)] backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-[480px] items-center justify-between px-6 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
-        <NavItem href="/" label="Accueil" active={pathname === "/"} emoji="🏠" />
+        <NavItem href="/app" label="Accueil" active={pathname === "/app"} emoji="🏠" />
         <Link
-          href="/voice"
+          href="/app/voice"
           aria-label="Parler à Sama Agent"
           onPointerDown={(e) => {
             const el = e.currentTarget;
@@ -52,7 +52,7 @@ export const BottomNav = memo(function BottomNav() {
         <NavItem
           href={dossierHref}
           label="Dossier"
-          active={pathname.startsWith("/dossier")}
+          active={pathname.startsWith("/app/dossier")}
           emoji="📁"
         />
       </div>

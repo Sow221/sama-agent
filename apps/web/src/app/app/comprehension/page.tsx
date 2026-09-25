@@ -41,7 +41,7 @@ export default function CompréhensionPage() {
   const setJourneyResponse = useJourneyStore((s) => s.setResponse);
   const journeyMutation = useJourneyMutation((r) => {
     setJourneyResponse(r);
-    router.push(`/journey/${r.journeyId}`);
+    router.push(`/app/journey/${r.journeyId}`);
   });
 
   const run = () =>

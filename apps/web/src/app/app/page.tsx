@@ -22,7 +22,7 @@ export default function AccueilPage() {
   const journeyId = useJourneyStore((s) => s.response?.journeyId);
 
   const intentMutation = useIntentMutation(() => {
-    router.push("/comprehension");
+    router.push("/app/comprehension");
   });
 
   const canSubmit = useMemo(() => text.trim().length > 0, [text]);
@@ -81,18 +81,18 @@ export default function AccueilPage() {
       </GlassCard>
 
       <div className="grid grid-cols-3 gap-3">
-        <Link href="/comprehension" className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-primary/40">
+        <Link href="/app/comprehension" className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-primary/40">
           <span className="text-xl leading-none">🧭</span>
           <p className="mt-2 text-sm font-semibold">Comprendre</p>
           <p className="mt-0.5 text-xs text-text2">Ce que la démarche implique</p>
         </Link>
-        <Link href="/voice" className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-accent-ai/40">
+        <Link href="/app/voice" className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-accent-ai/40">
           <span className="text-xl leading-none">🗣️</span>
           <p className="mt-2 text-sm font-semibold">Parler</p>
           <p className="mt-0.5 text-xs text-text2">Votre demande à la voix</p>
         </Link>
         {journeyId ? (
-          <Link href={`/dossier/${journeyId}`} className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-primary/40">
+          <Link href={`/app/dossier/${journeyId}`} className="focus-visible rounded-card border border-white/10 bg-white/[0.05] p-4 transition-colors hover:border-primary/40">
             <span className="text-xl leading-none">📁</span>
             <p className="mt-2 text-sm font-semibold">Suivre</p>
             <p className="mt-0.5 text-xs text-text2">Votre dossier en cours</p>
@@ -107,7 +107,7 @@ export default function AccueilPage() {
       </div>
 
       <div className="flex flex-col items-center gap-2">
-        <VoiceButton onPress={() => router.push("/voice")} disabled={pending} />
+        <VoiceButton onPress={() => router.push("/app/voice")} disabled={pending} />
         <p className="text-sm text-text2">Ou appuyez sur le micro pour parler en wolof.</p>
       </div>
     </section>

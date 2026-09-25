@@ -21,9 +21,15 @@ SAMA_DEVICE=cuda
 NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 NVIDIA_API_KEY=<secret Brev>
 NVIDIA_MODEL=z-ai/glm-5.3
+# Chaîne vision documentaire (2 temps réels, NVIDIA) :
+#   1. NVIDIA_VISION_MODEL décrit le document (vision) ;
+#   2. NVIDIA_EXTRACT_MODEL structure la description en JSON contraint (texte).
 # Le NIM GLM démarre froid (1re inférence lente) : timeout généreux côté httpx.
+NVIDIA_VISION_MODEL=meta/llama-3.2-11b-vision-instruct
+NVIDIA_EXTRACT_MODEL=z-ai/glm-5.3-flash
 LLM_TIMEOUT_SECS=300
-# Pensez à pré-chauffer le modèle avant la démo (1 appel trivial ~15 min avant).
+# Pensez à pré-chauffer les 3 modèles avant la démo (1 appel trivial ~15 min avant),
+# sinon la 1re inférence de GLM/flash peut prendre 50 s à 5 min (froid).
 SAMA_DATABASE_URL=postgresql+psycopg://<user>:<secret>@<host>:5432/sama
 KIRIKU_MODEL=AIHubSN/Kiriku-Wolof-ASR
 XTTS_MODEL=galsenai/xTTS-v2-wolof
@@ -66,6 +72,8 @@ Budget VRAM attendu : **Kiriku ≈ 10 Go** (fine-tune whisper-large-v2, fp16) + 
 |---|---|---|---|
 | Kiriku-Wolof-ASR | ADR-002 (AIHubSN) | ASR wolof | ~10 Go |
 | GLM z-ai/glm-5.3 | NVIDIA catalogue | intent + JSON | — (API) |
+| llama-3.2-11b-vision | NVIDIA catalogue | description vision documents | — (API) |
+| glm-5.3-flash | NVIDIA catalogue | structuration JSON vision | — (API) |
 | xTTS-v2-wolof | ADR-003 (GalsenAI) | TTS wolof | ~2 Go |
 
 Attribution **GalsenAI** audible à la démo (licence xTTS/Coqui — voir `LICENCES.md`).

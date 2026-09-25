@@ -3,7 +3,8 @@
 Arborescence :
   prompts/system/<v>.md              rôle système de l'agent
   prompts/intent/<v>.md              guidance d'intention (sortie JSON stricte)
-  prompts/document/<v>.md            guidance vision (observations factuelles)
+  prompts/document/<v>.md            guidance vision (description factuelle)
+  prompts/extract/<v>.md             structuration JSON de l'observation vision
   prompts/response/<v>.md            formulation vocale wolof (templates)
 
 Le code référence une VERSION (intent:v2, document:v1). Par défaut : dernière version
@@ -19,7 +20,7 @@ from pathlib import Path
 from agent.bootstrap import REPO_ROOT
 
 PROMPTS_DIR = REPO_ROOT / "prompts"
-ALLOWED_KINDS = ("system", "intent", "document", "response")
+ALLOWED_KINDS = ("system", "intent", "document", "extract", "response")
 
 _VERSION_RE = re.compile(r"^v(\d+)\.md$")
 

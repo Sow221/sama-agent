@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -211,4 +212,17 @@ def voice_token(user: AuthContext = Depends(require_user)) -> VoiceToken:
 
 
 if __name__ == "__main__":
-    uvicorn.run("agent.api.fastapi:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+    if sys.platform == "win32":
+        # Windows : le ProactorEventLoop meurt en charge (accept-loop → WinError 64,
+        # « le nom réseau n'est plus disponible ») et tue l'API. uvicorn 0.36 passe
+        # la fabrique de boucle via Config.get_loop_factory() → asyncio.run(loop_factory=…) :
+        # on impose le SelectorEventLoop (sans le bug d'accept), même sur win32.
+        import asyncio
+
+        _config = uvicorn.Config(
+            "agent.api.fastapi:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000"))
+        )
+        _config.get_loop_factory = lambda: asyncio.SelectorEventLoop
+        uvicorn.Server(_config).run()
+    else:
+        uvicorn.run("agent.api.fastapi:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

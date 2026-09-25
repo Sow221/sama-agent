@@ -26,7 +26,7 @@ export function DocumentCard({
   const warn = doc.status === "NEEDS_REVIEW" || doc.status === "UNEXPECTED";
   return (
     <Link
-      href={`/evidence/${encodeURIComponent(doc.requirementId)}?journey=${journeyId}`}
+      href={`/app/evidence/${encodeURIComponent(doc.requirementId)}?journey=${journeyId}`}
       className="focus-visible block"
     >
       <div className="flex items-center gap-3 rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md transition-colors hover:border-primary/40">

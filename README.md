@@ -6,7 +6,7 @@ Le cœur produit : **dialogue vocal continu avec l'IA** (ASR Kiriku → LLM NVID
 
 ## Structure
 ```
-apps/web            Front Next.js + TS + Tailwind (7 écrans blueprint + Realtime Voice) — TanStack Query + Zustand (D4) ; reprise serveur (GET resume)
+apps/web            Front Next.js + TS + Tailwind, mobile-first — landing public (/) + /auth + espace connecté sous /app (7 écrans + Realtime Voice, BottomNav uniquement dans l'espace) — TanStack Query + Zustand (D4) ; reprise serveur (GET resume)
 services/worker     API FastAPI (D1) + agent LiveKit — architecture hexagonale : agent/domain (pur) → agent/application (use_cases, dialogue, orchestration) → agent/infrastructure (llm, vision, stt, tts, prompts, db) → agent/api ; tools + dispatcher (frontière LLM ↔ système)
 services/worker/agent/infrastructure/db  Persistance (référence §7.3) : SQLAlchemy 2.0, 16 tables, seed idempotent, repositories — source de vérité serveur
 services/worker/alembic   Migrations de schéma (initial : 16 tables) — `python -m alembic upgrade head`

@@ -61,7 +61,7 @@ export default function PreuvePage() {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <Link href={`/dossier/${journeyId}`} className="text-sm font-medium text-accent-ai">
+        <Link href={`/app/dossier/${journeyId}`} className="text-sm font-medium text-accent-ai">
           ‹ Mon dossier
         </Link>
         <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
@@ -168,7 +168,7 @@ export default function PreuvePage() {
           <Button
             className="mt-3 w-full"
             variant="ghost"
-            onClick={() => router.push(`/dossier/${journeyId}`)}
+            onClick={() => router.push(`/app/dossier/${journeyId}`)}
           >
             Retourner au dossier
           </Button>
