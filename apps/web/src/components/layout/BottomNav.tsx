@@ -21,7 +21,7 @@ export const BottomNav = memo(function BottomNav() {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-2 bg-[rgba(10,18,32,0.85)] backdrop-blur-lg"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[rgba(10,18,32,0.82)] backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-[480px] items-center justify-between px-6 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
         <NavItem href="/" label="Accueil" active={pathname === "/"} emoji="🏠" />
@@ -34,10 +34,19 @@ export const BottomNav = memo(function BottomNav() {
             if ("vibrate" in navigator) navigator.vibrate(10);
           }}
           onPointerUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          className={`focus-visible relative -mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-400 text-white shadow-glow transition-transform ${
+          className={`focus-visible relative -mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-[#04211a] shadow-glow transition-transform ${
             inVoice ? "opacity-50" : "animate-pulse-slow"
           }`}
         >
+          {!inVoice ? (
+            <>
+              <span className="ring-pulse absolute inset-0 rounded-full border-2 border-accent-ai/50" />
+              <span
+                className="ring-pulse absolute inset-0 rounded-full border border-primary/60"
+                style={{ animationDelay: "1.1s" }}
+              />
+            </>
+          ) : null}
           <Mic className="h-7 w-7" />
         </Link>
         <NavItem

@@ -7,7 +7,8 @@
  * partagent jamais le même dossier (appropriation serveur journeys.user_id).
  */
 import { useRouter } from "next/navigation";
-import { Button, Card, Spinner } from "@/components/ui";
+import { Button, GlassCard, ThinkingDots } from "@/components/ui";
+import { ArrowRightIcon } from "@/components/icons";
 import { useJourneyMutation } from "@/lib/query/hooks";
 import { useJourneyStore } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -15,6 +16,24 @@ import { journeyIdFor } from "@/lib/auth/journey-id";
 
 /** Procédure de démonstration (report du référentiel officiel data/). */
 const PROCEDURE_ID = "driving_license_new";
+
+const REQUIREMENTS: { n: string; title: string; desc: string }[] = [
+  {
+    n: "1",
+    title: "Pièce d'identité",
+    desc: "Document officiel d'identité valide.",
+  },
+  {
+    n: "2",
+    title: "Certificat médical",
+    desc: "Certificat médical exigé pour la première demande.",
+  },
+  {
+    n: "3",
+    title: "Photographies",
+    desc: "Photographies d'identité demandées par le service.",
+  },
+];
 
 export default function CompréhensionPage() {
   const router = useRouter();
@@ -33,35 +52,36 @@ export default function CompréhensionPage() {
       procedureId: PROCEDURE_ID,
     });
 
+  const pending = journeyMutation.isPending;
+
   return (
-    <section className="flex flex-col gap-6 pt-4">
+    <section className="flex flex-col gap-6 pt-8">
       <div>
-        <h1 className="text-2xl font-bold">Comprendre</h1>
-        <p className="mt-1 text-text2">
+        <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          1 · Comprendre
+        </p>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Votre demande</h1>
+        <p className="mt-2 text-base text-text2">
           Première demande de permis de conduire — Sénégal. Voici les éléments exigés.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Card>
-          <p className="font-semibold text-primary">1. Pièce d'identité</p>
-          <p className="mt-1 text-sm text-text2">
-            Document officiel d'identité valide.
-          </p>
-        </Card>
-        <Card>
-          <p className="font-semibold text-primary">2. Certificat médical</p>
-          <p className="mt-1 text-sm text-text2">
-            Certificat médical exigé pour la première demande.
-          </p>
-        </Card>
-        <Card>
-          <p className="font-semibold text-primary">3. Photographies</p>
-          <p className="mt-1 text-sm text-text2">
-            Photographies d'identité demandées par le service.
-          </p>
-        </Card>
-      </div>
+      <GlassCard className="p-5">
+        <p className="text-sm font-semibold text-primary">Éléments officiels exigés</p>
+        <div className="mt-4 flex flex-col gap-3">
+          {REQUIREMENTS.map((r) => (
+            <div key={r.n} className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#04211a]">
+                {r.n}
+              </span>
+              <div>
+                <p className="font-semibold">{r.title}</p>
+                <p className="text-sm text-text2">{r.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
 
       {journeyMutation.isError ? (
         <p role="alert" className="text-sm text-danger">
@@ -69,8 +89,21 @@ export default function CompréhensionPage() {
         </p>
       ) : null}
 
-      <Button size="lg" onClick={run} disabled={journeyMutation.isPending} className="w-full">
-        {journeyMutation.isPending ? <Spinner /> : "Voir mon parcours →"}
+      <Button
+        size="lg"
+        variant="gradient"
+        onClick={run}
+        disabled={pending}
+        className="w-full"
+      >
+        {pending ? (
+          <ThinkingDots label="Ouverture de votre parcours…" />
+        ) : (
+          <>
+            Voir mon parcours
+            <ArrowRightIcon className="h-5 w-5" />
+          </>
+        )}
       </Button>
     </section>
   );

@@ -6,7 +6,7 @@
  */
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Spinner } from "@/components/ui";
+import { ThinkingDots } from "@/components/ui";
 import { DocumentCard } from "@/components/journey/DocumentCard";
 import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
@@ -49,16 +49,19 @@ export default function DossierPage() {
         {mutation.isError ? (
           <p role="alert" className="text-danger">Le dossier est indisponible. Réessayez.</p>
         ) : (
-          <Spinner />
+          <ThinkingDots label="Chargement de votre dossier…" />
         )}
       </div>
     );
   }
 
   return (
-    <section className="flex flex-col gap-6 pt-4">
+    <section className="flex flex-col gap-6 pt-8">
       <div>
-        <h1 className="text-2xl font-bold">Mon dossier</h1>
+        <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          3 · Dossier
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Mon dossier</h1>
         <p className="mt-1 text-sm text-text2">
           {response.completion.provided}/{response.completion.required} éléments fournis
         </p>

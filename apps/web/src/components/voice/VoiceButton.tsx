@@ -21,7 +21,7 @@ export function VoiceButton({
         if ("vibrate" in navigator) navigator.vibrate(10);
       }}
       onPointerUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      className="focus-visible flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-400 text-white shadow-glow transition-transform disabled:opacity-40"
+      className="focus-visible flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-[#04211a] shadow-glow transition-transform disabled:opacity-40"
     >
       <Mic className="h-7 w-7" />
     </button>

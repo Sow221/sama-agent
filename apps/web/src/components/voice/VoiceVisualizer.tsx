@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * VoiceVisualizer (ADR-008) : orbe dégradé violet/bleu + 2 « yeux » de l'IA
+ * VoiceVisualizer (ADR-008) : orbe dégradé vert/bleu (identité Sama Agent)
  * + anneaux réactifs. Les anneaux réagissent au VOLUME RÉEL :
  *  - phase listening → analyseur du micro entrant
  *  - phase speaking  → analyseur de la voix TTS sortante (réelle)
+ *  - phase connecting/thinking → pulsation douce (état réel de la session)
  * Aucun contenu textuel simulé : uniquement le volume physique.
  */
 import { useEffect, useRef } from "react";
@@ -49,6 +50,9 @@ export function VoiceVisualizer() {
 
   return (
     <div className="relative flex h-[280px] w-[280px] items-center justify-center" aria-hidden>
+      {/* halo doux derrière l'orbe (état réel) */}
+      <div className="glow-orb absolute inset-8 rounded-full bg-[radial-gradient(circle,rgba(13,201,138,0.28),transparent_68%)]" />
+
       {/* anneaux réactifs au volume réel */}
       <div
         id="rings"
@@ -56,16 +60,24 @@ export function VoiceVisualizer() {
         style={{ transform: "scale(0.3)", opacity: 0.35 }}
       />
       <div className="absolute inset-4 rounded-full border border-accent-ai/30" />
-      {/* orbe dégradé violet/bleu */}
+
+      {/* orbe dégradé vert/bleu — identité du projet */}
       <div
-        className={`relative flex h-44 w-44 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 via-blue-500 to-cyan-400 shadow-glow ${
+        className={`relative flex h-44 w-44 items-center justify-center rounded-full bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai ${
           phase === "thinking" ? "animate-spin-slow" : "animate-pulse-slow"
         }`}
+        style={{ boxShadow: "0 0 60px rgba(13,201,138,0.45), 0 0 120px rgba(56,189,248,0.25)" }}
       >
-        {/* les deux « yeux » de l'IA */}
-        <div className="flex gap-5">
-          <span className="h-4 w-4 rounded-full bg-white" />
-          <span className="h-4 w-4 rounded-full bg-white" />
+        {/* pulsation d'écoute à l'intérieur de l'orbe */}
+        {phase === "listening" ? <span className="ring-pulse absolute inset-0 rounded-full border-2 border-white/40" /> : null}
+        {/* noyau : reflet + micro stable */}
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-[#04211a]/25 backdrop-blur-sm">
+          <div className="absolute inset-0 rounded-full bg-white/10" style={{ clipPath: "polygon(20% 0, 100% 0, 100% 100%, 20% 100%)" }} />
+          <svg className="h-8 w-8 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0" />
+            <path d="M12 19v3" />
+          </svg>
         </div>
       </div>
     </div>

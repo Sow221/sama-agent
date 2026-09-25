@@ -9,7 +9,8 @@
 import { useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Card, Spinner } from "@/components/ui";
+import { Button, GlassCard, ThinkingDots } from "@/components/ui";
+import { UploadIcon, CheckIcon, CloseIcon } from "@/components/icons";
 import { EvidencePanel } from "@/components/journey/EvidencePanel";
 import { useEvidence, useAnalyzeMutation, useJourneyMutation } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
@@ -55,23 +56,32 @@ export default function PreuvePage() {
     recomputeJourney.mutate({ journeyId, procedureId: procedureIdOf(journeyId), documents: docs });
   }
 
+  const pending = analyze.isPending;
+
   return (
-    <section className="flex flex-col gap-6 pt-4">
+    <section className="flex flex-col gap-6 pt-8">
       <div>
-        <Link href={`/dossier/${journeyId}`} className="text-sm text-accent-ai">
+        <Link href={`/dossier/${journeyId}`} className="text-sm font-medium text-accent-ai">
           ‹ Mon dossier
         </Link>
-        <h1 className="mt-2 text-2xl font-bold capitalize">{requirement}</h1>
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          4 · Preuve
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight capitalize">
+          {requirement}
+        </h1>
       </div>
 
       {evidence.isLoading ? (
-        <div className="flex justify-center py-8"><Spinner /></div>
+        <div className="flex justify-center py-8">
+          <ThinkingDots label="Chargement de l'information officielle…" />
+        </div>
       ) : evidence.data ? (
         <EvidencePanel evidence={evidence.data} />
       ) : evidence.isError ? (
         <div
           role="alert"
-          className="rounded-card bg-warning/10 border border-warning/30 p-4 text-sm text-text1"
+          className="rounded-card border border-warning/30 bg-warning/10 p-4 text-sm text-text1"
         >
           <p className="font-semibold text-warning">Information à confirmer</p>
           <p className="mt-1">
@@ -81,28 +91,63 @@ export default function PreuvePage() {
         </div>
       ) : null}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <label className="block">
-          <span className="text-sm font-semibold">Fournir le document</span>
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="focus-visible mt-2 block w-full rounded-card bg-surface border border-surface-2 p-4 text-sm text-text1 file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#04211a]"
-          />
-        </label>
-        <Button type="submit" disabled={!file || analyze.isPending}>
-          {analyze.isPending ? <Spinner /> : "Analyser le document"}
-        </Button>
-        {analyze.isError ? (
-          <p role="alert" className="text-sm text-danger">
-            L'analyse a échoué : le fichier n'a pas pu être traité. Réessayez.
-          </p>
-        ) : null}
-      </form>
+      <GlassCard className="p-5">
+        <form onSubmit={onSubmit} className="flex flex-col gap-3">
+          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-card border-2 border-dashed border-white/15 bg-white/[0.03] p-5 text-center transition-colors hover:border-accent-ai/50">
+            <UploadIcon className="h-8 w-8 text-accent-ai" />
+            <span className="text-sm font-semibold">
+              {file ? file.name : "Fournir le document"}
+            </span>
+            <span className="text-xs text-text2">
+              {file
+                ? "Cliquez pour remplacer"
+                : "Image ou PDF — le document est analysé par la chaîne réelle"}
+            </span>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="sr-only"
+            />
+          </label>
+          {file ? (
+            <div className="flex items-center justify-between text-sm text-text2">
+              <span className="truncate max-w-[80%]">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => setFile(null)}
+                aria-label="Retirer le fichier"
+                className="focus-visible rounded-full p-1 hover:text-danger"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+          <Button
+            type="submit"
+            variant="gradient"
+            disabled={!file || pending}
+            className="w-full"
+          >
+            {pending ? (
+              <ThinkingDots label="Analyse de votre document…" />
+            ) : (
+              <>
+                Analyser le document
+                <CheckIcon className="h-5 w-5" />
+              </>
+            )}
+          </Button>
+          {analyze.isError ? (
+            <p role="alert" className="text-sm text-danger">
+              L'analyse a échoué : le fichier n'a pas pu être traité. Réessayez.
+            </p>
+          ) : null}
+        </form>
+      </GlassCard>
 
       {result ? (
-        <Card>
+        <GlassCard className={`p-5 ${result.status === "ANALYZED" ? "" : "border-warning/30"}`}>
           <p className="font-semibold">
             Résultat de l'analyse{" "}
             {result.status === "ANALYZED" ? "✓ semble correspondre" : `— ${result.status}`}
@@ -127,7 +172,7 @@ export default function PreuvePage() {
           >
             Retourner au dossier
           </Button>
-        </Card>
+        </GlassCard>
       ) : null}
     </section>
   );

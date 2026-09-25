@@ -6,6 +6,7 @@
  */
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import { ArrowRightIcon } from "@/components/icons";
 import { NextActionCard } from "@/components/journey/NextActionCard";
 import { useJourneyStore } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -16,8 +17,14 @@ export default function ProchaineActionPage() {
   const { user } = useAuth();
 
   return (
-    <section className="flex flex-col gap-6 pt-4">
-      <h1 className="text-2xl font-bold">Prochaine action</h1>
+    <section className="flex flex-col gap-6 pt-8">
+      <div>
+        <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          5 · Suite
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Prochaine action</h1>
+        <p className="mt-1 text-sm text-text2">Recommandée d'après votre dossier.</p>
+      </div>
       {response ? (
         <>
           <NextActionCard journey={response} />
@@ -26,8 +33,9 @@ export default function ProchaineActionPage() {
               href={`/evidence/${encodeURIComponent(response.nextActionRequirement)}?journey=${response.journeyId}`}
               className="w-full"
             >
-              <Button className="w-full" size="lg">
+              <Button className="w-full" size="lg" variant="gradient">
                 Commencer maintenant
+                <ArrowRightIcon className="h-5 w-5" />
               </Button>
             </Link>
           ) : null}

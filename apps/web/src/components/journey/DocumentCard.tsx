@@ -29,23 +29,29 @@ export function DocumentCard({
       href={`/evidence/${encodeURIComponent(doc.requirementId)}?journey=${journeyId}`}
       className="focus-visible block"
     >
-      <div className="flex items-center gap-3 rounded-card bg-surface border border-surface-2 p-4 transition-colors hover:border-primary/40">
+      <div className="flex items-center gap-3 rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md transition-colors hover:border-primary/40">
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
             ok
-              ? "bg-primary/15 text-primary"
+              ? "bg-gradient-to-br from-primary/30 to-accent-ai/20 text-primary"
               : warn
                 ? "bg-warning/15 text-warning"
                 : "bg-danger/15 text-danger"
           }`}
         >
-          {ok ? <CheckIcon className="h-5 w-5" /> : warn ? <AlertIcon className="h-5 w-5" /> : <span className="text-lg">+</span>}
+          {ok ? (
+            <CheckIcon className="h-5 w-5" />
+          ) : warn ? (
+            <AlertIcon className="h-5 w-5" />
+          ) : (
+            <span className="text-lg font-bold">+</span>
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{doc.name}</p>
           <Badge tone={ok ? "ok" : warn ? "warn" : "danger"}>{LABELS[doc.status]}</Badge>
         </div>
-        <span className="text-text2">›</span>
+        <span className="text-xl text-text2">›</span>
       </div>
     </Link>
   );

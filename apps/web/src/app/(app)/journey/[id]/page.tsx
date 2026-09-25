@@ -7,7 +7,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Button, Spinner } from "@/components/ui";
+import { Button, GlassCard, ThinkingDots, Badge } from "@/components/ui";
 import { JourneySteps } from "@/components/journey/JourneySteps";
 import { NextActionCard } from "@/components/journey/NextActionCard";
 import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
@@ -21,6 +21,14 @@ const STATUS_WHY: Record<string, string> = {
   NEEDS_REVIEW: "à vérifier — analyse en cours",
   UNEXPECTED: "inattendu, à remplacer",
   UNKNOWN: "non déterminable",
+};
+
+/** Pastille d'état réel du parcours (dérivée par le moteur). */
+const STATUS_TONE: Record<string, "ok" | "warn" | "danger" | "neutral"> = {
+  not_started: "neutral",
+  in_progress: "warn",
+  needs_action: "danger",
+  completed: "ok",
 };
 
 export default function ParcoursPage() {
@@ -66,37 +74,43 @@ export default function ParcoursPage() {
             Le parcours est indisponible. Réessayez.
           </p>
         ) : (
-          <Spinner />
+          <ThinkingDots label="Chargement de votre parcours…" />
         )}
       </div>
     );
   }
 
   return (
-    <section className="flex flex-col gap-6 pt-4">
-      <div>
-        <h1 className="text-2xl font-bold">Votre parcours</h1>
-        <p className="mt-1 text-sm uppercase tracking-wide text-text2">
+    <section className="flex flex-col gap-6 pt-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+            2 · Parcours
+          </p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre parcours</h1>
+        </div>
+        <Badge tone={STATUS_TONE[response.status] ?? "neutral"}>
           {response.status.replaceAll("_", " ")}
-        </p>
+        </Badge>
       </div>
 
       <JourneySteps steps={response.steps} />
 
-      <div className="rounded-card bg-surface border border-surface-2 p-4 text-center">
-        <p className="text-sm text-text2">Dossier</p>
-        <p className="text-3xl font-bold text-primary">
-          {response.completion.provided}/{response.completion.required}
+      <GlassCard className="flex flex-col items-center gap-1 p-6 text-center">
+        <p className="text-sm uppercase tracking-wide text-text2">Dossier</p>
+        <p className="text-5xl font-extrabold tracking-tight text-gradient">
+          {response.completion.provided}
+          <span className="text-2xl text-text2">/{response.completion.required}</span>
         </p>
         <p className="text-sm text-text2">éléments fournis</p>
-      </div>
+      </GlassCard>
 
       {(() => {
         const pending = response.documents.filter((d) => d.status !== "ANALYZED");
         if (!pending.length) return null;
         return (
-          <div className="rounded-card bg-surface border border-surface-2 p-4">
-            <p className="text-sm text-text2">Ce qui manque</p>
+          <div className="rounded-card border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-sm uppercase tracking-wide text-text2">Ce qui manque</p>
             <ul className="mt-2 space-y-2">
               {pending.map((d) => (
                 <li key={d.requirementId} className="text-sm text-text1">
@@ -107,7 +121,7 @@ export default function ParcoursPage() {
             </ul>
             <Link
               href={`/dossier/${journeyId}`}
-              className="focus-visible mt-3 inline-block text-sm text-accent-ai"
+              className="focus-visible mt-3 inline-block text-sm font-medium text-accent-ai"
             >
               Voir les documents concernés ›
             </Link>
@@ -118,7 +132,7 @@ export default function ParcoursPage() {
       <NextActionCard journey={response} />
 
       <Link href={`/dossier/${journeyId}`} className="w-full">
-        <Button className="w-full" size="lg">
+        <Button className="w-full" size="lg" variant="gradient">
           Voir mon dossier
         </Button>
       </Link>

@@ -23,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="fr" className={inter.variable}>
       <body className="min-h-dvh bg-bg text-text1 antialiased">
+        <div className="aurora" aria-hidden />
         <AuthProvider>
           <Providers>
             <Suspense fallback={null}>

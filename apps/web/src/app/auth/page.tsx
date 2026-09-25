@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Spinner } from "@/components/ui";
+import { Button, ThinkingDots } from "@/components/ui";
 import { useAuth } from "@/lib/auth/auth-context";
 
 type Mode = "signin" | "signup";
@@ -77,10 +77,14 @@ export default function AuthPage() {
   return (
     <section className="mx-auto flex max-w-md flex-col gap-6 pt-8">
       <div className="text-center">
-        <p className="text-sm font-medium uppercase tracking-widest text-accent-ai">
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-base font-extrabold text-[#04211a] shadow-glow">
+          SA
+        </span>
+        <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
           Votre dossier, rien que pour vous
         </p>
-        <h1 className="mt-2 text-2xl font-bold">
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight">
           {mode === "signin" ? "Connexion" : "Créer un compte"}
         </h1>
         <p className="mt-2 text-sm text-text2">
@@ -89,7 +93,8 @@ export default function AuthPage() {
         </p>
       </div>
 
-      <Card className="flex flex-col gap-4">
+      <div className="rounded-card border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
+        <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-2">
           <Button
             type="button"
@@ -134,8 +139,8 @@ export default function AuthPage() {
             autoComplete={mode === "signin" ? "current-password" : "new-password"}
             className="focus-visible w-full rounded-2xl bg-surface border border-surface-2 p-4 text-base text-text1 placeholder:text-text2"
           />
-          <Button type="submit" disabled={submitDisabled}>
-            {busy ? <Spinner /> : mode === "signin" ? "Se connecter" : "Créer mon compte"}
+          <Button type="submit" variant="gradient" disabled={submitDisabled}>
+            {busy ? <ThinkingDots label="Connexion…" /> : mode === "signin" ? "Se connecter" : "Créer mon compte"}
           </Button>
         </form>
 
@@ -159,7 +164,8 @@ export default function AuthPage() {
         <Button type="button" variant="ghost" onClick={onGoogle} className="w-full">
           Continuer avec Google
         </Button>
-      </Card>
+        </div>
+      </div>
     </section>
   );
 }
