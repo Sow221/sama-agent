@@ -39,7 +39,6 @@ import os
 
 from agent import bootstrap  # noqa: F401  (met sys.path avant les imports agent)
 from agent.domain.naming import journey_id_of
-from agent.schemas import JourneyDocument, JourneyRequest
 from agent.voice import audio, protocol
 from agent.voice.session import VoiceSession, _Superseded
 
@@ -69,7 +68,6 @@ except ImportError as exc:  # pragma: no cover - depend du poste de dev
 # fois la room connectée, et ils lèvent eux-mêmes une erreur lisible en mode
 # déterministe (le front bascule alors en texte).
 from agent.application.orchestration.agent_orchestrator import voice_turn
-from agent.application.use_cases.get_journey import get_journey
 from agent.infrastructure.stt import asr_kiriku
 from agent.infrastructure.tts import synthesize as tts_synthesize
 
@@ -90,7 +88,6 @@ class VoiceRuntime:
             transcribe=self._transcribe,
             turn=self._turn,
             synthesize=self._synthesize,
-            documents_provider=self._documents,
         )
         #: Publication audio en cours (réf. pour pouvoir l'interrompre).
         self._track = None
@@ -104,16 +101,12 @@ class VoiceRuntime:
         self._audio_limit_hit = False
 
     # ── Fournisseurs (bloquants : toujours appelés via to_thread) ──────────
-    def _documents(self) -> list[JourneyDocument]:
-        """État réel du dossier, relu au moment du tour (G3 : la base est la
-        source de vérité, jamais une copie en mémoire de la session)."""
-        return get_journey(JourneyRequest(journeyId=self.journey_id)).documents
-
     def _transcribe(self, wav: bytes) -> str:
         return asr_kiriku.transcribe(wav)
 
     def _turn(self, text: str) -> str:
-        return voice_turn(text, self.journey_id, documents=self._documents())
+        # Le dossier est relu en base à chaque tour (G3 : jamais une copie en mémoire).
+        return voice_turn(text, self.journey_id)
 
     def _synthesize(self, text: str) -> bytes:
         # Résolveur réel : xTTS (si configuré) → Edge neural (fr) → SAPI (Windows).
@@ -125,8 +118,7 @@ class VoiceRuntime:
         """Émet un événement vers le client (jamais bloquant, jamais fatal)."""
         try:
             await self.room.local_participant.publish_data(
-                protocol.encode(event),
-                rtc.DataPacket_Kind.RELIABLE,
+                protocol.encode(event), reliable=True,
             )
         except Exception as exc:  # le client est parti, la room se ferme…
             log.debug("envoi client impossible (%s) : %s", event.get("type"), exc)
@@ -232,12 +224,14 @@ class VoiceRuntime:
         source = rtc.AudioSource(sample_rate=audio.TTS_SAMPLE_RATE, num_channels=1)
         track = rtc.LocalAudioTrack.create_audio_track("agent-voice", source)
         pub = await self.room.local_participant.publish_track(
-            track, rtc.TrackPublishOptions(source="voice")
+            track, rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE)
         )
         self._source, self._track = source, pub
+        interrupted = False
         try:
             for chunk in chunks:
                 if self._stop.is_set() or self.session.is_superseded(turn_id):
+                    interrupted = True
                     break
                 await source.capture_frame(
                     rtc.AudioFrame(
@@ -249,11 +243,17 @@ class VoiceRuntime:
                 )
                 # Rythme réel : 100 ms d'audio par trame.
                 await asyncio.sleep(0.1)
+            if interrupted:
+                # Barge-in : l'audio déjà en file (jusqu'à 1 s) ne doit plus sortir.
+                source.clear_queue()
+            else:
+                # Sinon on laisse finir la phrase avant de dépublier le track.
+                await source.wait_for_playout()
         finally:
             self._stop.clear()
             self._source = None
             self._track = None
-            await source.close()
+            await source.aclose()
             try:
                 await self.room.local_participant.unpublish_track(pub.sid)
             except RuntimeError:
@@ -308,14 +308,10 @@ class VoiceRuntime:
 
     async def run(self) -> None:
         """Boucle de vie : diffusion de l'audio micro + attente des événements."""
-        try:
-            await self.room.start_audio()
-        except Exception as exc:
-            log.warning("démarrage du routage audio impossible : %s", exc)
         await self.send(protocol.agent_state(protocol.ST_LISTENING))
         # Le job se termine quand la room se vide ou qu'on est déconnecté.
         try:
-            while not self.room.isdisconnected():
+            while self.room.isconnected():
                 await asyncio.sleep(0.5)
         finally:
             tasks = tuple(self._audio_tasks.values())
@@ -344,7 +340,7 @@ async def entrypoint(ctx: JobContext) -> None:
                     protocol.ERR_UNKNOWN_ROOM,
                     f"room non reconnue : {room.name}",
                 )),
-                rtc.DataPacket_Kind.RELIABLE,
+                reliable=True,
             )
         except Exception:
             pass

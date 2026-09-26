@@ -5,9 +5,14 @@ Fournisseur interchangeable (référence §5.5) : le domaine ne dépend pas de c
 """
 from __future__ import annotations
 
+import io
+import logging
 import os
+import wave
 
 from agent import mode as app_mode
+
+log = logging.getLogger("sama.asr")
 
 
 class KirikuUnavailableError(RuntimeError):
@@ -35,9 +40,13 @@ class _LazyKiriku:
                 tokenizer=processor.tokenizer,
                 feature_extractor=processor.feature_extractor,
                 device=device,
-                generate_kwargs={"language": "wolof", "task": "transcribe"},
             )
         return self._pipe
+
+    #: Langue forcée au décodage. « wolof » n'est pas une langue Whisper standard :
+    #: si le modèle la refuse, on retombe (une fois pour toutes) sur la détection
+    #: du fine-tune. KIRIKU_LANGUAGE="" désactive le forçage d'emblée.
+    _language: str | None = os.getenv("KIRIKU_LANGUAGE", "wolof").strip() or None
 
     def transcribe(self, audio_wav_bytes: bytes) -> str:
         if not app_mode.is_live():
@@ -45,8 +54,31 @@ class _LazyKiriku:
                 "ASR non disponible en mode deterministic (Version B : saisie texte)"
             )
         pipe = self._load()
-        result = pipe(audio_wav_bytes)
+        # WAV décodé ici (stdlib) : le pipeline n'a pas besoin de ffmpeg sur le nœud.
+        audio = _wav_to_input(audio_wav_bytes)
+        generate_kwargs = {"task": "transcribe"}
+        if self._language:
+            generate_kwargs["language"] = self._language
+        try:
+            result = pipe(audio, generate_kwargs=generate_kwargs)
+        except ValueError as exc:
+            if not self._language or "language" not in str(exc).lower():
+                raise
+            log.warning("langue %r refusée par le modèle (%s) — détection du modèle", self._language, exc)
+            type(self)._language = None
+            result = pipe(audio, generate_kwargs={"task": "transcribe"})
         return str(result.get("text", "")).strip()
+
+
+def _wav_to_input(wav_bytes: bytes) -> dict:
+    """WAV PCM 16 bits mono → entrée brute du pipeline (float32 [-1, 1] + fréquence)."""
+    import numpy as np
+
+    with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
+        rate = wf.getframerate()
+        pcm = wf.readframes(wf.getnframes())
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+    return {"raw": samples, "sampling_rate": rate}
 
 
 _kiriku = _LazyKiriku()

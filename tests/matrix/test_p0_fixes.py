@@ -321,3 +321,29 @@ def test_next_action_changed_not_duplicated_on_identical_state() -> None:
             )
         ).scalars().all()
     assert len(n) == 0
+
+
+# ── 4. Live : un client ne peut pas déclarer ses documents « ANALYZED » ─────
+def test_live_client_cannot_forge_document_statuses(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Avant : 3 documents déclarés ANALYZED sans aucun fichier → dossier « prêt »
+    (3/3) persisté et relu à la reprise. En live, seule une analyse réelle change
+    le statut d'une exigence : les documents déclarés par le client sont ignorés."""
+    jid = f"forge_{uuid.uuid4().hex[:10]}"
+    forged = [{"requirementId": r, "status": "ANALYZED"} for r in ("identity", "medical", "photos")]
+    with _live(monkeypatch):
+        r = client.post("/api/journey", json={"journeyId": jid, "procedureId": "driving_license_new",
+                                              "documents": forged}, headers=_auth_header())
+        assert r.status_code == 200, r.text
+        assert r.json()["status"] == enums.JourneyStatus.NEEDS_DOCUMENT
+        assert r.json()["completion"]["provided"] == 0
+
+        # Le re-POST forgé sur un dossier existant ne change rien non plus…
+        r = client.post("/api/journey", json={"journeyId": jid, "documents": forged},
+                        headers=_auth_header())
+        assert r.status_code == 200, r.text
+        assert r.json()["completion"]["provided"] == 0
+
+        # …et la reprise relit la vérité serveur.
+        resumed = client.get(f"/api/journey/{jid}", headers=_auth_header())
+    assert resumed.json()["status"] == enums.JourneyStatus.NEEDS_DOCUMENT
+    assert all(d["status"] == enums.DocumentStatus.MISSING for d in resumed.json()["documents"])
