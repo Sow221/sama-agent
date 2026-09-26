@@ -16,6 +16,10 @@ python3 -m venv services/worker/.venv
 source services/worker/.venv/bin/activate
 pip install --upgrade pip
 pip install -e services/worker
+# Voix wolof Adia (CONCREE/Adia_TTS) : Parler-TTS n'est publié que sur GitHub.
+# Non bloquant : sans lui, la voix wolof passe par MMS (facebook/mms-tts-wol).
+pip install "git+https://github.com/huggingface/parler-tts.git" \
+  || echo "⚠ parler-tts non installé : voix wolof via MMS uniquement"
 
 echo "[3/4] cloudflared (adresse HTTPS publique de l'API, sans compte)"
 if ! command -v cloudflared >/dev/null; then

@@ -25,6 +25,16 @@ au-delà de la démo requiert la relecture des licences de chaque modèle.
 | `@ricky0123/vad-web` | MIT | VAD Silero côté client (ADR-004) |
 | Next.js / React / Tailwind / TanStack Query / Zustand / Zod / Vitest / Playwright / FastAPI / Pydantic / Uvicorn / httpx | MIT / Apache-2.0 (familles OSS) | liste exhaustive dans `package-lock.json` / `pyproject.toml` |
 
+## Voix wolof de l'agent (TTS) — alternatives à xTTS-v2-wolof
+
+| Modèle | Auteur | Licence | Usage |
+|---|---|---|---|
+| `CONCREE/Adia_TTS` (Parler-TTS, ~40 h de wolof) | Concree | Apache 2.0 | voix wolof principale (`SAMA_TTS_WOLOF=adia,…`) |
+| `facebook/mms-tts-wol` (VITS, projet MMS) | Meta AI | **CC-BY-NC 4.0 — non commercial** | repli wolof ; à remplacer avant tout usage commercial |
+| Edge neural `fr-FR-DeniseNeural` | Microsoft | service en ligne | repli français si aucune voix wolof ne répond |
+
+Attribution à citer à la démo : « Voix wolof : Adia TTS (Concree) / MMS (Meta) ».
+
 ## Code Sama Agent
 
 Code produit du hackathon GOMYCODE × NVIDIA — propriété de l'équipe ; non publié.

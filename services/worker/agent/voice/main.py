@@ -69,7 +69,8 @@ except ImportError as exc:  # pragma: no cover - depend du poste de dev
 # déterministe (le front bascule alors en texte).
 from agent.application.orchestration.agent_orchestrator import voice_turn
 from agent.infrastructure.stt import asr_kiriku
-from agent.infrastructure.tts import synthesize as tts_synthesize
+from agent.infrastructure.tts import synthesize_reply as tts_synthesize_reply
+from agent.infrastructure.tts import tts_wolof
 
 #: Borne mémoire explicite : segment de 30 s en PCM mono 48 kHz / 16 bits.
 MAX_BUFFERED_AUDIO_SECONDS = 30
@@ -104,14 +105,18 @@ class VoiceRuntime:
     def _transcribe(self, wav: bytes) -> str:
         return asr_kiriku.transcribe(wav)
 
-    def _turn(self, text: str) -> str:
+    def _turn(self, text: str):
         # Le dossier est relu en base à chaque tour (G3 : jamais une copie en mémoire).
-        return voice_turn(text, self.journey_id)
+        # Rend (texte affiché en français, réponse complète à dire).
+        reply = voice_turn(text, self.journey_id)
+        return reply.display, reply
 
-    def _synthesize(self, text: str) -> bytes:
-        # Résolveur réel : xTTS (si configuré) → Edge neural (fr) → SAPI (Windows).
-        # Toute panne remonte en agent_error honnête (le front bascule en texte).
-        return tts_synthesize(text, speaker_wav=self.speaker)
+    def _synthesize(self, reply) -> bytes:
+        # Voix réelle : wolof (Adia → MMS) si disponible, sinon la phrase française
+        # (Edge). Toute panne remonte en agent_error honnête (le front bascule en texte).
+        wav, lang = tts_synthesize_reply(reply.display, reply.spoken, speaker_wav=self.speaker)
+        log.info("voix de l'agent : %s", "wolof" if lang == "wo" else "français (repli)")
+        return wav
 
     # ── Canal de données ───────────────────────────────────────────────────
     async def send(self, event: dict) -> None:
@@ -373,6 +378,12 @@ def worker_options() -> WorkerOptions:
     )
 
 
+def app_mode_is_live() -> bool:
+    from agent import mode as app_mode
+
+    return app_mode.is_live()
+
+
 def _warm_models() -> None:
     """Préchauffe Kiriku au démarrage : le premier tour vocal n'attend pas le
     téléchargement ni le chargement du modèle. Une panne est journalisée, jamais
@@ -382,6 +393,8 @@ def _warm_models() -> None:
         log.info("Kiriku chargé — ASR prêt")
     except Exception:
         log.exception("préchauffage Kiriku impossible")
+    if app_mode_is_live():
+        tts_wolof.warm()
 
 
 if __name__ == "__main__":

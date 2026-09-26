@@ -136,8 +136,9 @@ def test_voice_turn_reads_a_per_user_journey_from_the_database() -> None:
     jid = f"driving_license_new-{uuid.uuid4().hex[:8]}"
     apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"))
     reply = process_voice_turn("je veux mon permis de conduire", jid)
-    assert reply  # formulé depuis l'état réel du moteur
-    assert reply != "Pouvez-vous préciser votre demande ?"
+    # Formulé depuis l'état réel du moteur : affiché en français, dit en wolof.
+    assert "Pièce d'identité" in reply.display
+    assert reply.spoken and "kàrtu identite" in reply.spoken
 
 
 def test_voice_turn_on_unknown_journey_fails_explicitly() -> None:
@@ -149,7 +150,8 @@ def test_runtime_turn_uses_the_persisted_dossier() -> None:
     jid = f"driving_license_new-{uuid.uuid4().hex[:8]}"
     journey = apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"))
     assert journey.status == enums.JourneyStatus.NEEDS_DOCUMENT
-    assert _runtime(_Room(), jid)._turn("permis de conduire")
+    display, reply = _runtime(_Room(), jid)._turn("permis de conduire")
+    assert display == reply.display and reply.spoken
 
 
 def test_formulation_names_the_real_pieces() -> None:
@@ -198,3 +200,89 @@ def test_worker_shares_one_asr_model_across_sessions() -> None:
     opts = voice_main.worker_options()
     assert opts.job_executor_type == JobExecutorType.THREAD
     assert opts.load_threshold >= 0.9
+
+
+# ── Voix wolof (alternatives à xTTS GalsenAI) ───────────────────────────────
+def test_wolof_phrase_follows_the_engine() -> None:
+    from agent.application.dialogue import formulate_wolof
+    from agent.application.use_cases.get_journey import get_journey
+
+    def say(docs):
+        return formulate_wolof(get_journey(JourneyRequest(
+            journeyId="driving_license_new", procedureId="driving_license_new", documents=docs)))
+
+    assert "kàrtu identite bi" in say(None) and "nataal yi" in say(None)
+    assert "Fàww ñu seet kàrtu identite bi" in say([{"requirementId": "identity", "status": "NEEDS_REVIEW"}])
+    ready = say([{"requirementId": r, "status": "ANALYZED"} for r in ("identity", "medical", "photos")])
+    assert "ñett ci ñett" in ready  # nombres en lettres : un TTS lit mal les chiffres
+
+
+def test_reply_is_spoken_in_wolof_first_then_french(monkeypatch) -> None:
+    from agent import mode as app_mode
+    from agent.infrastructure import tts
+    from agent.infrastructure.tts import tts_wolof
+
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    said = []
+    monkeypatch.setattr(tts, "synthesize", lambda text, speaker_wav=None: said.append(text) or b"FR")
+
+    monkeypatch.setattr(tts_wolof, "synthesize", lambda text: (b"WO:" + text.encode(), "adia"))
+    assert tts.synthesize_reply("Il manque", "Dafa des") == (b"WO:Dafa des", "wo")
+
+    def down(text):
+        raise tts_wolof.WolofTtsUnavailableError("pas de GPU")
+
+    monkeypatch.setattr(tts_wolof, "synthesize", down)
+    # Repli : c'est la phrase FRANÇAISE qui est lue, jamais du wolof en voix française.
+    assert tts.synthesize_reply("Il manque", "Dafa des") == (b"FR", "fr")
+    assert said == ["Il manque"]
+
+
+def test_wolof_engine_order_and_fallback(monkeypatch) -> None:
+    from agent.infrastructure.tts import tts_wolof
+
+    class _Ok(tts_wolof._Engine):
+        name = "ok"
+        def _load(self):
+            return "model"
+        def _synth(self, model, text):
+            return b"WAV"
+
+    class _Ko(tts_wolof._Engine):
+        name = "ko"
+        def _load(self):
+            raise RuntimeError("poids introuvables")
+
+    monkeypatch.setattr(tts_wolof, "ENGINES", {"adia": _Ko(), "mms": _Ok()})
+    monkeypatch.setenv("SAMA_TTS_WOLOF", "adia,mms")
+    assert tts_wolof.synthesize("Dafa des") == (b"WAV", "mms")
+    monkeypatch.setenv("SAMA_TTS_WOLOF", "off")
+    with pytest.raises(tts_wolof.WolofTtsUnavailableError):
+        tts_wolof.synthesize("Dafa des")
+
+
+def test_wolof_waveform_is_converted_to_worker_format() -> None:
+    import math
+
+    from agent.infrastructure.tts.tts_wolof import _float_to_wav
+    from agent.voice import audio
+
+    sine = [0.5 * math.sin(2 * math.pi * 440 * i / 16_000) for i in range(16_000)]
+    pcm, rate = audio.wav_to_pcm(_float_to_wav(sine, 16_000))
+    assert rate == audio.TTS_SAMPLE_RATE and abs(len(pcm) // 2 - 24_000) < 50
+
+
+def test_session_displays_french_and_speaks_the_reply_object() -> None:
+    from agent.voice.session import VoiceSession
+
+    spoken = []
+    session = VoiceSession(
+        transcribe=lambda wav: "sama permis",
+        turn=lambda text: ("Il manque la pièce.", {"wo": "Dafa des"}),
+        synthesize=lambda speech: spoken.append(speech) or b"RIFF",
+    )
+    turn_id = session.enqueue_segment(b"x")
+    result = session.handle_turn(b"wav", turn_id)
+    texts = [e["text"] for e in result["events"] if e["type"] == "agent_text"]
+    assert texts == ["sama permis", "Il manque la pièce."]
+    assert spoken == [{"wo": "Dafa des"}]

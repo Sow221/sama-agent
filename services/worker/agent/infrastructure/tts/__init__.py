@@ -94,4 +94,28 @@ def synthesize(text: str, speaker_wav: str | None = None, voice: str | None = No
     )
 
 
-__all__ = ["synthesize", "XttsUnavailableError"]
+def synthesize_reply(display_fr: str, spoken_wo: str | None,
+                     speaker_wav: str | None = None) -> tuple[bytes, str]:
+    """Voix de l'agent : le WOLOF d'abord (Adia, puis MMS), la voix française
+    (Edge) en repli. Rend (WAV, langue réellement parlée : « wo » ou « fr »).
+
+    Jamais de mélange : si la version wolof ne peut pas être dite, c'est la
+    phrase FRANÇAISE qui est lue (et non du wolof lu par une voix française).
+    """
+    from agent import mode as app_mode
+    from agent.infrastructure.tts import tts_wolof
+
+    if not app_mode.is_live():
+        raise XttsUnavailableError(
+            "TTS non disponible en mode deterministic (Version B : saisie texte)"
+        )
+    if spoken_wo:
+        try:
+            wav, engine = tts_wolof.synthesize(spoken_wo)
+            return wav, "wo"
+        except tts_wolof.WolofTtsUnavailableError:
+            pass  # journalisé par tts_wolof ; repli honnête sur la voix française
+    return synthesize(display_fr, speaker_wav=speaker_wav), "fr"
+
+
+__all__ = ["synthesize", "synthesize_reply", "XttsUnavailableError"]

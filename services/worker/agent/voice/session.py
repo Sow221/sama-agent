@@ -27,8 +27,8 @@ from agent.voice import protocol
 #: Signatures des fournisseurs (toutes bloquantes : le worker les exécute dans
 #: un thread, cette classe ne le gère pas — c'est le rôle de `main.py`).
 Transcriber = Callable[[bytes], str]
-TurnFn = Callable[[str], str]
-Synthesizer = Callable[[str], bytes]
+TurnFn = Callable[[str], "str | tuple[str, object]"]
+Synthesizer = Callable[[object], bytes]
 
 
 class _Superseded(Exception):
@@ -165,20 +165,23 @@ class VoiceSession:
 
         # 2. Tour de conversation — intent + journey + formulation.
         try:
-            reply = self.turn(text)
+            out = self.turn(text)
         except Exception as exc:
             if self.is_superseded(turn_id):
                 raise _Superseded(turn_id) from exc
             events.append(protocol.agent_error(protocol.ERR_TURN_FAILED, str(exc), turn_id))
             return {"events": events, "audio": None, "text": text, "reply": ""}
         self._check_alive(turn_id)
+        # Un tour peut rendre (texte affiché, contenu à dire) : l'écran montre le
+        # français, la voix dit le wolof. Une simple chaîne sert aux deux.
+        reply, speech = out if isinstance(out, tuple) else (out, out)
         self.history.append({"turnId": turn_id, "role": "agent", "text": reply})
 
         # 3. TTS — WAV réel. On envoie le texte AVANT de synthétiser : l'usager
         #    attend une réponse, pas un chargement.
         events.append(protocol.agent_text(reply, turn_id, final=True, role=protocol.ROLE_AGENT))
         try:
-            wav_out = self.synthesize(reply)
+            wav_out = self.synthesize(speech)
         except Exception as exc:
             if self.is_superseded(turn_id):
                 raise _Superseded(turn_id) from exc
