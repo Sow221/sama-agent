@@ -6,14 +6,25 @@ import { z } from "zod";
 import { newTraceId } from "@/lib/trace";
 import { authBearerHeaders } from "@/lib/auth/supabase";
 import {
+  agentTurnResponseSchema,
+  conversationMessageSchema,
+  conversationSchema,
+  memoryItemSchema,
+  type AgentTurnResponse,
+  type Conversation,
+  type ConversationMessage,
+  type MemoryKind,
+  type ServerMemoryItem,
   documentAnalysisSchema,
   evidenceSchema,
   intentResponseSchema,
   journeyResponseSchema,
+  voiceTokenSchema,
   type DocumentAnalysis,
   type Evidence,
   type IntentResponse,
   type JourneyResponse,
+  type VoiceToken,
 } from "@/lib/schemas";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -51,6 +62,10 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    // 401 → événement système « session expirée » (§44), écouté par AppSystemUI.
+    if (res.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sama:unauthorized"));
+    }
     const detail = await res.text().catch(() => "");
     throw new ApiError(
       `API ${path} → ${res.status}${detail ? ` : ${detail.slice(0, 200)}` : ""}`,
@@ -64,11 +79,15 @@ async function request<T>(
 }
 
 export const api = {
-  /** POST /api/intent — comprend la demande */
-  intent(transcript: string, language?: "fr" | "wo"): Promise<IntentResponse> {
+  /** POST /api/intent — comprend la demande (contexte facultatif : dossier en cours) */
+  intent(
+    transcript: string,
+    language?: "fr" | "wo",
+    context?: { journeyId?: string; stepId?: string }
+  ): Promise<IntentResponse> {
     return request("/api/intent", intentResponseSchema, {
       method: "POST",
-      body: JSON.stringify({ transcript, language }),
+      body: JSON.stringify({ transcript, language, context }),
     });
   },
 
@@ -99,9 +118,67 @@ export const api = {
     return request(`/api/evidence/${encodeURIComponent(requirement)}`, evidenceSchema);
   },
 
-  async voiceToken(): Promise<{ url: string; token: string }> {
-    return request("/api/voice/token", z.object({ url: z.string(), token: z.string() }), {
+  /**
+   * POST /api/voice/token — jeton LiveKit réel pour UN dossier.
+   * `journeyId` est optionnel : à défaut, l'API reprend le dossier de l'usager.
+   * Le serveur répond 503 (clés LiveKit absentes) ou 409 (aucun dossier) plutôt
+   * que de signer un jeton vers une room fantôme : le front peut donc afficher
+   * un message honnête au lieu d'échouer plus tard, sans explication.
+   */
+  voiceToken(journeyId?: string): Promise<VoiceToken> {
+    return request("/api/voice/token", voiceTokenSchema, {
       method: "POST",
+      body: JSON.stringify(journeyId ? { journeyId } : {}),
     });
+  },
+
+  /* ── Conversations (historique serveur, isolé par usager) ── */
+  conversations(): Promise<Conversation[]> {
+    return request("/api/conversations?limit=50", z.object({ items: z.array(conversationSchema) }))
+      .then((r) => r.items);
+  },
+  conversation(id: string): Promise<Conversation> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, conversationSchema);
+  },
+  createConversation(body: { title?: string; journeyId?: string }): Promise<Conversation> {
+    return request("/api/conversations", conversationSchema, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  renameConversation(id: string, title: string): Promise<Conversation> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, conversationSchema, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+  },
+  deleteConversation(id: string): Promise<unknown> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, z.unknown(), { method: "DELETE" });
+  },
+  messages(conversationId: string): Promise<ConversationMessage[]> {
+    return request(
+      `/api/conversations/${encodeURIComponent(conversationId)}/messages?limit=200`,
+      z.object({ items: z.array(conversationMessageSchema) })
+    ).then((r) => r.items);
+  },
+
+  /** POST /api/agent/turn — tour réel : intent → dossier → réponse + mémoire + historique. */
+  agentTurn(body: { text: string; journeyId?: string; conversationId?: string }): Promise<AgentTurnResponse> {
+    return request("/api/agent/turn", agentTurnResponseSchema, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /* ── Mémoire long terme (serveur, purgeable) ── */
+  memories(): Promise<ServerMemoryItem[]> {
+    return request("/api/memory?limit=100", z.object({ items: z.array(memoryItemSchema) }))
+      .then((r) => r.items);
+  },
+  createMemory(body: { kind: MemoryKind; content: string; source?: string; journeyId?: string }): Promise<ServerMemoryItem> {
+    return request("/api/memory", memoryItemSchema, { method: "POST", body: JSON.stringify(body) });
+  },
+  deleteMemory(id: string): Promise<unknown> {
+    return request(`/api/memory/${encodeURIComponent(id)}`, z.unknown(), { method: "DELETE" });
   },
 };

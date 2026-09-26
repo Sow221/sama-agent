@@ -16,10 +16,13 @@ from agent import mode as app_mode
 from agent.infrastructure.db.engine import db_session
 from agent.infrastructure.db.models import (
     AuditEvent,
+    Conversation,
+    ConversationMessage,
     Document,
     DocumentObservation,
     Journey,
     JourneyRequirement,
+    MemoryItem,
     ProcedureVersion,
     ToolCall,
     User,
@@ -79,13 +82,17 @@ def upsert_journey_state(journey: JourneyResponse, user_id: str | None = None) -
                 raise PermissionError(f"parcours {journey.journeyId} d'un autre usager")
             if user_id and previous.user_id is None:
                 previous.user_id = user_id
+            # L'ancien statut doit être capturé AVANT l'affectation, sinon la
+            # comparaison est toujours fausse et NEXT_ACTION_CHANGED ne part jamais.
+            from_status = (previous.status.value if hasattr(previous.status, "value")
+                           else str(previous.status))
+            to_status = journey.status.value if hasattr(journey.status, "value") else str(journey.status)
             previous.status = journey.status
             previous.completed_at = _now() if journey.status == enums.JourneyStatus.READY_FOR_NEXT_STEP else None
             previous.updated_at = _now()
-            if previous.status != journey.status:
+            if from_status != to_status:
                 _audit(session, NEXT_ACTION_CHANGED, journey_id=journey.journeyId,
-                       payload={"from": previous.status.value if hasattr(previous.status, "value") else str(previous.status),
-                                "to": journey.status.value if hasattr(journey.status, "value") else str(journey.status),
+                       payload={"from": from_status, "to": to_status,
                                 "nextAction": journey.nextAction})
         for doc in journey.documents:
             existing = session.execute(
@@ -126,6 +133,34 @@ def load_journey_state(journey_id: str, user_id: str | None = None) -> dict | No
             for r in reqs
         ]
         return {"procedureId": version.procedure_id if version else None, "documents": docs}
+
+
+def latest_journey_of(user_id: str) -> str | None:
+    """Dossier de travail de l'usager : le plus récemment modifié.
+
+    Utilisé par `POST /api/voice/token` quand la requête ne précise pas de
+    dossier — le worker vocal a besoin d'un dossier réel, pas d'un nom de room
+    arbitraire. Un dossier sans propriétaire (harnais déterministe) n'est pas
+    attribuable : on l'ignore plutôt que de le voler.
+    """
+    if not user_id:
+        return None
+    with db_session() as session:
+        return session.execute(
+            select(Journey.id)
+            .where(Journey.user_id == user_id)
+            .order_by(Journey.updated_at.desc())
+            .limit(1)
+        ).scalar_one_or_none()
+
+
+def journey_belongs_to_user(journey_id: str, user_id: str) -> bool:
+    """Vérifie strictement le propriétaire d'un parcours, y compris les lignes orphelines."""
+    if not journey_id or not user_id:
+        return False
+    with db_session() as session:
+        row = session.get(Journey, journey_id)
+        return row is not None and row.user_id == user_id
 
 
 # ── Documents + observations ───────────────────────────────────────────────
@@ -193,3 +228,212 @@ def save_tool_call(tool_name: str, arguments: dict, result: dict | None,
         session.add(ToolCall(id=_new_id(), session_id=session_id, tool_name=tool_name,
                              arguments=arguments, result=result, status=status,
                              latency_ms=latency_ms))
+
+
+# ── Conversations (P1 — historique réel, isolation par propriétaire) ────────
+def create_conversation(user_id: str, title: str | None = None,
+                        journey_id: str | None = None) -> dict:
+    """Crée une conversation du propriétaire `user_id` (identité réelle, sub JWT)."""
+    row_id = _new_id()
+    with db_session() as session:
+        session.add(Conversation(
+            id=row_id, user_id=user_id,
+            title=(title or "Nouvelle conversation").strip()[:255],
+            journey_id=journey_id,
+        ))
+    return get_conversation(row_id, user_id)
+
+
+def _conversation_dict(c) -> dict:
+    return {
+        "id": c.id, "title": c.title, "status": c.status,
+        "journeyId": c.journey_id, "userId": c.user_id,
+        "createdAt": c.created_at.isoformat() if c.created_at else None,
+        "lastActivityAt": c.last_activity_at.isoformat() if c.last_activity_at else None,
+    }
+
+
+def get_conversation(conversation_id: str, user_id: str) -> dict | None:
+    """Lecture STRICTEMENT du propriétaire : un dossier étranger = None (→ 404)."""
+    with db_session() as session:
+        c = session.get(Conversation, conversation_id)
+        if c is None or c.user_id != user_id:
+            return None
+        return _conversation_dict(c)
+
+
+def list_conversations(user_id: str, limit: int = 20, offset: int = 0) -> list[dict]:
+    with db_session() as session:
+        rows = session.execute(
+            select(Conversation)
+            .where(Conversation.user_id == user_id)
+            .order_by(Conversation.last_activity_at.desc())
+            .offset(offset).limit(limit)
+        ).scalars().all()
+        return [_conversation_dict(c) for c in rows]
+
+
+def delete_conversation(conversation_id: str, user_id: str) -> bool:
+    """Suppression propriétaire : cascade des messages. Étranger → False (→ 404)."""
+    with db_session() as session:
+        c = session.get(Conversation, conversation_id)
+        if c is None or c.user_id != user_id:
+            return False
+        session.execute(
+            ConversationMessage.__table__.delete().where(
+                ConversationMessage.conversation_id == conversation_id)
+        )
+        session.delete(c)
+        return True
+
+
+def update_conversation(conversation_id: str, user_id: str, title: str | None = None,
+                        status: str | None = None) -> dict | None:
+    with db_session() as session:
+        c = session.get(Conversation, conversation_id)
+        if c is None or c.user_id != user_id:
+            return None
+        if title is not None:
+            c.title = title.strip()[:255]
+        if status is not None:
+            c.status = status
+    return get_conversation(conversation_id, user_id)
+
+
+def add_conversation_message(conversation_id: str, user_id: str, role: str,
+                             content: str, language: str | None = None,
+                             journey_id: str | None = None) -> dict | None:
+    """Ajoute un message (user|assistant) à la conversation du propriétaire.
+
+    Touche `last_activity_at` — l'historique est trié par activité réelle.
+    """
+    mid = _new_id()
+    with db_session() as session:
+        c = session.get(Conversation, conversation_id)
+        if c is None or c.user_id != user_id:
+            return None
+        session.add(ConversationMessage(
+            id=mid, conversation_id=conversation_id, role=role,
+            content=content[:100_000], language=language, journey_id=journey_id,
+        ))
+        c.last_activity_at = _now()
+        if journey_id:
+            c.journey_id = journey_id
+    with db_session() as session:
+        m = session.get(ConversationMessage, mid)
+        return {
+            "id": m.id, "conversationId": m.conversation_id, "role": m.role,
+            "content": m.content, "language": m.language,
+            "journeyId": m.journey_id,
+            "createdAt": m.created_at.isoformat() if m.created_at else None,
+        }
+
+
+def list_conversation_messages(conversation_id: str, user_id: str,
+                               limit: int = 100, offset: int = 0) -> list[dict] | None:
+    """Messages paginés. Conversation étrangère → None (→ 404), jamais une fuite."""
+    with db_session() as session:
+        c = session.get(Conversation, conversation_id)
+        if c is None or c.user_id != user_id:
+            return None
+        rows = session.execute(
+            select(ConversationMessage)
+            .where(ConversationMessage.conversation_id == conversation_id)
+            .order_by(ConversationMessage.created_at.asc())
+            .offset(offset).limit(limit)
+        ).scalars().all()
+        return [{
+            "id": m.id, "conversationId": m.conversation_id, "role": m.role,
+            "content": m.content, "language": m.language, "journeyId": m.journey_id,
+            "createdAt": m.created_at.isoformat() if m.created_at else None,
+        } for m in rows]
+
+
+# ── Mémoire long terme (P1 — persistante, liée à l'usager, purgeable) ───────
+_MEMORY_KINDS = {"SELF", "PREFERENCE", "FACT", "TEMPORARY", "CONVERSATION"}
+
+
+def create_memory(user_id: str, kind: str, content: str, source: str | None = None,
+                  journey_id: str | None = None) -> dict:
+    kind = kind.upper()
+    if kind not in _MEMORY_KINDS:
+        raise ValueError(f"kind mémoire inconnu : {kind}")
+    row_id = _new_id()
+    with db_session() as session:
+        session.add(MemoryItem(
+            id=row_id, user_id=user_id, kind=kind,
+            content=content.strip()[:10_000], source=source, journey_id=journey_id,
+        ))
+    return get_memory(row_id, user_id)
+
+
+def _memory_dict(m) -> dict:
+    return {
+        "id": m.id, "kind": m.kind, "content": m.content, "source": m.source,
+        "journeyId": m.journey_id,
+        "createdAt": m.created_at.isoformat() if m.created_at else None,
+        "updatedAt": m.updated_at.isoformat() if m.updated_at else None,
+    }
+
+
+def get_memory(memory_id: str, user_id: str) -> dict | None:
+    with db_session() as session:
+        m = session.get(MemoryItem, memory_id)
+        if m is None or m.user_id != user_id:
+            return None
+        return _memory_dict(m)
+
+
+def list_memory(user_id: str, kind: str | None = None,
+                limit: int = 50, offset: int = 0) -> list[dict]:
+    with db_session() as session:
+        q = select(MemoryItem).where(MemoryItem.user_id == user_id)
+        if kind:
+            q = q.where(MemoryItem.kind == kind.upper())
+        rows = session.execute(q.order_by(MemoryItem.updated_at.desc())
+                               .offset(offset).limit(limit)).scalars().all()
+        return [_memory_dict(m) for m in rows]
+
+
+def search_memory(user_id: str, query: str, limit: int = 10) -> list[dict]:
+    """Récupération par similarité de texte simple (LIKE insensible à la casse).
+
+    Honnête et prévisible : la mémoire est récupérée par mots présents, pas par
+    une « sémantique » invérifiable locale.
+    """
+    terms = [t for t in query.lower().split() if len(t) >= 3][:8]
+    if not terms:
+        return []
+    with db_session() as session:
+        from agent.infrastructure.db.models import MemoryItem as M
+        clauses = [M.content.ilike(f"%{t}%") for t in terms]
+        q = select(M).where(M.user_id == user_id, *clauses)
+        rows = session.execute(q.order_by(M.updated_at.desc()).limit(limit)).scalars().all()
+        return [_memory_dict(m) for m in rows]
+
+
+def delete_memory(memory_id: str, user_id: str) -> bool:
+    with db_session() as session:
+        m = session.get(MemoryItem, memory_id)
+        if m is None or m.user_id != user_id:
+            return False
+        session.delete(m)
+        return True
+
+
+def recall_top_memory(user_id: str, kinds: tuple[str, ...] = ("SELF", "PREFERENCE", "FACT"),
+                      limit: int = 8) -> list[dict]:
+    """Mémoire injectable dans le contexte LLM — propriétaire uniquement.
+
+    Retourne les éléments les plus récents ; le prompt d'agent décide quoi utiliser.
+    """
+    if not user_id:
+        return []
+    with db_session() as session:
+        rows = session.execute(
+            select(MemoryItem)
+            .where(MemoryItem.user_id == user_id, MemoryItem.kind.in_(kinds))
+            .order_by(MemoryItem.updated_at.desc())
+            .limit(limit)
+        ).scalars().all()
+        return [_memory_dict(m) for m in rows]

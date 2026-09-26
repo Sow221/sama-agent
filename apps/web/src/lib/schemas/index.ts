@@ -133,8 +133,19 @@ export const evidenceSchema = z.object({
 });
 export type Evidence = z.infer<typeof evidenceSchema>;
 
-/* ── Réel-temps (DataChannel LiveKit) ───────────────────── */
+/* ── Réel-temps (DataChannel LiveKit) ──────────────────────────
+   Miroir exact de `services/worker/agent/voice/protocol.py`. Les deux côtés
+   listent les mêmes noms d'événements et les mêmes `turnId` ; un test de parité
+   (`voice.test.ts`) compare les listes, donc un ajout d'un côté casse l'autre.
 
+   Le canal est désormais BIDIRECTIONNEL. Avant, seul le client parlait
+   (`barge_in`/`user_segment`/`cancel`) et le worker ne répondait jamais : le front
+   devait donc inventer l'état (« Je vous écoute… » en dur) et ne pouvait jamais
+   afficher la transcription réelle. `agent_speaking`/`agent_done` existaient
+   dans le schéma mais n'étaient émis par personne — c'est-à-dire que personne
+   ne les écoutait.                                    */
+
+/** Client → worker */
 export const voiceEventBase = {
   barge_in: z.object({ type: z.literal("barge_in") }),
   user_segment: z.object({
@@ -143,16 +154,117 @@ export const voiceEventBase = {
     /* durée du segment audio publié (ms) */
     durationMs: z.number().int().nonnegative(),
   }),
-  agent_speaking: z.object({ type: z.literal("agent_speaking") }),
-  agent_done: z.object({ type: z.literal("agent_done") }),
-  cancel: z.object({ type: z.literal("cancel") }),
+  cancel: z.object({ type: z.literal("cancel"), turnId: z.string().optional() }),
 } as const;
 
 export const voiceEventSchema = z.discriminatedUnion("type", [
   voiceEventBase.barge_in,
   voiceEventBase.user_segment,
-  voiceEventBase.agent_speaking,
-  voiceEventBase.agent_done,
   voiceEventBase.cancel,
 ]);
 export type VoiceEvent = z.infer<typeof voiceEventSchema>;
+
+/* Worker → client */
+
+export const AGENT_STATES = ["listening", "thinking", "speaking"] as const;
+export const agentStateSchema = z.enum(AGENT_STATES);
+export type AgentState = z.infer<typeof agentStateSchema>;
+
+export const AGENT_ERROR_CODES = [
+  "asr_unavailable",
+  "tts_unavailable",
+  "no_journey",
+  "unknown_room",
+  "turn_failed",
+] as const;
+export const agentErrorCodeSchema = z.enum(AGENT_ERROR_CODES);
+export type AgentErrorCode = z.infer<typeof agentErrorCodeSchema>;
+
+export const AGENT_TEXT_ROLES = ["user", "agent"] as const;
+export const agentTextRoleSchema = z.enum(AGENT_TEXT_ROLES);
+export type AgentTextRole = z.infer<typeof agentTextRoleSchema>;
+
+export const agentEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("agent_state"),
+    state: agentStateSchema,
+    turnId: z.string().nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("agent_text"),
+    text: z.string(),
+    turnId: z.string().nullable().optional(),
+    final: z.boolean(),
+    /* `user` = transcription ASR réelle, `agent` = réponse du moteur. */
+    role: agentTextRoleSchema,
+  }),
+  z.object({
+    type: z.literal("agent_error"),
+    code: agentErrorCodeSchema,
+    message: z.string(),
+    turnId: z.string().nullable().optional(),
+  }),
+]);
+export type AgentEvent = z.infer<typeof agentEventSchema>;
+
+/** `POST /api/voice/token` — le dossier et la room sont explicites. */
+export const voiceTokenSchema = z.object({
+  url: z.string(),
+  token: z.string(),
+  journeyId: z.string(),
+  room: z.string(),
+  identity: z.string(),
+  ttl: z.number().int().positive(),
+});
+export type VoiceToken = z.infer<typeof voiceTokenSchema>;
+/* ── Conversations, tour d'agent, mémoire (contrat serveur — fastapi.py) ── */
+
+export const conversationSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  status: z.string(),
+  journeyId: z.string().nullable(),
+  createdAt: z.string(),
+  lastActivityAt: z.string().nullable().optional(),
+});
+export type Conversation = z.infer<typeof conversationSchema>;
+
+export const conversationMessageSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  language: z.string().nullable().optional(),
+  journeyId: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+export type ConversationMessage = z.infer<typeof conversationMessageSchema>;
+
+export const MEMORY_KINDS = ["SELF", "PREFERENCE", "FACT", "TEMPORARY", "CONVERSATION"] as const;
+export const memoryKindSchema = z.enum(MEMORY_KINDS);
+export type MemoryKind = z.infer<typeof memoryKindSchema>;
+
+export const memoryItemSchema = z.object({
+  id: z.string(),
+  kind: memoryKindSchema,
+  content: z.string(),
+  source: z.string().nullable().optional(),
+  journeyId: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().nullable().optional(),
+});
+export type ServerMemoryItem = z.infer<typeof memoryItemSchema>;
+
+export const agentTurnResponseSchema = z.object({
+  answer: z.string(),
+  intent: z.string(),
+  language: z.string(),
+  confidence: z.number(),
+  needsClarification: z.boolean(),
+  journeyStatus: z.string().nullable(),
+  nextAction: z.string().nullable(),
+  memoryUsed: z.array(z.object({ kind: z.string(), content: z.string() })),
+  newMemories: z.array(memoryItemSchema),
+  conversation: z.array(conversationMessageSchema),
+});
+export type AgentTurnResponse = z.infer<typeof agentTurnResponseSchema>;

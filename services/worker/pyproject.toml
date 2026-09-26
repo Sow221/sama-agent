@@ -2,7 +2,7 @@
 name = "sama-worker"
 version = "0.1.0"
 description = "Sama Agent — worker IA (ASR Kiriku, LLM NVIDIA, Journey déterministe, TTS xTTS wolof)"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -11,7 +11,8 @@ dependencies = [
     "httpx>=0.28",
     "python-multipart>=0.0.19",
     "livekit-api>=0.9",
-    "livekit-agents>=0.6",
+    "livekit-agents>=1.0",
+    "livekit>=1.0",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
     "psycopg[binary]>=3.2",
@@ -19,6 +20,9 @@ dependencies = [
     "torch>=2.4",
     "transformers>=4.46",
     "numpy>=1.26",
+    # Voix de l'agent (repli réel quand xTTS wolof n'a pas de poids) : Edge neural FR.
+    "edge-tts>=6.1",
+    "miniaudio>=1.59",
 ]
 
 [project.optional-dependencies]

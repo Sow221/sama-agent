@@ -5,39 +5,60 @@ Fournisseur interchangeable (référence §5.5) : le domaine ne dépend pas de c
 """
 from __future__ import annotations
 
+import io
+import logging
 import os
+import threading
+import wave
 
 from agent import mode as app_mode
+
+log = logging.getLogger("sama.asr")
 
 
 class KirikuUnavailableError(RuntimeError):
     pass
 
 
+_infer_lock = threading.Lock()
+
+
 class _LazyKiriku:
     """Charge le modèle UNE fois (warm), le jour J seulement (GPU Brev)."""
     _pipe = None
+    _lock = threading.Lock()
 
     def _load(self):
-        if self._pipe is None:
-            from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+        # Cache au niveau de la CLASSE : un seul modèle par process, partagé par
+        # toutes les sessions (l'agent voix tourne en mode THREAD). Le verrou
+        # évite deux chargements concurrents (préchauffage + premier tour).
+        with type(self)._lock:
+            if type(self)._pipe is None:
+                type(self)._pipe = self._build()
+        return type(self)._pipe
 
-            model_id = os.getenv("KIRIKU_MODEL", "AIHubSN/Kiriku-Wolof-ASR")
-            device = 0 if os.getenv("SAMA_DEVICE", "cuda").lower() == "cuda" else -1
-            torch_dtype = "float16" if device == 0 else "float32"
-            processor = AutoProcessor.from_pretrained(model_id)
-            model = AutoModelForSpeechSeq2Seq.from_pretrained(
-                model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
-            ).to("cuda" if device == 0 else "cpu")
-            self._pipe = pipeline(
-                "automatic-speech-recognition",
-                model=model,
-                tokenizer=processor.tokenizer,
-                feature_extractor=processor.feature_extractor,
-                device=device,
-                generate_kwargs={"language": "wolof", "task": "transcribe"},
-            )
-        return self._pipe
+    def _build(self):
+        from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+
+        model_id = os.getenv("KIRIKU_MODEL", "AIHubSN/Kiriku-Wolof-ASR")
+        device = 0 if os.getenv("SAMA_DEVICE", "cuda").lower() == "cuda" else -1
+        torch_dtype = "float16" if device == 0 else "float32"
+        processor = AutoProcessor.from_pretrained(model_id)
+        model = AutoModelForSpeechSeq2Seq.from_pretrained(
+            model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True
+        ).to("cuda" if device == 0 else "cpu")
+        return pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            tokenizer=processor.tokenizer,
+            feature_extractor=processor.feature_extractor,
+            device=device,
+        )
+
+    #: Langue forcée au décodage. « wolof » n'est pas une langue Whisper standard :
+    #: si le modèle la refuse, on retombe (une fois pour toutes) sur la détection
+    #: du fine-tune. KIRIKU_LANGUAGE="" désactive le forçage d'emblée.
+    _language: str | None = os.getenv("KIRIKU_LANGUAGE", "wolof").strip() or None
 
     def transcribe(self, audio_wav_bytes: bytes) -> str:
         if not app_mode.is_live():
@@ -45,11 +66,47 @@ class _LazyKiriku:
                 "ASR non disponible en mode deterministic (Version B : saisie texte)"
             )
         pipe = self._load()
-        result = pipe(audio_wav_bytes)
+        # WAV décodé ici (stdlib) : le pipeline n'a pas besoin de ffmpeg sur le nœud.
+        audio = _wav_to_input(audio_wav_bytes)
+        generate_kwargs = {"task": "transcribe"}
+        if self._language:
+            generate_kwargs["language"] = self._language
+        try:
+            # Une inférence à la fois sur le GPU (sessions en threads, modèle partagé).
+            with _infer_lock:
+                result = pipe(audio, generate_kwargs=generate_kwargs)
+        except ValueError as exc:
+            if not self._language or "language" not in str(exc).lower():
+                raise
+            log.warning("langue %r refusée par le modèle (%s) — détection du modèle", self._language, exc)
+            type(self)._language = None
+            with _infer_lock:
+                result = pipe(audio, generate_kwargs={"task": "transcribe"})
         return str(result.get("text", "")).strip()
 
 
+def _wav_to_input(wav_bytes: bytes) -> dict:
+    """WAV PCM 16 bits mono → entrée brute du pipeline (float32 [-1, 1] + fréquence)."""
+    import numpy as np
+
+    with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
+        rate = wf.getframerate()
+        pcm = wf.readframes(wf.getnframes())
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768.0
+    return {"raw": samples, "sampling_rate": rate}
+
+
 _kiriku = _LazyKiriku()
+
+
+def warm() -> None:
+    """Charge (et télécharge au besoin) Kiriku sur le GPU, une fois par process.
+
+    Appelé au démarrage de l'agent voix : sans cela, le PREMIER tour vocal
+    attendait le téléchargement (~3 Go) puis le chargement du modèle.
+    """
+    if app_mode.is_live():
+        _kiriku._load()
 
 
 def transcribe(audio_wav_bytes: bytes) -> str:

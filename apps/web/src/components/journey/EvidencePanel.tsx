@@ -5,10 +5,12 @@ import type { Evidence } from "@/lib/schemas";
 /** Preuve officielle + limites (C §66) — mention explicite : pas de validation OBLIGATOIRE. */
 export function EvidencePanel({ evidence }: { evidence: Evidence }) {
   return (
-    <div className="space-y-4">
-      <div className="rounded-card bg-surface border border-surface-2 p-4">
-        <p className="text-sm text-text2">Source officielle</p>
-        <p className="font-semibold">{evidence.source}</p>
+    <div className="space-y-3">
+      <div className="rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text2">
+          Source officielle
+        </p>
+        <p className="mt-1 font-semibold">{evidence.source}</p>
         {evidence.sourceUrl ? (
           <a
             href={evidence.sourceUrl}
@@ -20,11 +22,11 @@ export function EvidencePanel({ evidence }: { evidence: Evidence }) {
           </a>
         ) : null}
       </div>
-      <div className="rounded-card bg-surface border border-surface-2 p-4">
+      <div className="rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
         <p className="font-semibold">Ce qu'il faut</p>
         <p className="mt-1 text-text1">{evidence.description}</p>
       </div>
-      <div className="rounded-card bg-warning/10 border border-warning/30 p-4">
+      <div className="rounded-card border border-warning/30 bg-warning/10 p-4">
         <p className="font-semibold text-warning">À noter</p>
         <ul className="mt-2 space-y-1 text-sm text-text1">
           {evidence.limitations.map((l, i) => (

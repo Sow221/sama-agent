@@ -1,18 +1,33 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
 import { AuthProvider } from "@/lib/auth/auth-context";
-import { Header } from "@/components/layout/Header";
-import { BottomNav } from "@/components/layout/BottomNav";
+import { ToastProvider } from "@/components/ui/overlays";
 import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
+const DESCRIPTION =
+  "Comprendre et suivre les démarches administratives au Sénégal, à la voix, en wolof. Application en français.";
+
+// Pas de `title` ici : le titre d'onglet est rendu par écran (RouteTitle, providers.tsx).
 export const metadata: Metadata = {
-  title: "Sama Agent — Assistant administratif vocal",
-  description:
-    "Comprendre et suivre les démarches administratives au Sénégal, à la voix, en wolof. Application en français.",
+  description: DESCRIPTION,
+  applicationName: "Sama Agent",
+  openGraph: {
+    title: "Sama Agent — Assistant administratif vocal",
+    description: DESCRIPTION,
+    type: "website",
+    locale: "fr_SN",
+    siteName: "Sama Agent",
+  },
+  twitter: { card: "summary", title: "Sama Agent", description: DESCRIPTION },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a1220",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -23,13 +38,12 @@ export default function RootLayout({
   return (
     <html lang="fr" className={inter.variable}>
       <body className="min-h-dvh bg-bg text-text1 antialiased">
+        <div className="aurora" aria-hidden />
         <AuthProvider>
           <Providers>
-            <Suspense fallback={null}>
-              <Header />
-            </Suspense>
-            <main className="container-page">{children}</main>
-            <BottomNav />
+            <ToastProvider>
+              <Suspense fallback={null}>{children}</Suspense>
+            </ToastProvider>
           </Providers>
         </AuthProvider>
       </body>

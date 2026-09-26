@@ -5,10 +5,9 @@ Aucune règle métier ici : tout est porté par les use cases.
 """
 from __future__ import annotations
 
-from agent.schemas import JourneyDocument
-from agent.application.use_cases.process_voice import process_voice_turn
+from agent.application.use_cases.process_voice import VoiceReply, process_voice_turn
 
 
-def voice_turn(text: str, journey_id: str, documents: list[JourneyDocument] | None = None) -> str:
+def voice_turn(text: str, journey_id: str) -> VoiceReply:
     """Un tour complet : ASR (fait par l'appelant) → intent → journey → réponse formulée."""
-    return process_voice_turn(text, journey_id, documents=documents)
+    return process_voice_turn(text, journey_id)

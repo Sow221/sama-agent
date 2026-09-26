@@ -8,6 +8,7 @@ from agent.application.use_cases.get_evidence import get_evidence
 from agent.application.use_cases.process_voice import process_voice_turn
 from agent.application.use_cases.persist_journey import apply_journey, resume_journey
 from agent.application.use_cases.persist_analysis import persist_document_analysis
+from agent.application.use_cases.agent_turn import run_agent_turn, run_tool_loop
 
 __all__ = [
     "infer_intent",
@@ -18,4 +19,6 @@ __all__ = [
     "apply_journey",
     "resume_journey",
     "persist_document_analysis",
+    "run_agent_turn",
+    "run_tool_loop",
 ]

@@ -1,6 +1,8 @@
 /**
  * Microphone → VAD Silero WASM (ADR-004 : VAD côté client).
- * API réelle @ricky0123/vad-web v0.0.25 : MicVAD.new(options).
+ * API réelle @ricky0123/vad-web v0.0.31 : la v0.0.31 remplace l'option `stream`
+ * par getStream/pauseStream/resumeStream (+ startOnLoad). `start()` reprend le
+ * rôle de l'ancien `resume()`. onSpeechStart/onSpeechEnd : signatures inchangées.
  *  - onSpeechStart → barge-in + phase "J'écoute…"
  *  - onSpeechEnd → le segment audio réel (Float32Array 16 kHz) + event user_segment
  */
@@ -23,7 +25,11 @@ export class SileroVad {
     const vad = await RickyMicVAD.new({
       ...defaults,
       model: "v5",
-      stream,
+      // Le flux est déjà fourni (LiveKit) : on ne le coupe ni ne le ré-acquiert jamais.
+      getStream: async () => stream,
+      pauseStream: async () => {},
+      resumeStream: async () => stream,
+      startOnLoad: false,
       onSpeechStart: () => {
         if (!this.disposed) cb.onSpeechStart();
       },
@@ -39,13 +45,14 @@ export class SileroVad {
     this.vad?.pause();
   }
 
+  /** v0.0.31 : `start()` reprend l'écoute après pause. */
   resume(): Promise<void> | void {
-    return this.vad?.resume();
+    return this.vad?.start();
   }
 
   destroy(): void {
     this.disposed = true;
-    this.vad?.destroy();
+    void this.vad?.destroy();
     this.vad = null;
   }
 }

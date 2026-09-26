@@ -3,8 +3,10 @@
  * - journeyIdFor : identifiant de dossier PAR-USAGER (appropriation serveur).
  * - authBearerHeaders : aucun en-tête sans Supabase configuré (mode harnais) —
  *   l'identité de service du worker s'applique, on ne masque jamais.
+ * - authBearerHeaders NE REJETTE JAMAIS : c'est vérifié en simulant une auth
+ *   configurée dont la lecture de session échoue.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { journeyIdFor, procedureIdOf } from "./journey-id";
 import { authBearerHeaders } from "./supabase";
 
@@ -40,5 +42,57 @@ describe("authBearerHeaders — harnais sans Supabase", () => {
   it("renvoie des en-têtes vides quand l'auth n'est pas configurée (identité de service)", async () => {
     // En environnement de test, NEXT_PUBLIC_SUPABASE_* ne sont pas définis.
     expect(await authBearerHeaders()).toEqual({});
+  });
+});
+
+describe("authBearerHeaders — auth configurée", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  /** Réimporte le module avec l'auth « configurée » (constantes lues au chargement). */
+  async function withAuthConfigured() {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://projet.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "cle-anon");
+    vi.resetModules();
+    return import("./supabase");
+  }
+
+  it("joint le jeton quand l'usager est connecté", async () => {
+    const { authBearerHeaders } = await withAuthConfigured();
+    const headers = await authBearerHeaders(async () => ({ session: { access_token: "tok-1" } }));
+    expect(headers).toEqual({ authorization: "Bearer tok-1" });
+  });
+
+  it("ne joint rien quand la session est simplement absente", async () => {
+    // État normal : personne n'est connecté. Ce n'est pas une erreur.
+    const { authBearerHeaders } = await withAuthConfigured();
+    expect(await authBearerHeaders(async () => ({ session: null }))).toEqual({});
+  });
+
+  it("REGRESSION : une lecture de session en échec ne fait PAS échouer l'appel", async () => {
+    // Le défaut : le rejet remontait de `authBearerHeaders`, donc `request()`
+    // échouait AVANT `fetch`. Une Supabase instable rendait cassées toutes les
+    // requêtes de l'application, y compris celles qui n'exigent pas d'auth.
+    // Constaté en e2e : l'app entière bloquée sur « chargement ».
+    const { authBearerHeaders } = await withAuthConfigured();
+    const headers = await authBearerHeaders(async () => {
+      throw new Error("Fetch failed");
+    });
+    expect(headers).toEqual({});
+  });
+
+  it("reste muet sur l'échec : pas de secret divulgué, pas de rejet", async () => {
+    const { authBearerHeaders } = await withAuthConfigured();
+    let thrown: unknown = null;
+    try {
+      await authBearerHeaders(async () => {
+        throw new Error("https://xyz.supabase.co/auth/v1?key=SECRET");
+      });
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeNull();
   });
 });

@@ -189,9 +189,54 @@ class AuditEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class Conversation(TimestampMixin, Base):
+    """Historique des conversations (P1 — remplace le localStorage du front).
+
+    `user_id` est l'identité réelle (sub Supabase) : chaque requête filtre par
+    propriétaire — un usager ne peut JAMAIS lire/modifier/supprimer celle d'un autre
+    (testé explicitement, cf. tests/matrix/test_conversations.py).
+    """
+    __tablename__ = "conversations"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(255), default="Nouvelle conversation")
+    status: Mapped[str] = mapped_column(String(24), default="active")  # active | archived
+    journey_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ConversationMessage(Base):
+    __tablename__ = "conversation_messages"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    role: Mapped[str] = mapped_column(String(12))  # user | assistant
+    content: Mapped[str] = mapped_column(Text)
+    language: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    journey_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MemoryItem(TimestampMixin, Base):
+    """Mémoire long terme (P1) — liée à l'usager, persistante, récupérable, supprimable.
+
+    kinds : SELF (identité/parcours) · PREFERENCE (préférences) · FACT (fait mémorisé) ·
+            TEMPORARY (info courte durée) · CONVERSATION (résumé lié à un échange).
+    """
+    __tablename__ = "memory_items"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(24))
+    content: Mapped[str] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(24), nullable=True)  # voice | text | agent
+    journey_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 # Toutes les tables pour alembic / create_all
 ALL_MODELS = (
     User, Session, AgentMessage, Procedure, ProcedureVersion, ProcedureStep,
     Requirement, Source, RequirementSource, Journey, JourneyRequirement,
     Document, DocumentObservation, Evidence, ToolCall, AuditEvent,
+    Conversation, ConversationMessage, MemoryItem,
 )
