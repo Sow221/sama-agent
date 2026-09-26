@@ -11,7 +11,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@ricky0123/vad-web": "^0.0.25",
+    "@ricky0123/vad-web": "^0.0.31",
     "@sama/shared": "*",
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.62.0",

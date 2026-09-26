@@ -38,7 +38,7 @@ function usePostAuthRedirect() {
 /* ═══════════════ Log in (§18) ═══════════════ */
 export function LoginForm() {
   usePostAuthRedirect();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,16 +106,6 @@ export function LoginForm() {
           Se connecter
         </Button>
       </form>
-
-      <div className="my-4 flex items-center gap-3 text-sm text-text-muted">
-        <span className="h-px flex-1 bg-border" />
-        ou
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      <Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => signInWithGoogle()}>
-        Continuer avec Google
-      </Button>
     </AuthShell>
   );
 }

@@ -30,7 +30,15 @@ class GlmLlm:
         self._httpx = httpx.Client(timeout=timeout_s)
 
     def _chat(self, messages: list[dict]) -> str:
-        """Un aller-retour réel vers le NIM — renvoie le texte brut du modèle."""
+        """Un aller-retour réel vers le NIM — renvoie le texte brut du modèle.
+
+        NON-streaming (choix mesuré, pas un préjugé) : sur ce backend NVIDIA, le
+        streaming pour les sorties json_object volumineuses est 4× plus lent que la
+        requête synchrone — mesuré 183 469 ms en streaming contre 35–49 s à chaud en
+        non-streaming. Le NIM bufférise la génération. On garde donc le mode
+        synchrone, et l'on transforme proprement les erreurs transport (ex. 504
+        NVIDIA) en LlmUnavailableError — jamais de contenu fabriqué.
+        """
         if not self.base_url or not self.api_key:
             raise LlmUnavailableError("NVIDIA_BASE_URL / NVIDIA_API_KEY manquants")
         payload: dict = {
@@ -40,13 +48,23 @@ class GlmLlm:
         }
         if self._force_json:
             payload["response_format"] = {"type": "json_object"}
-        r = self._httpx.post(
-            f"{self.base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json=payload,
-        )
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
+        try:
+            r = self._httpx.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=payload,
+            )
+            r.raise_for_status()
+            content = r.json()["choices"][0]["message"]["content"]
+            if not content:
+                raise LlmUnavailableError("réponse vide du modèle")
+            return content
+        except LlmUnavailableError:
+            raise
+        except httpx.HTTPError as exc:
+            # Panne transport/temps de réponse (ex. 504 NVIDIA) : décision honnête
+            # au-dessus — clarification ou 503, jamais de contenu fabriqué.
+            raise LlmUnavailableError(f"NIM indisponible : {exc}") from exc
 
     def _request(self, messages: list[dict]) -> dict:
         return self._parse_json(self._chat(messages))

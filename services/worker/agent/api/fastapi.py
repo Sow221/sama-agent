@@ -43,6 +43,32 @@ from agent.schemas import (
 log = logging.getLogger("sama.worker")
 logging.basicConfig(level=logging.INFO)
 
+# ── Défense en profondeur : upload borné + rate limiting (endpoints payants LLM) ──
+# Note produit : un fichier non-image N'EST PAS rejeté — il part en analyse honnête
+# (NEEDS_REVIEW, jamais fabriqué). La défense = taille bornée + limitation de débit ; 
+# la validation de type reste la décision du domaine (content_type + provider vision).
+MAX_UPLOAD_BYTES = int(os.getenv("SAMA_MAX_UPLOAD_MB", "10")) * 1024 * 1024
+_RATELIMIT_MAX = int(os.getenv("SAMA_RATE_LIMIT_PER_MIN", "60"))
+_RATELIMIT_WINDOW_S = 60.0
+_RATELIMIT: dict[str, list[float]] = {}
+
+
+def _check_rate_limit(user_id: str) -> None:
+    """Borne la sur-sollicitation des endpoints qui déclenchent des appels LLM payants.
+
+    Fenêtre glissante en mémoire (suffisant à cette échelle, sans dépendance).
+    Jamais actif en mode harnais (deterministic) : la suite de test n'est pas limitée.
+    """
+    if not app_mode.is_live():
+        return
+    now = time.monotonic()
+    hits = [t for t in _RATELIMIT.get(user_id, []) if now - t < _RATELIMIT_WINDOW_S]
+    if len(hits) >= _RATELIMIT_MAX:
+        raise HTTPException(status_code=429, detail="trop de requêtes — réessayez dans une minute")
+    hits.append(now)
+    _RATELIMIT[user_id] = hits
+
+
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 
@@ -97,16 +123,20 @@ def healthz() -> dict:
 @app.post("/api/intent", response_model=IntentResponse)
 def intent(req: IntentRequest, request: Request,
            user: AuthContext = Depends(require_user)) -> IntentResponse:
+    _check_rate_limit(user.user_id)
     try:
         result = infer_intent(req)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"intent indisponible : {exc}")
+        # Détail technique dans la trace serveur, jamais exposé au client.
+        log.warning("intent — échec de la chaîne LLM : %s", exc)
+        raise HTTPException(status_code=503, detail="le service de compréhension est momentanément indisponible")
     request.state.trace_fields = {
         "intent": result.intent,
         "confidence": result.confidence,
-        # Honnête : le fallback est utilisé en mode deterministic (règles) ; en live ce
-        # n'est pas le cas (l'échec LLM → clarification confiance 0, jamais fabriqué).
-        "fallbackUsed": not app_mode.is_live(),
+        # Honnête, par état réel : le fallback est utilisé quand la chaîne produit
+        # une clarification (confiance 0) au lieu d'une décision — règles sans
+        # mot-clé en mode déterministe, sortie LLM invalide en live. Jamais deviné.
+        "fallbackUsed": bool(result.needsClarification),
         "model": os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3") if app_mode.is_live() else "regles-c",
     }
     return result
@@ -115,6 +145,7 @@ def intent(req: IntentRequest, request: Request,
 @app.post("/api/journey", response_model=JourneyResponse)
 def journey(req: JourneyRequest, request: Request,
             user: AuthContext = Depends(require_user)) -> JourneyResponse:
+    _check_rate_limit(user.user_id)
     try:
         result = apply_journey(req, user_id=user.user_id)
     except KeyError as exc:
@@ -123,6 +154,9 @@ def journey(req: JourneyRequest, request: Request,
     except PermissionError as exc:
         # Appropriation : un parcours d'un autre usager n'est pas modifiable.
         raise HTTPException(status_code=403, detail=str(exc))
+    except Exception as exc:
+        log.warning("journey — échec de la persistance du parcours : %s", exc)
+        raise HTTPException(status_code=503, detail="le service de parcours est momentanément indisponible")
     request.state.trace_fields = {
         "journeyState": result.status,
     }
@@ -151,8 +185,12 @@ async def analyze(
     request: Request = None,
     user: AuthContext = Depends(require_user),
 ) -> DocumentAnalysis:
+    _check_rate_limit(user.user_id)
+    # Fichier entier borné (un upload illimité = risque mémoire). Au-delà : 413.
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="fichier trop volumineux (10 Mo maximum)")
     try:
-        content = await file.read()
         analysis = analyze_document(
             requirement_id=requirementId,
             file_name=file.filename or "fichier",
@@ -160,7 +198,8 @@ async def analyze(
             content_type=file.content_type or "application/octet-stream",
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"analyse indisponible : {exc}")
+        log.warning("documents/analyze — échec de la chaîne vision : %s", exc)
+        raise HTTPException(status_code=503, detail="l'analyse du document est momentanément indisponible")
     # Persistance réelle (documents + observations + audit) — l'état du dossier suit.
     try:
         persist_document_analysis(journeyId, analysis, file.filename or "fichier",
@@ -170,7 +209,8 @@ async def analyze(
         # Le parcours doit exister avant tout document (FK PostgreSQL vérifiées).
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"persistance indisponible : {exc}")
+        log.warning("documents/analyze — persistance en échec : %s", exc)
+        raise HTTPException(status_code=500, detail="la persistance du dossier est momentanément indisponible")
     request.state.trace_fields = {
         "documentStatus": analysis.status,
         "journeyState": journeyId,
@@ -179,7 +219,7 @@ async def analyze(
 
 
 @app.get("/api/evidence/{requirement}", response_model=Evidence)
-def evidence(requirement: str) -> Evidence:
+def evidence(requirement: str, user: AuthContext = Depends(require_user)) -> Evidence:
     try:
         return get_evidence(requirement)
     except KeyError:
@@ -189,6 +229,7 @@ def evidence(requirement: str) -> Evidence:
 @app.post("/api/voice/token", response_model=VoiceToken)
 def voice_token(user: AuthContext = Depends(require_user)) -> VoiceToken:
     """Token LiveKit réel (ADR-004) — le worker est l'autorité de la room."""
+    _check_rate_limit(user.user_id)
     key = os.getenv("LIVEKIT_API_KEY", "devkey")
     secret = os.getenv("LIVEKIT_API_SECRET", "devsecret")
     room = os.getenv("LIVEKIT_ROOM", "sama-demo")

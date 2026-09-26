@@ -34,12 +34,16 @@ if _url.startswith("sqlite"):
     if file_part and file_part != ":memory:":
         Path(file_part).parent.mkdir(parents=True, exist_ok=True)
 elif _url.startswith("postgresql"):
-    # psycopg3 auto-prépare une requête au serveur après ~5 exécutions (noms
-    # "_pg3_N"). Avec le pooler transactionnel Supabase (PgBouncer, 6543), ce
-    # prepared statement nommé entre en collision d'un backend à l'autre
-    # ("prepared statement _pg3_0 already exists") → échecs intermittents.
-    # Désactivation explicite : sans impact de perf à notre échelle (obs.).
-    _engine_kwargs["connect_args"] = {"prepare_threshold": 0}
+    # psycopg3 prépare une requête côté serveur (noms "_pg3_N"). Avec le pooler
+    # transactionnel Supabase (PgBouncer, 6543), le backend est RESET après chaque
+    # transaction : le cache client garde un nom périmé → "prepared statement
+    # _pg3_N does not exist" (mesuré en live). IMPORTANT (mesuré, psycopg 3.2) :
+    #   prepare_threshold=None → AUCUNE préparation serveur (0 statement)
+    #   prepare_threshold=0    → « prépare immédiatement » (3 statements) ← l'ANCIEN
+    #                             correctif supposait l'inverse et aggravait !
+    # None garantit la compatibilité pooler transactionnel ; sans impact de perf
+    # à notre échelle (une poignée de requêtes par appel).
+    _engine_kwargs["connect_args"] = {"prepare_threshold": None}
     # Le pooler ferme les connexions inactives (~30 s à quelques min) : sans
     # pre_ping, la première requête après un temps mort 500 (OperationalError
     # « server closed the connection unexpectedly »). pre_ping = SELECT 1 au
@@ -50,17 +54,17 @@ elif _url.startswith("postgresql"):
 engine = create_engine(_url, **_engine_kwargs)
 
 if _url.startswith("postgresql"):
-    # VERROU de sécurité : SQLAlchemy ne forward pas toujours connect_args vers
-    # psycopg.connect ; on impose prepare_threshold=0 sur CHAQUE connexion
-    # physique (prouvé : défaut 5 → DuplicatePreparedStatement sur le pooler,
-    # 0 → aucune préparation, aucun conflit). Un simple attribut, toujours appliqué.
+    # VERROU de sécurité : le connect_arg peut ne pas être forwardé selon les
+    # versions ; on impose prepare_threshold=None (JAMAIS préparer serveur — la
+    # valeur mesurée à 0 statements) sur CHAQUE connexion physique.
+    # (Attention : 0 = « prépare immédiatement », inverse de l'intention.)
     from sqlalchemy import event
 
     @event.listens_for(engine, "connect")
     def _no_auto_prepare(dbapi_conn, _record):  # noqa: ANN001
         threshold = getattr(dbapi_conn, "prepare_threshold", None)
-        if threshold not in (None, 0):
-            dbapi_conn.prepare_threshold = 0
+        if threshold is not None:
+            dbapi_conn.prepare_threshold = None
 
 if _url.startswith("sqlite"):
     # SQLite ne vérifie PAS les FK par défaut : on les active pour attraper en dev

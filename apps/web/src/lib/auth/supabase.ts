@@ -58,6 +58,33 @@ export interface SupabaseAuth {
 
 const noopUnsubscribe = () => {};
 
+/** Messages d'erreur d'authentification en français (les codes Supabase restent vrais). */
+const FRENCH_AUTH_ERRORS: Record<string, string> = {
+  invalid_credentials: "E-mail ou mot de passe incorrect.",
+  email_not_confirmed: "Adresse e-mail non confirmée. Vérifiez votre boîte mail.",
+  over_email_send_rate_limit: "Trop de messages envoyés récemment. Réessayez dans quelques minutes.",
+  user_already_exists: "Un compte existe déjà avec cette adresse e-mail.",
+  weak_password: "Mot de passe trop faible (6 caractères minimum).",
+  same_password: "Le nouveau mot de passe doit être différent de l'ancien.",
+  provider_disabled: "Cette méthode de connexion n'est pas disponible.",
+};
+
+function frenchAuthError(error: unknown): Error {
+  if (error instanceof Error) {
+    const code = (error as { code?: string }).code;
+    if (code && FRENCH_AUTH_ERRORS[code]) return new Error(FRENCH_AUTH_ERRORS[code]);
+    const msg = error.message;
+    if (msg === "Invalid login credentials") return new Error("E-mail ou mot de passe incorrect.");
+    if (msg === "Email not confirmed") return new Error("Adresse e-mail non confirmée. Vérifiez votre boîte mail.");
+    if (msg === "User already registered") return new Error("Un compte existe déjà avec cette adresse e-mail.");
+    if (/rate limit|too .* request/i.test(msg)) {
+      return new Error("Trop de tentatives récentes. Réessayez dans quelques minutes.");
+    }
+    return error;
+  }
+  return new Error("Une erreur est survenue. Réessayez.");
+}
+
 export function supabaseAuthFlow(): SupabaseAuth | null {
   if (!isAuthConfigured()) return null;
   const sb = getSupabase();
@@ -72,7 +99,7 @@ export function supabaseAuthFlow(): SupabaseAuth | null {
     },
     async signInWithPassword(email, password) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) throw frenchAuthError(error);
     },
     async signUp(email, password, options) {
       const { error } = await sb.auth.signUp({
@@ -80,14 +107,16 @@ export function supabaseAuthFlow(): SupabaseAuth | null {
         password,
         options: { data: options?.name ? { full_name: options.name } : undefined },
       });
-      if (error) throw error;
+      if (error) throw frenchAuthError(error);
     },
     async signInWithGoogle(redirectTo) {
+      // Provider actuellement désactivé dans le projet Supabase (external.google=false) :
+      // le bouton n'est plus affiché (§99 — pas de promesse sans fonctionnalité).
       const { error } = await sb.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo },
       });
-      if (error) throw error;
+      if (error) throw frenchAuthError(error);
     },
     async signOut() {
       await sb.auth.signOut();
@@ -96,11 +125,11 @@ export function supabaseAuthFlow(): SupabaseAuth | null {
       const { error } = await sb.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) throw error;
+      if (error) throw frenchAuthError(error);
     },
     async updatePassword(newPassword) {
       const { error } = await sb.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      if (error) throw frenchAuthError(error);
     },
   };
 }
