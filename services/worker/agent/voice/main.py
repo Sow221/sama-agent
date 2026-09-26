@@ -60,7 +60,7 @@ front bascule alors en saisie texte (dégradé honnête, jamais de fausse voix).
 """
 try:
     from livekit import rtc
-    from livekit.agents import JobContext, WorkerOptions, cli
+    from livekit.agents import JobContext, JobExecutorType, WorkerOptions, cli
 except ImportError as exc:  # pragma: no cover - depend du poste de dev
     raise ImportError(f"{_MISSING_HINT}\nCause initiale : {exc}") from exc
 
@@ -357,5 +357,35 @@ async def entrypoint(ctx: JobContext) -> None:
         raise
 
 
+def worker_options() -> WorkerOptions:
+    """Options du worker LiveKit, réglées pour un modèle ASR lourd sur GPU.
+
+    - THREAD (et non PROCESS, défaut du SDK) : les sessions partagent le process,
+      donc UN seul Kiriku (~10 Go de VRAM) chargé une fois. En PROCESS, chaque
+      session rechargeait le modèle (premier tour très lent, VRAM épuisée).
+    - load_threshold : le SDK refuse les sessions au-delà de 70 % de charge CPU
+      en production ; l'inférence ASR dépasse ce seuil en pointe.
+    """
+    return WorkerOptions(
+        entrypoint_fnc=entrypoint,
+        job_executor_type=JobExecutorType.THREAD,
+        load_threshold=float(os.getenv("VOICE_LOAD_THRESHOLD", "0.95")),
+    )
+
+
+def _warm_models() -> None:
+    """Préchauffe Kiriku au démarrage : le premier tour vocal n'attend pas le
+    téléchargement ni le chargement du modèle. Une panne est journalisée, jamais
+    fatale (l'agent renverra alors une erreur ASR honnête au client)."""
+    try:
+        asr_kiriku.warm()
+        log.info("Kiriku chargé — ASR prêt")
+    except Exception:
+        log.exception("préchauffage Kiriku impossible")
+
+
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    import threading
+
+    threading.Thread(target=_warm_models, name="kiriku-warmup", daemon=True).start()
+    cli.run_app(worker_options())

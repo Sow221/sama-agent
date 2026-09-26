@@ -13,38 +13,28 @@ que s'il est vert. Aucun secret dans ce fichier.
 
 ## 1. Worker sur Brev (GPU)
 
-Variables d'environnement Brev (voir `infra/brev/README.md` pour la liste complète) :
-
-```
-SAMA_MODE=live
-SAMA_DEVICE=cuda
-NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-NVIDIA_API_KEY=…
-NVIDIA_MODEL=z-ai/glm-5.3
-SAMA_DATABASE_URL=postgresql+psycopg://…pooler.supabase.com:6543/postgres
-SUPABASE_JWT_SECRET=…
-LIVEKIT_URL=wss://<projet>.livekit.cloud
-LIVEKIT_API_KEY=…
-LIVEKIT_API_SECRET=…
-ALLOWED_ORIGINS=https://<votre-app>.vercel.app
-# Voix de l'agent : xTTS wolof n'a pas de poids publiés → NE PAS définir XTTS_MODEL.
-# Le résolveur utilise alors Edge neural (français).
-SAMA_TTS_BACKEND=edge
-```
-
-Installation puis démarrage :
+1. Console Brev → **Create Instance** → un GPU de 24 Go (L4, A10G ou L40S suffit :
+   Kiriku ≈ 4–6 Go de VRAM en fp16).
+2. Ouvrir un terminal sur l'instance (console Brev, ou `brev shell <instance>`), puis :
 
 ```bash
-cd services/worker && pip install -e .
-bash infra/brev/run-production.sh      # migrations + API :8000 + agent voix (« start »)
+git clone https://github.com/Sow221/sama-agent.git && cd sama-agent
+bash infra/brev/setup-brev.sh                  # Python, dépendances, cloudflared (une fois)
+cp infra/brev/sama.env.example ~/sama.env
+nano ~/sama.env                                # remplir les secrets (jamais commités)
+bash infra/brev/run-production.sh              # API + agent voix + adresse HTTPS publique
 ```
 
+`run-production.sh` vérifie les variables (sans les afficher), applique les migrations,
+lance l'API, l'agent voix (`start`), puis un tunnel Cloudflare, et **affiche l'adresse
+publique `https://….trycloudflare.com`** à reporter dans Vercel.
+(Alternative : exposer le port 8000 via l'onglet **Access** de Brev — mais un tunnel
+Brev protégé par authentification bloquera les appels du site Vercel.)
+
 **Contrôles**
-- `curl https://<api-brev>/healthz` → `{"status":"ok","mode":"live"}`
-- Les logs de l'agent voix montrent l'enregistrement auprès de LiveKit
-  (pas l'aide de la CLI : la commande doit être `python -m agent.voice.main start`).
-- Le port 8000 est exposé en **HTTPS** par Brev (lien de partage / tunnel) : c'est
-  cette URL qui sert de `NEXT_PUBLIC_API_URL`.
+- `https://<adresse-publique>/healthz` dans un navigateur → `{"status":"ok","mode":"live"}`
+- `tail -f var/logs/voice.log` : l'agent s'enregistre auprès de LiveKit et
+  « Kiriku chargé — ASR prêt » apparaît (premier démarrage : téléchargement ~3 Go).
 
 ## 2. Supabase
 

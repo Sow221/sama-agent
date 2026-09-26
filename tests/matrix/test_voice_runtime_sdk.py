@@ -189,3 +189,12 @@ def test_edge_tts_streams_into_memory_buffer(monkeypatch) -> None:
     out = io.BytesIO()
     tts_edge._synthesize_async("bonjour", "fr-FR-DeniseNeural", out)
     assert out.getvalue() == b"ID3-mp3"
+
+
+def test_worker_shares_one_asr_model_across_sessions() -> None:
+    """Sessions en THREAD (un seul Kiriku en VRAM) et seuil de charge relevé."""
+    from livekit.agents import JobExecutorType
+
+    opts = voice_main.worker_options()
+    assert opts.job_executor_type == JobExecutorType.THREAD
+    assert opts.load_threshold >= 0.9
