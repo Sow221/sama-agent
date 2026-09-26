@@ -1,13 +1,12 @@
 "use client";
 
-/** Écran 7 — Limites : transparence honnête (C §16/§66). */
+/** Écran Limites — transparence honnête (C §16/§66) — spec §63 Help. */
 import { GlassCard } from "@/components/ui";
 
 const LIMITS = [
   "Sama Agent est un assistant d'accompagnement, pas une administration.",
   "L'analyse d'un document n'est pas une validation administrative officielle.",
   "La vérification définitive relève du service compétent (CAPP Karangë).",
-  "Pendant la voix, aucune transcription n'est affichée : l'app reste en français.",
   "Les informations affichées proviennent de sources officielles, vérifiées au moment de la démonstration.",
 ];
 

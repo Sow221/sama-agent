@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
 import { AuthProvider } from "@/lib/auth/auth-context";
-import { Header } from "@/components/layout/Header";
+import { ToastProvider } from "@/components/ui/overlays";
 import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -25,10 +25,9 @@ export default function RootLayout({
         <div className="aurora" aria-hidden />
         <AuthProvider>
           <Providers>
-            <Suspense fallback={null}>
-              <Header />
-            </Suspense>
-            <main className="container-page">{children}</main>
+            <ToastProvider>
+              <Suspense fallback={null}>{children}</Suspense>
+            </ToastProvider>
           </Providers>
         </AuthProvider>
       </body>

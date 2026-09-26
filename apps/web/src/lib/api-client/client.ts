@@ -51,6 +51,10 @@ async function request<T>(
   });
 
   if (!res.ok) {
+    // 401 → événement système « session expirée » (§44), écouté par AppSystemUI.
+    if (res.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("sama:unauthorized"));
+    }
     const detail = await res.text().catch(() => "");
     throw new ApiError(
       `API ${path} → ${res.status}${detail ? ` : ${detail.slice(0, 200)}` : ""}`,
@@ -64,11 +68,15 @@ async function request<T>(
 }
 
 export const api = {
-  /** POST /api/intent — comprend la demande */
-  intent(transcript: string, language?: "fr" | "wo"): Promise<IntentResponse> {
+  /** POST /api/intent — comprend la demande (contexte facultatif : dossier en cours) */
+  intent(
+    transcript: string,
+    language?: "fr" | "wo",
+    context?: { journeyId?: string; stepId?: string }
+  ): Promise<IntentResponse> {
     return request("/api/intent", intentResponseSchema, {
       method: "POST",
-      body: JSON.stringify({ transcript, language }),
+      body: JSON.stringify({ transcript, language, context }),
     });
   },
 

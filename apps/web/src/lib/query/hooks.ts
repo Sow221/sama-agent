@@ -14,8 +14,15 @@ import type {
 
 export function useIntentMutation(onSuccess: (r: IntentResponse) => void) {
   return useMutation({
-    mutationFn: ({ transcript, language }: { transcript: string; language?: "fr" | "wo" }) =>
-      api.intent(transcript, language),
+    mutationFn: ({
+      transcript,
+      language,
+      context,
+    }: {
+      transcript: string;
+      language?: "fr" | "wo";
+      context?: { journeyId?: string; stepId?: string };
+    }) => api.intent(transcript, language, context),
     onSuccess,
   });
 }

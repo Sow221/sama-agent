@@ -1,35 +1,37 @@
 "use client";
 
 /**
- * PhaseHeader — libellé PILOTÉ par la phase réelle de la session vocale
- * (VoicePhase du store : connecting/listening/thinking/speaking/idle).
- * Pastille de couleur par état + libellé (aucun contenu simulé).
+ * PhaseHeader — libellé PILOTÉ par la phase réelle de la session vocale (§30-32).
+ * Mapping CoreState vers labels, pastille de couleur par état (jamais deviné).
  */
-import { useVoiceStore } from "@/lib/state/stores";
+import { CORE_STATE_LABEL, type CoreState } from "./VoiceCore";
 
-const META: Record<string, { label: string; dot: string }> = {
-  connecting: { label: "Connexion…", dot: "bg-text2" },
-  listening: { label: "J'écoute…", dot: "bg-primary" },
-  thinking: { label: "J'analyse…", dot: "bg-warning" },
-  speaking: { label: "Je réponds…", dot: "bg-accent-ai" },
-  idle: { label: "", dot: "" },
+const DOT: Record<CoreState, string> = {
+  idle: "bg-primary",
+  connecting: "bg-text-muted animate-pulse",
+  listening: "bg-primary",
+  transcribing: "bg-accent-ai",
+  processing: "bg-warning animate-pulse",
+  speaking: "bg-accent-ai",
+  acting: "bg-primary animate-pulse",
+  waiting_confirmation: "bg-warning animate-pulse",
+  success: "bg-primary",
+  paused: "bg-text-muted",
+  interrupted: "bg-warning",
+  error: "bg-error",
+  offline: "bg-text-muted",
 };
 
-export function PhaseHeader() {
-  const phase = useVoiceStore((s) => s.phase);
-  const meta = META[phase];
-  if (!meta || !meta.label) return null;
+export function PhaseHeader({ state }: { state: CoreState }) {
+  const label = CORE_STATE_LABEL[state];
+  if (!label) return null;
   return (
     <p
       aria-live="polite"
       className="flex items-center justify-center gap-2.5 text-center text-lg font-semibold text-text1"
     >
-      <span
-        className={`inline-block h-2.5 w-2.5 rounded-full ${meta.dot} ${
-          phase === "thinking" ? "animate-pulse" : ""
-        }`}
-      />
-      {meta.label}
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT[state]}`} />
+      {label}
     </p>
   );
 }

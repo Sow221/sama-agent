@@ -47,9 +47,13 @@ export interface SupabaseAuth {
   getSession: () => Promise<Session | null>;
   onAuthStateChange: (cb: (session: Session | null) => void) => () => void;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, options?: { name?: string }) => Promise<void>;
   signInWithGoogle: (redirectTo: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Mot de passe oublié (§20) — envoie un lien réel de réinitialisation. */
+  resetPassword?: (email: string) => Promise<void>;
+  /** Nouveau mot de passe depuis /reset-password (§22). */
+  updatePassword?: (newPassword: string) => Promise<void>;
 }
 
 const noopUnsubscribe = () => {};
@@ -70,8 +74,12 @@ export function supabaseAuthFlow(): SupabaseAuth | null {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
-    async signUp(email, password) {
-      const { error } = await sb.auth.signUp({ email, password });
+    async signUp(email, password, options) {
+      const { error } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: options?.name ? { full_name: options.name } : undefined },
+      });
       if (error) throw error;
     },
     async signInWithGoogle(redirectTo) {
@@ -83,6 +91,16 @@ export function supabaseAuthFlow(): SupabaseAuth | null {
     },
     async signOut() {
       await sb.auth.signOut();
+    },
+    async resetPassword(email) {
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+    },
+    async updatePassword(newPassword) {
+      const { error } = await sb.auth.updateUser({ password: newPassword });
+      if (error) throw error;
     },
   };
 }

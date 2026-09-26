@@ -25,9 +25,13 @@ export interface AuthValue {
   session: Session | null;
   user: Session["user"] | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, options?: { name?: string }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Mot de passe oublié (§20). */
+  resetPassword: (email: string) => Promise<void>;
+  /** Nouveau mot de passe (§22). */
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -74,8 +78,8 @@ export function AuthProvider({
     [auth]
   );
   const signUp = useCallback(
-    async (email: string, password: string) => {
-      if (auth) await auth.signUp(email, password);
+    async (email: string, password: string, options?: { name?: string }) => {
+      if (auth) await auth.signUp(email, password, options);
     },
     [auth]
   );
@@ -85,6 +89,18 @@ export function AuthProvider({
   const signOut = useCallback(async () => {
     if (auth) await auth.signOut();
   }, [auth]);
+  const resetPassword = useCallback(
+    async (email: string) => {
+      if (auth) await auth.resetPassword?.(email);
+    },
+    [auth]
+  );
+  const updatePassword = useCallback(
+    async (newPassword: string) => {
+      if (auth) await auth.updatePassword?.(newPassword);
+    },
+    [auth]
+  );
 
   const value = useMemo<AuthValue>(
     () => ({
@@ -96,8 +112,20 @@ export function AuthProvider({
       signUp,
       signInWithGoogle,
       signOut,
+      resetPassword,
+      updatePassword,
     }),
-    [configured, loading, session, signIn, signUp, signInWithGoogle, signOut]
+    [
+      configured,
+      loading,
+      session,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      resetPassword,
+      updatePassword,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
