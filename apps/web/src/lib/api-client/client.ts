@@ -10,10 +10,12 @@ import {
   evidenceSchema,
   intentResponseSchema,
   journeyResponseSchema,
+  voiceTokenSchema,
   type DocumentAnalysis,
   type Evidence,
   type IntentResponse,
   type JourneyResponse,
+  type VoiceToken,
 } from "@/lib/schemas";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -107,9 +109,17 @@ export const api = {
     return request(`/api/evidence/${encodeURIComponent(requirement)}`, evidenceSchema);
   },
 
-  async voiceToken(): Promise<{ url: string; token: string }> {
-    return request("/api/voice/token", z.object({ url: z.string(), token: z.string() }), {
+  /**
+   * POST /api/voice/token — jeton LiveKit réel pour UN dossier.
+   * `journeyId` est optionnel : à défaut, l'API reprend le dossier de l'usager.
+   * Le serveur répond 503 (clés LiveKit absentes) ou 409 (aucun dossier) plutôt
+   * que de signer un jeton vers une room fantôme : le front peut donc afficher
+   * un message honnête au lieu d'échouer plus tard, sans explication.
+   */
+  voiceToken(journeyId?: string): Promise<VoiceToken> {
+    return request("/api/voice/token", voiceTokenSchema, {
       method: "POST",
+      body: JSON.stringify(journeyId ? { journeyId } : {}),
     });
   },
 };

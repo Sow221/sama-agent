@@ -6,7 +6,7 @@
  * prochaine action issue de `nextAction` — jamais générées côté client.
  */
 import Link from "next/link";
-import { Button, Card, EmptyState } from "@/components/ui";
+import { Button, Card, EmptyState, Hydrating } from "@/components/ui";
 import { ArrowRightIcon, CheckIcon } from "@/components/icons";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 
@@ -14,7 +14,9 @@ export default function ActionsPage() {
   const journey = useJourneyStore((s) => s.response);
   const ready = usePersistReady();
 
-  if (!ready) return null;
+  // Le garde-fou reste (ne pas lire un store non hydraté) : c'est le rendu qui
+  // affichait un écran VIDE, pas un chargement.
+  if (!ready) return <Hydrating />;
 
   if (!journey) {
     return (

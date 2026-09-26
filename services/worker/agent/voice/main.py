@@ -1,190 +1,365 @@
-"""
-Agent LiveKit — la boucle vocale réelle (ADR-004/005).
+"""Agent LiveKit — la boucle vocale réelle (ADR-004/005).
 
 Flux (tout réel, zéro contenu pré-écrit) :
-  client (VAD Silero) ──DataChannel──► this worker
+  client (VAD Silero) ──DataChannel──► ce worker
       user_segment / barge_in / cancel
-  audio micro ──► ASR Kiriku (wolof) ──► orchestrator (intent → Journey → formulation)
+  audio micro ──► ASR Kiriku (wolof) ──► orchestrateur (intent → Journey → formulation)
       ──► xTTS wolof ──► track audio publiée dans la room (voix IA réelle).
 
-Structure hexagonale (référence §5) : le worker appelle l'ORCHESTRATEUR applicatif,
-jamais le domaine ni les providers directement ici.
+Ce fichier est un **adaptateur LiveKit mince**. Toute la logique testable
+(rééchantillonnage, découpe en trames, protocole, barge-in) vit dans
+`agent.voice.audio`, `agent.voice.protocol` et `agent.voice.session`, qui sont
+purs et couverts par `tests/matrix/test_voice_loop.py`. C'est délibéré : avant,
+100 % de cette logique vivait ici, derrière `import numpy` / `import
+livekit.agents`, donc le module ne pouvait pas être importé sur une machine sans
+GPU et la logique vocale n'était couverte par AUCUN test.
+
+Trois erreurs structurelles corrigées ici :
+  1. **Dossier inconnu du nom de la room.** L'ancien code lisait
+     `os.getenv("LIVEKIT_ROOM", "sama-demo")` et chargeait la procédure
+     « sama-demo » → `KeyError`. Le dossier est désormais décodé du nom de la
+     room (convention réversible de `agent.domain.naming`), et une room
+     inconnue est refusée **proprement**, avec un code d'erreur envoyé au client.
+  2. **Audio micro jamais reçu.** L'ancien code itérait
+     `room.remote_participants` une seule fois, au moment de l'entrée : un
+     client qui rejoint la room plus tard n'était jamais écouté, et un track non
+     publié renvoyait `None` (AttributeError sur `None.on`). On s'abonne à
+     l'événement `track_subscribed`, qui couvre l'arrivée tardive, et on
+     démarre explicitement le routage audio de la room.
+  3. **Appels bloquants sur la boucle d'événements.** ASR, calcul du tour et TTS
+     sont synchrones et lourds (secondes). Sur la boucle asyncio, ils gelaient
+     la room entière — donc le barge-in ne pouvait pas arriver pendant un calcul.
+     Ils passent désormais par `asyncio.to_thread`, et le barge-in les annule.
 """
 from __future__ import annotations
 
 import asyncio
-import io
-import json
 import logging
 import os
-import struct
-import wave
 
-import numpy as np
-from livekit import rtc
-from livekit.agents import WorkerOptions, cli
-
-from agent import bootstrap  # noqa: F401
-from agent.schemas import DocumentAnalysis, JourneyDocument, JourneyRequest
-from agent.application.orchestration.agent_orchestrator import voice_turn
-from agent.application.use_cases.analyze_document import analyze_document
-from agent.application.use_cases.get_journey import get_journey
-from agent.infrastructure.stt import asr_kiriku
-from agent.infrastructure.tts import tts_xtts
+from agent import bootstrap  # noqa: F401  (met sys.path avant les imports agent)
+from agent.domain.naming import journey_id_of
+from agent.schemas import JourneyDocument, JourneyRequest
+from agent.voice import audio, protocol
+from agent.voice.session import VoiceSession, _Superseded
 
 log = logging.getLogger("sama.worker.voice")
 logging.basicConfig(level=logging.INFO)
 
-# État réel du dossier côté worker (mémoire de session ; la persistance PostgreSQL arrive
-# en Phase PERS via les repositories — l'état serveur devient alors source de vérité).
-_DOSSIERS: dict[str, list[JourneyDocument]] = {}
+# ── Dépendances lourdes : échec EXPLICITE et actionnable, pas un ModuleNotFoundError
+_MISSING_HINT = """\
+La boucle vocale réelle requiert le SDK agent LiveKit et ses dépendances lourdes.
+
+    pip install "livekit-agents>=1.0" "livekit>=1.8" numpy
+
+Le CPU (ASR Kiriku / TTS xTTS) s'installe séparément, car il pèse plusieurs Go :
+    pip install torch transformers TTS
+
+Sans ces paquets, le reste du produit fonctionne : API HTTP, moteur de parcours,
+analyse de documents, tests. Seule la session vocale est indisponible, et le
+front bascule alors en saisie texte (dégradé honnête, jamais de fausse voix).
+"""
+try:
+    from livekit import rtc
+    from livekit.agents import JobContext, WorkerOptions, cli
+except ImportError as exc:  # pragma: no cover - depend du poste de dev
+    raise ImportError(f"{_MISSING_HINT}\nCause initiale : {exc}") from exc
+
+# Les fournisseurs STT/TTS sont importés tardivement : ils ne sont utiles qu'une
+# fois la room connectée, et ils lèvent eux-mêmes une erreur lisible en mode
+# déterministe (le front bascule alors en texte).
+from agent.application.orchestration.agent_orchestrator import voice_turn
+from agent.application.use_cases.get_journey import get_journey
+from agent.infrastructure.stt import asr_kiriku
+from agent.infrastructure.tts import synthesize as tts_synthesize
+
+#: Borne mémoire explicite : segment de 30 s en PCM mono 48 kHz / 16 bits.
+MAX_BUFFERED_AUDIO_SECONDS = 30
+MAX_BUFFERED_AUDIO_BYTES = audio.MIC_SAMPLE_RATE * 2 * MAX_BUFFERED_AUDIO_SECONDS
 
 
-def update_dossier_from_analysis(journey_id: str, analysis: DocumentAnalysis) -> None:
-    docs = _DOSSIERS.setdefault(journey_id, [])
-    for d in docs:
-        if d.requirementId == analysis.requirementId:
-            d.status = analysis.status
-            return
-    docs.append(JourneyDocument(requirementId=analysis.requirementId, status=analysis.status))
+class VoiceRuntime:
+    """Une session vocale : capture, tours, publication, barge-in."""
 
-
-def _current_journey(journey_id: str):
-    return get_journey(
-        JourneyRequest(journeyId=journey_id, documents=_DOSSIERS.get(journey_id))
-    )
-
-
-def _turn(text: str, journey_id: str) -> str:
-    """Un tour de la boucle : intent (LLM) → Journey (déterministe) → réponse formulée."""
-    return voice_turn(text, journey_id, documents=_DOSSIERS.get(journey_id))
-
-
-def _frames_to_wav_16k(frames: list[rtc.AudioFrame]) -> bytes:
-    """Assemble les frames du segment en un WAV 16 kHz mono réel (entrée ASR Kiriku)."""
-    if not frames:
-        return b""
-    all_raw = b"".join(f.data for f in frames)
-    if not all_raw:
-        return b""
-    samples = np.frombuffer(all_raw, dtype=np.int16).astype(np.float32)
-    # Le micro est 48 kHz : on ré-échantillonne réellement vers 16 kHz (décimation simple, phase 1)
-    if samples.size > 0:
-        step = max(1, round(48000 / 16000))
-        samples = samples[::step]
-    pcm = samples.astype(np.int16).tobytes()
-
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(pcm)
-    return buf.getvalue()
-
-
-def _wav_to_frames(wav_bytes: bytes, sample_rate: int = 24000) -> list[rtc.AudioFrame]:
-    """Découpe le WAV synthétisé en frames (durée 100 ms) pour la publication sur le track."""
-    with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
-        if wf.getframerate() != sample_rate or wf.getnchannels() != 1:
-            raise ValueError(f"attendu {sample_rate} Hz mono, reçu {wf.getframerate()} Hz/{wf.getnchannels()} ch")
-        data = wf.readframes(wf.getnframes())
-    samples = struct.unpack(f"<{len(data) // 2}h", data)
-    frame_size = sample_rate // 10  # 100 ms
-    out: list[rtc.AudioFrame] = []
-    for i in range(0, len(samples), frame_size):
-        chunk = samples[i : i + frame_size]
-        if not chunk:
-            break
-        out.append(
-            rtc.AudioFrame(
-                data=struct.pack(f"<{len(chunk)}h", *chunk),
-                sample_rate=sample_rate,
-                num_channels=1,
-                samples_per_channel=len(chunk),
-            )
+    def __init__(self, ctx: JobContext, journey_id: str) -> None:
+        self.ctx = ctx
+        self.room = ctx.room
+        self.journey_id = journey_id
+        self.speaker = os.getenv("XTTS_SPEAKER", "")
+        self.session = VoiceSession(
+            transcribe=self._transcribe,
+            turn=self._turn,
+            synthesize=self._synthesize,
+            documents_provider=self._documents,
         )
-    return out
+        #: Publication audio en cours (réf. pour pouvoir l'interrompre).
+        self._track = None
+        self._source = None
+        self._stop = asyncio.Event()
+        self._lock = asyncio.Lock()
+        self._audio_tasks: dict[str, asyncio.Task[None]] = {}
+        # Volume du segment en cours, borné en octets plutôt qu'en trames.
+        self._buffered = 0
+        self._buffered_bytes = 0
+        self._audio_limit_hit = False
+
+    # ── Fournisseurs (bloquants : toujours appelés via to_thread) ──────────
+    def _documents(self) -> list[JourneyDocument]:
+        """État réel du dossier, relu au moment du tour (G3 : la base est la
+        source de vérité, jamais une copie en mémoire de la session)."""
+        return get_journey(JourneyRequest(journeyId=self.journey_id)).documents
+
+    def _transcribe(self, wav: bytes) -> str:
+        return asr_kiriku.transcribe(wav)
+
+    def _turn(self, text: str) -> str:
+        return voice_turn(text, self.journey_id, documents=self._documents())
+
+    def _synthesize(self, text: str) -> bytes:
+        # Résolveur réel : xTTS (si configuré) → Edge neural (fr) → SAPI (Windows).
+        # Toute panne remonte en agent_error honnête (le front bascule en texte).
+        return tts_synthesize(text, speaker_wav=self.speaker)
+
+    # ── Canal de données ───────────────────────────────────────────────────
+    async def send(self, event: dict) -> None:
+        """Émet un événement vers le client (jamais bloquant, jamais fatal)."""
+        try:
+            await self.room.local_participant.publish_data(
+                protocol.encode(event),
+                rtc.DataPacket_Kind.RELIABLE,
+            )
+        except Exception as exc:  # le client est parti, la room se ferme…
+            log.debug("envoi client impossible (%s) : %s", event.get("type"), exc)
+
+    # ── Capture audio ──────────────────────────────────────────────────────
+    def on_audio_frame(self, frame) -> None:
+        """Callback `audio_frame` : empile le PCM du segment en cours.
+
+        Ne fait QUE de l'empilement — c'est une garantie de non-blocage pour le
+        thread média de LiveKit. La conversion WAV/16 k a lieu au flush.
+        """
+        pcm = bytes(frame.data)
+        if self._buffered_bytes + len(pcm) > MAX_BUFFERED_AUDIO_BYTES:
+            self._audio_limit_hit = True
+            return
+        self.session.push_audio(pcm)
+        self._buffered += 1
+        self._buffered_bytes += len(pcm)
+
+    async def _read_audio_track(self, track) -> None:
+        """Consomme les trames d'un track distant via l'API LiveKit AudioStream."""
+        stream = rtc.AudioStream(
+            track=track,
+            sample_rate=audio.MIC_SAMPLE_RATE,
+            num_channels=1,
+            capacity=50,
+        )
+        try:
+            async for event in stream:
+                self.on_audio_frame(event.frame)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("lecture du track audio interrompue : %s", getattr(track, "sid", "unknown"))
+        finally:
+            await stream.aclose()
+
+    def _watch_audio_track(self, track, publication) -> None:
+        if track.kind != rtc.TrackKind.KIND_AUDIO:
+            return
+        track_sid = getattr(track, "sid", None) or publication.sid
+        active = self._audio_tasks.get(track_sid)
+        if active is not None and not active.done():
+            return
+        log.info("micro abonné : %s", publication.name)
+        self._audio_tasks[track_sid] = asyncio.create_task(self._read_audio_track(track))
+
+    async def flush_segment(self) -> None:
+        """Fin de segment VAD : WAV → ASR → tour → publication. Chaîne réelle."""
+        pcm_48k = self.session.flush_segment()
+        self._buffered = 0
+        self._buffered_bytes = 0
+        limit_hit = self._audio_limit_hit
+        self._audio_limit_hit = False
+        if limit_hit:
+            await self.send(protocol.agent_error(
+                protocol.ERR_TURN_FAILED,
+                f"segment audio supérieur à {MAX_BUFFERED_AUDIO_SECONDS} secondes",
+            ))
+            return
+        if not pcm_48k:
+            return
+        wav = await asyncio.to_thread(audio.mic_frames_to_wav, [pcm_48k], audio.MIC_SAMPLE_RATE)
+        if not wav:
+            return
+
+        turn_id = self.session.enqueue_segment(wav)
+        await self.send(protocol.agent_state(protocol.ST_THINKING, turn_id))
+        try:
+            result = await asyncio.to_thread(self.session.handle_turn, wav, turn_id)
+        except _Superseded:
+            # Barge-in : ce tour est mort, on ne dit rien (pas même « listening »).
+            log.info("tour %s abandonne (barge-in)", turn_id)
+            return
+
+        # Transcription puis réponse, dans l'ordre — même si la voix, elle, échoue.
+        for event in result["events"]:
+            await self.send(event)
+        if result["audio"] is None:
+            await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
+            return
+
+        # Le barge-in peut être arrivé pendant la synthèse : on ne parle plus.
+        if self.session.is_superseded(turn_id):
+            log.info("tour %s abandonne avant publication (barge-in)", turn_id)
+            return
+
+        await self.send(protocol.agent_state(protocol.ST_SPEAKING, turn_id))
+        await self._publish(result["audio"], turn_id)
+        await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
+
+    async def _publish(self, wav: bytes, turn_id: str) -> None:
+        """Publie le WAV synthétisé trame par trame, en respectant le barge-in."""
+        try:
+            chunks = await asyncio.to_thread(audio.wav_to_chunks, wav, audio.TTS_SAMPLE_RATE, 100)
+        except audio.AudioFormatError as exc:
+            # Format inattendu : la réponse texte est déjà partie, on le signale.
+            await self.send(protocol.agent_error(protocol.ERR_TURN_FAILED, str(exc), turn_id))
+            return
+        if not chunks:
+            return
+
+        source = rtc.AudioSource(sample_rate=audio.TTS_SAMPLE_RATE, num_channels=1)
+        track = rtc.LocalAudioTrack.create_audio_track("agent-voice", source)
+        pub = await self.room.local_participant.publish_track(
+            track, rtc.TrackPublishOptions(source="voice")
+        )
+        self._source, self._track = source, pub
+        try:
+            for chunk in chunks:
+                if self._stop.is_set() or self.session.is_superseded(turn_id):
+                    break
+                await source.capture_frame(
+                    rtc.AudioFrame(
+                        data=chunk.data,
+                        sample_rate=chunk.sample_rate,
+                        num_channels=chunk.num_channels,
+                        samples_per_channel=chunk.samples_per_channel,
+                    )
+                )
+                # Rythme réel : 100 ms d'audio par trame.
+                await asyncio.sleep(0.1)
+        finally:
+            self._stop.clear()
+            self._source = None
+            self._track = None
+            await source.close()
+            try:
+                await self.room.local_participant.unpublish_track(pub.sid)
+            except RuntimeError:
+                pass  # la room s'est fermée entre-temps : rien à publier de toute façon
+
+    # ── Abonnements ────────────────────────────────────────────────────────
+    async def attach(self) -> None:
+        """S'abonne à la room : tracks, data, départs, participants tardifs."""
+        self.room.on("data_received", self._on_data)
+
+        @self.room.on("track_subscribed")
+        def _on_track(track, publication, participant):  # noqa: ANN001
+            """Un track micro vient d'être publié — y compris pour un client
+            arrivé APRÈS notre entrée (le cas que l'ancien code ignorait)."""
+            self._watch_audio_track(track, publication)
+
+        @self.room.on("track_unsubscribed")
+        def _on_track_unsubscribed(track, publication, participant):  # noqa: ANN001
+            track_sid = getattr(track, "sid", None) or publication.sid
+            task = self._audio_tasks.pop(track_sid, None)
+            if task is not None:
+                task.cancel()
+
+        @self.room.on("participant_disconnected")
+        def _on_leave(participant):  # noqa: ANN001
+            log.info("participant parti : %s", participant.identity)
+
+        # L'agent peut entrer après le navigateur : traiter aussi les tracks déjà
+        # souscrits, pas seulement les futurs événements track_subscribed.
+        for participant in self.room.remote_participants.values():
+            for publication in participant.track_publications.values():
+                track = publication.track
+                if publication.subscribed and track is not None:
+                    self._watch_audio_track(track, publication)
+
+    def _on_data(self, data, *_args) -> None:
+        """Traite un événement client. Jamais d'exception : on ne tue pas la room."""
+        event = protocol.decode(data.data if hasattr(data, "data") else data)
+        if not event:
+            return
+        kind = event.get("type")
+        if kind == protocol.EV_USER_SEGMENT:
+            # Un segment VAD est prêt : on planifie le tour sur la boucle.
+            asyncio.create_task(self.flush_segment())
+        elif kind in (protocol.EV_BARGE_IN, protocol.EV_CANCEL):
+            abandoned = self.session.interrupt()
+            self._buffered = 0
+            self._buffered_bytes = 0
+            self._audio_limit_hit = False
+            self._stop.set()  # arrête la publication audio en cours
+            log.info("barge-in : tour %s abandonné", abandoned)
+
+    async def run(self) -> None:
+        """Boucle de vie : diffusion de l'audio micro + attente des événements."""
+        try:
+            await self.room.start_audio()
+        except Exception as exc:
+            log.warning("démarrage du routage audio impossible : %s", exc)
+        await self.send(protocol.agent_state(protocol.ST_LISTENING))
+        # Le job se termine quand la room se vide ou qu'on est déconnecté.
+        try:
+            while not self.room.isdisconnected():
+                await asyncio.sleep(0.5)
+        finally:
+            tasks = tuple(self._audio_tasks.values())
+            self._audio_tasks.clear()
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def entrypoint(ctx: JobContext) -> None:
+    """Point d'entrée du worker : on déduit le dossier, on branche la session."""
     await ctx.connect()
     room = ctx.room
     log.info("Room jointe : %s", room.name)
 
-    stop_event = asyncio.Event()
-    journey_id = os.getenv("LIVEKIT_ROOM", "sama-demo")
-    speaker = os.getenv("XTTS_SPEAKER", "")
-
-    buffer: list[rtc.AudioFrame] = []
-
-    async def play_text(text: str) -> None:
-        """Voix IA : xTTS réel → track audio publiée (le client garde le micro actif)."""
-        wav = tts_xtts.synthesize(text, speaker)
-        frames = _wav_to_frames(wav)
-        if not frames:
-            return
-        source = rtc.AudioSource(sample_rate=24000, num_channels=1)
-        track = rtc.LocalAudioTrack.create_audio_track("agent-voice", source)
-        pub = await room.local_participant.publish_track(
-            track, rtc.TrackPublishOptions(source="voice")
-        )
+    # ── B3 : le dossier vient du NOM de la room, plus d'une variable d'env ──
+    journey_id = journey_id_of(room.name)
+    if not journey_id:
+        # Room inconnue : on le dit au client et on sort proprement. L'ancien
+        # code essayait de charger la procédure « sama-demo » → KeyError.
+        log.error("room non reconnue : %r (préfixe attendu « %s »)", room.name, "sama-")
         try:
-            for f in frames:
-                if stop_event.is_set() or room is None:
-                    break
-                await source.capture_frame(f)
-        finally:
-            await source.close()
-            try:
-                await room.local_participant.unpublish_track(pub.sid)
-            except RuntimeError:
-                pass
+            await room.local_participant.publish_data(
+                protocol.encode(protocol.agent_error(
+                    protocol.ERR_UNKNOWN_ROOM,
+                    f"room non reconnue : {room.name}",
+                )),
+                rtc.DataPacket_Kind.RELIABLE,
+            )
+        except Exception:
+            pass
+        await room.disconnect()
+        return
 
-    async def handle_segment() -> None:
-        stop_event.clear()
-        wav = _frames_to_wav_16k(buffer[:])
-        buffer.clear()
-        if not wav:
-            return
-        log.info("segment — ASR (Kiriku)…")
-        try:
-            text = asr_kiriku.transcribe(wav)
-        except Exception as exc:
-            log.error("ASR échoué : %s", exc)
-            return
-        log.info("ASR → %r", text)
-        if not text.strip():
-            return
-        reply = _turn(text, journey_id)
-        log.info("réponse → %r", reply)
-        await play_text(reply)
-
-    def on_data(data: rtc.DataReceivedEvent) -> None:
-        try:
-            event = json.loads(data.data.decode())
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            return
-        kind = event.get("type")
-        if kind in ("cancel", "barge_in"):
-            stop_event.set()
-        elif kind == "user_segment":
-            asyncio.create_task(handle_segment())
-
-    room.on("data_received", on_data)
-
-    for participant in room.remote_participants.values():
-        for _, pub in participant.track_publications.items():
-            if pub.kind == rtc.TrackKind.KIND_AUDIO:
-                track = await pub.track()
-
-                @track.on("audio_frame")
-                def _frame(frame: rtc.AudioFrame) -> None:
-                    if len(buffer) < 500:  # fenêtre ~5 s max
-                        buffer.append(frame)
-
-    while True:
-        await asyncio.sleep(60)
+    runtime = VoiceRuntime(ctx, journey_id)
+    await runtime.attach()
+    try:
+        await runtime.run()
+    except Exception:
+        log.exception("session vocale interrompue")
+        await room.disconnect()
+        raise
 
 
-cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+if __name__ == "__main__":
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))

@@ -33,13 +33,45 @@ function getSupabase(): SupabaseClient {
   return _client;
 }
 
-/** En-têtes d'autorisation à joindre aux appels API — vides si auth non configurée. */
-export async function authBearerHeaders(): Promise<Record<string, string>> {
-  if (!isAuthConfigured()) return {};
+/** Forme minimale de la lecture de session, pour permettre l'injection en test. */
+export type SessionReader = () => Promise<{
+  session: { access_token?: string } | null;
+}>;
+
+/** Lecteur réel : la session Supabase du navigateur. */
+const supabaseSession: SessionReader = async () => {
   const { data } = await getSupabase().auth.getSession();
-  return data.session?.access_token
-    ? { authorization: `Bearer ${data.session.access_token}` }
-    : {};
+  return { session: (data.session as { access_token?: string } | null) ?? null };
+};
+
+/**
+ * ⚠ `getSession()` est ici aussi sans garde-fou, et le défaut était plus large
+ * qu'un écran bloqué : une lecture de session qui échoue faisait REJETER
+ * `authBearerHeaders`, donc `request()` échouait AVANT même d'appeler `fetch`.
+ * Résultat : une Supabase instable rendait cassées *toutes* les requêtes API
+ * de l'application, y compris celles qui n'exigent pas d'authentification. La
+ * cause invisible (Supabase) transformait en panne totale du produit.
+ *
+ * On distingue donc deux situations, qui n'appellent pas la même décision :
+ *  - l'utilisateur est connecté  → on joint son jeton ;
+ *  - on n'a pas pu le savoir      → on joint RIEN.
+ * Le worker tranche alors lui-même (401 si la route l'exige, sinon 200 en
+ * identité de service). C'est au serveur de refuser, pas au client de deviner.
+ *
+ * `readSession` est injectable pour que cette garantie soit vérifiable sans
+ * navigateur ni réseau.
+ */
+export async function authBearerHeaders(
+  readSession: SessionReader = supabaseSession
+): Promise<Record<string, string>> {
+  if (!isAuthConfigured()) return {};
+  try {
+    const { session } = await readSession();
+    return session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {};
+  } catch {
+    // Lecture impossible : on poursuit sans jeton plutôt que de tout casser.
+    return {};
+  }
 }
 
 /** Flux d'authentification partagé (AuthProvider — voir auth-context.tsx). */

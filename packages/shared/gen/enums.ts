@@ -19,6 +19,18 @@ export type JOURNEY_STATUS = (typeof JOURNEY_STATUS)[number];
 export const DOCUMENT_STATUS = ["MISSING", "PROVIDED", "ANALYZED", "NEEDS_REVIEW", "UNEXPECTED", "UNKNOWN"] as const;
 export type DOCUMENT_STATUS = (typeof DOCUMENT_STATUS)[number];
 
+export const JOURNEY_STATUS_LABEL = {
+  NOT_STARTED: "Pas encore commencé",
+  IN_PROGRESS: "En cours de préparation",
+  NEEDS_INFORMATION: "Il manque une information",
+  NEEDS_DOCUMENT: "Il manque une pièce",
+  NEEDS_REVIEW: "Vérification nécessaire",
+  READY_FOR_NEXT_STEP: "Prêt pour la suite",
+  OUT_OF_SCOPE: "Hors périmètre de cet assistant",
+} as const;
+export type JourneyStatusLabel = keyof typeof JOURNEY_STATUS_LABEL;
+export type JourneyStatusLabelValue = (typeof JOURNEY_STATUS_LABEL)[JourneyStatusLabel];
+
 export const NEXT_ACTION = ["PROVIDE_DOCUMENT", "REVIEW_DOCUMENT", "READ_INFORMATION", "CONTACT_SERVICE", "CLARIFY", "PROVIDE_PHOTOS"] as const;
 export type NEXT_ACTION = (typeof NEXT_ACTION)[number];
 

@@ -13,6 +13,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { Spinner } from "./spinner";
+import { ThinkingDots } from "./thinking";
 
 /* ═══════════════ Button (§108) ═══════════════ */
 export type ButtonVariant =
@@ -200,6 +201,31 @@ export function Badge({
 
 export function StatusPill({ label, tone }: { label: string; tone: BadgeTone }) {
   return <Badge tone={tone}>{label}</Badge>;
+}
+
+/**
+ * Place d'attente pendant l'hydratation des stores persistés (zustand v5).
+ *
+ * Ces pages avaient `if (!ready) return null;` : pendant la fenêtre
+ * d'hydratation — le temps d'un aller-retour `sessionStorage`, donc visible à
+ * chaque navigation — l'écran rendait **rien du tout**. L'usager voit un vide,
+ * pas un chargement ; sur réseau lent ou storage bloqué, ce vide peut durer.
+ *
+ * Le garde-fou lui-même est bon (agir sur un store non hydraté écraserait un
+ * dossier porteur d'analyses, point 6) : c'est son rendu qui était faux. On dit
+ * ce qui se passe, on ne simule aucune donnée.
+ */
+export function Hydrating({ label = "Chargement de votre dossier…" }: { label?: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-testid="hydrating"
+      className="flex min-h-[40vh] flex-col items-center justify-center gap-3"
+    >
+      <ThinkingDots label={label} />
+    </div>
+  );
 }
 
 /* ═══════════════ Tabs (§28) ═══════════════ */
@@ -405,3 +431,4 @@ export function Tooltip({ label, children }: { label: string; children: ReactNod
 /* Rétrocompat : ThinkingDots = Thinking (§66) */
 export { Spinner } from "./spinner";
 export { ThinkingDots, Thinking } from "./thinking";
+export { ErrorNotice } from "./error-notice";

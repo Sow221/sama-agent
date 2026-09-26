@@ -8,7 +8,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Card, Textarea } from "@/components/ui";
+import { Button, Card, ErrorNotice, Textarea } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { VoiceCore } from "@/components/voice/VoiceCore";
 import { useIntentMutation } from "@/lib/query/hooks";
@@ -18,9 +18,14 @@ export default function HomePage() {
   const router = useRouter();
   const [text, setText] = useState("");
   const journey = useJourneyStore((s) => s.response);
+  const setIntent = useJourneyStore((s) => s.setIntent);
   const ready = usePersistReady();
 
-  const intent = useIntentMutation(() => {
+  const intent = useIntentMutation((r) => {
+    // La réponse du serveur était jetée : on ne gardait que le `push`. On la
+    // conserve pour que l'écran suivant montre ce qui a été compris de la
+    // demande — y compris, et surtout, quand il faut préciser.
+    setIntent({ response: r, transcript: text.trim() });
     router.push("/app/comprehension");
   });
 
@@ -83,9 +88,11 @@ export default function HomePage() {
             ) : null}
           </Button>
           {intent.isError ? (
-            <p role="alert" className="text-sm text-error">
-              L'analyse de la demande a échoué. Réessayez.
-            </p>
+            <ErrorNotice
+              error={intent.error}
+              action="L'analyse de la demande"
+              onRetry={() => intent.mutate({ transcript: text.trim(), language: "fr" })}
+            />
           ) : null}
         </form>
       </Card>

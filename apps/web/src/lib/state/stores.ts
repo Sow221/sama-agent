@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import type {
   Completion,
   DocumentAnalysis,
+  IntentResponse,
   JourneyResponse,
 } from "@/lib/schemas";
 
@@ -36,9 +37,30 @@ export interface ChatMessage {
 }
 
 /* ── journeyStore : résultat du moteur déterministe ── */
+
+/**
+ * Ce que le serveur a RÉELLEMENT compris de la demande, avec la transcription
+ * qui l'a produit.
+ *
+ * ⚠ Avant, `home/page.tsx` appelait `/api/intent` puis ignorait la réponse et
+ *ait `router.push("/app/comprehension")`. L'écran suivant affichait un texte
+ * figé (« Première demande de permis de conduire — Sénégal ») et 3 exigences
+ * en dur. Conséquence mesurable : `needsClarification` et
+ * `clarificationQuestion` — deux champs produits par le serveur — n'étaient
+ * affichés nulle part, donc une demande incomprise était traitée comme une
+ * première demande. Les mots de l'usager n'influençaient rien.
+ */
+export interface UnderstoodIntent {
+  response: IntentResponse;
+  /** Ce que l'usager a réellement écrit (ou dit), pas une reformulation. */
+  transcript: string;
+}
+
 interface JourneyState {
   response: JourneyResponse | null;
+  intent: UnderstoodIntent | null;
   setResponse: (r: JourneyResponse) => void;
+  setIntent: (i: UnderstoodIntent | null) => void;
   clear: () => void;
 }
 
@@ -46,14 +68,18 @@ export const useJourneyStore = create<JourneyState>()(
   persist(
     (set) => ({
       response: null,
+      intent: null,
       setResponse: (response) => set({ response }),
-      clear: () => set({ response: null }),
+      setIntent: (intent) => set({ intent }),
+      // Effacer le parcours efface aussi ce qu'on avait compris : sinon un
+      // nouveau dossier afficherait l'ancienne demande, lisible mais fausse.
+      clear: () => set({ response: null, intent: null }),
     }),
     {
       name: "sama:journey",
       // Le dossier de la session survit à un rechargement (scénario démo réel, point 25).
       storage: createJSONStorage(sessionSafe),
-      partialize: (s) => ({ response: s.response }),
+      partialize: (s) => ({ response: s.response, intent: s.intent }),
     }
   )
 );

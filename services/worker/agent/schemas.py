@@ -114,9 +114,22 @@ class Evidence(BaseModel):
     limitations: list[str]
 
 
+class VoiceTokenRequest(BaseModel):
+    """Demande de jeton vocal. Le dossier est optionnel : à défaut, l'API reprend
+    le dossier de l'usager (le plus récent) — jamais un nom de room arbitraire."""
+    journeyId: str | None = None
+    ttl: int = 3600
+
+
 class VoiceToken(BaseModel):
     url: str
     token: str
+    # journeyId / room sont explicites : le worker vocal n'a plus à deviner le
+    # dossier depuis le nom de la room (cause du KeyError "sama-demo").
+    journeyId: str
+    room: str
+    identity: str
+    ttl: int
 
 
 class RequestTrace(BaseModel):
@@ -132,3 +145,42 @@ class RequestTrace(BaseModel):
     documentStatus: str | None = None
     error: str | None = None
     fallbackUsed: bool = False
+
+
+# ── Historique des conversations (P1) ───────────────────────────────────────
+class ConversationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str | None = Field(default=None, max_length=255)
+    journeyId: str | None = None
+
+
+class ConversationUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str | None = Field(default=None, max_length=255)
+    status: str | None = None
+
+
+class MessageCreate(BaseModel):
+    """Ajout d'un message ENTRANT (user) — l'assistant est écrit par le serveur."""
+    model_config = ConfigDict(extra="forbid")
+    role: str = "user"
+    content: str = Field(min_length=1, max_length=100_000)
+    language: str | None = None
+    journeyId: str | None = None
+
+
+class AgentTurnRequest(BaseModel):
+    """Tour d'agent conversationnel — histoire/mémoire/tools réels côté serveur."""
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1)
+    journeyId: str | None = None
+    conversationId: str | None = None
+    useTools: bool = False
+
+
+class MemoryCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str = "FACT"  # SELF | PREFERENCE | FACT | TEMPORARY | CONVERSATION
+    content: str = Field(min_length=1, max_length=10_000)
+    source: str | None = None
+    journeyId: str | None = None

@@ -13,7 +13,7 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
@@ -21,7 +21,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from livekit import api as livekit_api
 
 from agent import mode as app_mode
+from agent.domain.naming import room_name as voice_room_name
 from agent.infrastructure.auth.supabase import AuthContext, require_user
+from agent.infrastructure.db.repositories import journey_belongs_to_user, latest_journey_of
+from agent.infrastructure.llm.glm import GlmLlm, provider_status
 # Use cases — importés depuis leur module (pas via le façade `__init__`, qui ré-exporte
 # les fonctions : les noms de modules et de fonctions cohabiteraient de façon ambiguë).
 from agent.application.use_cases.process_intent import infer_intent
@@ -29,15 +32,35 @@ from agent.application.use_cases.analyze_document import analyze_document
 from agent.application.use_cases.get_evidence import get_evidence
 from agent.application.use_cases.persist_journey import apply_journey, resume_journey
 from agent.application.use_cases.persist_analysis import persist_document_analysis
+from agent.application.use_cases.agent_turn import run_agent_turn, run_tool_loop
+from agent.infrastructure.db.repositories import (
+    add_conversation_message,
+    create_conversation,
+    create_memory,
+    delete_conversation,
+    delete_memory,
+    get_conversation as get_conversation_row,
+    list_conversation_messages,
+    list_conversations,
+    list_memory,
+    search_memory,
+    update_conversation,
+)
 from agent.schemas import (
+    AgentTurnRequest,
+    ConversationCreate,
+    ConversationUpdate,
     DocumentAnalysis,
     Evidence,
     IntentRequest,
     IntentResponse,
     JourneyRequest,
     JourneyResponse,
+    MemoryCreate,
+    MessageCreate,
     RequestTrace,
     VoiceToken,
+    VoiceTokenRequest,
 )
 
 log = logging.getLogger("sama.worker")
@@ -76,6 +99,19 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     log.info("Sama Agent worker — up (mode=%s)", app_mode.mode())
+    # Préchauffage NIM automatique au démarrage (SAMA_AUTO_WARMUP, défaut activé) :
+    # plus de dépendance à un prewarm manuel pour le fonctionnement normal. Thread
+    # daemon : une panne de préchauffage ne bloque jamais le worker.
+    if app_mode.is_live() and os.getenv("SAMA_AUTO_WARMUP", "true").lower() != "false":
+        import threading
+
+        def _warm() -> None:
+            try:
+                GlmLlm().warm()
+            except Exception as exc:  # pragma: no cover — log seulement
+                log.warning("auto-warmup en échec : %s", exc)
+
+        threading.Thread(target=_warm, name="nim-warmup", daemon=True).start()
     yield
 
 
@@ -83,7 +119,7 @@ app = FastAPI(title="Sama Agent API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in ALLOWED_ORIGINS],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -118,6 +154,14 @@ async def trace_middleware(request: Request, call_next):
 @app.get("/healthz")
 def healthz() -> dict:
     return {"status": "ok", "mode": app_mode.mode()}
+
+
+@app.get("/api/ai/status")
+def ai_status(user: AuthContext = Depends(require_user)) -> dict:
+    """Observabilité fournisseur : état du disjoncteur + dernière mesure réelle.
+    Protégé par auth — aucun détail d'infra exposé hors du service.
+    """
+    return provider_status()
 
 
 @app.post("/api/intent", response_model=IntentResponse)
@@ -227,29 +271,197 @@ def evidence(requirement: str, user: AuthContext = Depends(require_user)) -> Evi
 
 
 @app.post("/api/voice/token", response_model=VoiceToken)
-def voice_token(user: AuthContext = Depends(require_user)) -> VoiceToken:
-    """Token LiveKit réel (ADR-004) — le worker est l'autorité de la room."""
+def voice_token(
+    body: VoiceTokenRequest | None = None,
+    user: AuthContext = Depends(require_user),
+) -> VoiceToken:
+    """Token LiveKit réel (ADR-004).
+
+    Trois corrections par rapport à l'ancien comportement :
+    1. **Plus de repli silencieux sur `devkey`/`devsecret`.** En `live`, une clé
+       absente est une erreur de configuration explicite (503), pas un 200 signé
+       par des identifiants publics.
+    2. **L'identité est l'usager authentifié** (sub Supabase), pas un aléa : les
+       logs LiveKit se rattachent à un compte, et le worker sait qui parle.
+    3. **La room est dérivée du dossier**, donc un dossier par usager au lieu
+       d'une room `sama-demo` partagée par tout le monde.
+    """
     _check_rate_limit(user.user_id)
-    key = os.getenv("LIVEKIT_API_KEY", "devkey")
-    secret = os.getenv("LIVEKIT_API_SECRET", "devsecret")
-    room = os.getenv("LIVEKIT_ROOM", "sama-demo")
-    identity = f"awa-{uuid.uuid4().hex[:8]}"
-    if hasattr(livekit_api, "VideoGrants"):
-        # livekit-api ≥ 1.x : pattern builder (grants déclarés)
-        grants = livekit_api.VideoGrants(room_join=True, room=room)
-        token = (
-            livekit_api.AccessToken(key, secret)
-            .with_identity(identity)
-            .with_grants(grants)
-            .to_jwt()
+    body = body or VoiceTokenRequest()
+
+    key = os.getenv("LIVEKIT_API_KEY", "").strip()
+    secret = os.getenv("LIVEKIT_API_SECRET", "").strip()
+    if not key or not secret or key == "devkey" or secret == "devsecret":
+        # Le harnais déterministe local tolère les clés de développement
+        # (l'agent vocal y est de toute façon injoignable : pas de SFU).
+        if app_mode.is_live():
+            raise HTTPException(
+                status_code=503,
+                detail="service vocal non configuré (LIVEKIT_API_KEY / LIVEKIT_API_SECRET)",
+            )
+        log.warning("LIVEKIT_API_KEY/SECRET absents — clés de développement du harnais")
+        key, secret = key or "devkey", secret or "devsecret"
+
+    journey_id = (body.journeyId or latest_journey_of(user.user_id) or "").strip()
+    if not journey_id:
+        raise HTTPException(
+            status_code=409,
+            detail="aucun dossier : créez un parcours avant de lancer la session vocale",
         )
-    else:
-        # livekit-api 0.x (legacy)
-        at = livekit_api.AccessToken(key, secret)
-        at.identity = identity
-        at.add_grant(room_join=True, room=room)
-        token = at.to_jwt()
-    return VoiceToken(url=LIVEKIT_URL, token=token)
+    try:
+        room = voice_room_name(journey_id)
+    except ValueError as exc:
+        # journeyId inexistant / trop long pour un nom de room : on le dit.
+        raise HTTPException(status_code=422, detail=str(exc))
+    if not journey_belongs_to_user(journey_id, user.user_id):
+        raise HTTPException(status_code=404, detail="parcours introuvable")
+    identity = f"awa-{user.user_id}"[:64]
+    ttl = max(60, min(int(body.ttl), 24 * 3600))
+
+    grants = livekit_api.VideoGrants(
+        room_join=True,
+        room=room,
+        # Le client ne crée pas la room : c'est le worker, dispatché explicitement.
+        can_publish=True,
+        can_subscribe=True,
+    )
+    token = (
+        livekit_api.AccessToken(key, secret)
+        .with_identity(identity)
+        .with_name(user.email or user.user_id)
+        .with_grants(grants)
+        .with_ttl(timedelta(seconds=ttl))  # livekit-api attend une durée, pas un entier
+        .to_jwt()
+    )
+    return VoiceToken(
+        url=LIVEKIT_URL, token=token, journeyId=journey_id, room=room,
+        identity=identity, ttl=ttl,
+    )
+
+
+# ── Historique des conversations (P1) — isolation stricte par propriétaire ──
+@app.post("/api/conversations")
+def conversations_create(body: ConversationCreate,
+                         user: AuthContext = Depends(require_user)):
+    return create_conversation(user.user_id, title=body.title, journey_id=body.journeyId)
+
+
+@app.get("/api/conversations")
+def conversations_list(limit: int = 20, offset: int = 0,
+                       user: AuthContext = Depends(require_user)):
+    return {"items": list_conversations(user.user_id, limit=min(limit, 100), offset=max(offset, 0))}
+
+
+def _owned_conversation_or_404(conv_id: str, user_id: str) -> dict:
+    row = get_conversation_row(conv_id, user_id)
+    if row is None:
+        # Un dossier étranger est indistinguable d'un dossier inconnu (pas de fuite).
+        raise HTTPException(status_code=404, detail="conversation introuvable")
+    return row
+
+
+@app.get("/api/conversations/{conversation_id}")
+def conversations_get(conversation_id: str, user: AuthContext = Depends(require_user)):
+    return _owned_conversation_or_404(conversation_id, user.user_id)
+
+
+@app.patch("/api/conversations/{conversation_id}")
+def conversations_patch(conversation_id: str, body: ConversationUpdate,
+                        user: AuthContext = Depends(require_user)):
+    row = update_conversation(conversation_id, user.user_id, title=body.title, status=body.status)
+    if row is None:
+        raise HTTPException(status_code=404, detail="conversation introuvable")
+    return row
+
+
+@app.delete("/api/conversations/{conversation_id}")
+def conversations_delete(conversation_id: str, user: AuthContext = Depends(require_user)):
+    if not delete_conversation(conversation_id, user.user_id):
+        raise HTTPException(status_code=404, detail="conversation introuvable")
+    return {"deleted": conversation_id}
+
+
+@app.post("/api/conversations/{conversation_id}/messages")
+def conversations_messages_add(conversation_id: str, body: MessageCreate,
+                               user: AuthContext = Depends(require_user)):
+    if body.role not in ("user",):
+        raise HTTPException(status_code=422, detail="le client n'écrit que les messages 'user'")
+    msg = add_conversation_message(conversation_id, user.user_id, body.role,
+                                   body.content, language=body.language,
+                                   journey_id=body.journeyId)
+    if msg is None:
+        raise HTTPException(status_code=404, detail="conversation introuvable")
+    return msg
+
+
+@app.get("/api/conversations/{conversation_id}/messages")
+def conversations_messages_list(conversation_id: str, limit: int = 100, offset: int = 0,
+                                user: AuthContext = Depends(require_user)):
+    rows = list_conversation_messages(conversation_id, user.user_id,
+                                      limit=min(limit, 500), offset=max(offset, 0))
+    if rows is None:
+        raise HTTPException(status_code=404, detail="conversation introuvable")
+    return {"items": rows}
+
+
+# ── Tour d'agent conversationnel (P1 — mémoire + historique + tools réels) ──
+@app.post("/api/agent/turn")
+def agent_turn(body: AgentTurnRequest, request: Request,
+               user: AuthContext = Depends(require_user)) -> dict:
+    """Un tour serveur : intent → dossier → réponse formulée + mémoire + historique.
+
+    `useTools: true` active la boucle tool calling (orchestrateur multi-étapes).
+    Chaque appel d'outil est réel, tracé (table tool_calls) et interprété par le LLM.
+    """
+    _check_rate_limit(user.user_id)
+    try:
+        if body.useTools:
+            result = run_tool_loop(body.text, user.user_id,
+                                   journey_id=body.journeyId)
+        else:
+            result = run_agent_turn(body.text, user.user_id,
+                                    journey_id=body.journeyId,
+                                    conversation_id=body.conversationId)
+    except Exception as exc:
+        log.warning("agent/turn — échec de la chaîne : %s", exc)
+        raise HTTPException(status_code=503,
+                            detail="le service de dialogue est momentanément indisponible")
+    request.state.trace_fields = {
+        "intent": result.get("intent"),
+        "journeyState": result.get("journeyStatus"),
+        "model": os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3") if app_mode.is_live() else "deterministic",
+    }
+    return result
+
+
+# ── Mémoire long terme (P1) — persistante, liée à l'usager, purgeable ────────
+@app.post("/api/memory")
+def memory_create(body: MemoryCreate, user: AuthContext = Depends(require_user)):
+    try:
+        return create_memory(user.user_id, body.kind, body.content,
+                             source=body.source, journey_id=body.journeyId)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/memory")
+def memory_list(kind: str | None = None, limit: int = 50, offset: int = 0,
+                user: AuthContext = Depends(require_user)):
+    return {"items": list_memory(user.user_id, kind=kind,
+                                 limit=min(limit, 200), offset=max(offset, 0))}
+
+
+@app.get("/api/memory/search")
+def memory_search(q: str = "", limit: int = 10,
+                  user: AuthContext = Depends(require_user)):
+    return {"items": search_memory(user.user_id, q, limit=min(limit, 50))}
+
+
+@app.delete("/api/memory/{memory_id}")
+def memory_delete(memory_id: str, user: AuthContext = Depends(require_user)):
+    if not delete_memory(memory_id, user.user_id):
+        raise HTTPException(status_code=404, detail="mémoire introuvable")
+    return {"deleted": memory_id}
 
 
 if __name__ == "__main__":

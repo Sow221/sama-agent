@@ -36,6 +36,15 @@ class DocumentStatus(str, Enum):
     UNEXPECTED = "UNEXPECTED"
     UNKNOWN = "UNKNOWN"
 
+class JourneyStatusLabel(str, Enum):
+    NOT_STARTED = "Pas encore commencé"
+    IN_PROGRESS = "En cours de préparation"
+    NEEDS_INFORMATION = "Il manque une information"
+    NEEDS_DOCUMENT = "Il manque une pièce"
+    NEEDS_REVIEW = "Vérification nécessaire"
+    READY_FOR_NEXT_STEP = "Prêt pour la suite"
+    OUT_OF_SCOPE = "Hors périmètre de cet assistant"
+
 class NextAction(str, Enum):
     PROVIDE_DOCUMENT = "PROVIDE_DOCUMENT"
     REVIEW_DOCUMENT = "REVIEW_DOCUMENT"

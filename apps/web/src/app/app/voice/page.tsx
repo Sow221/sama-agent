@@ -35,6 +35,11 @@ export default function VoicePage() {
   const mediaRef = useRef<MediaStream | null>(null);
   const cbRef = useRef<{ onRemoteAudio: (el: HTMLAudioElement) => void } | null>(null);
   const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  /* Ce que le WORKER a réellement dit/reçu. Jamais deviné, jamais codé en dur. */
+  const [agentReply, setAgentReply] = useState<string | null>(null);
+  const [heard, setHeard] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const phase = useVoiceStore((s) => s.phase);
   const setPhase = useVoiceStore((s) => s.setPhase);
@@ -56,8 +61,21 @@ export default function VoicePage() {
   const start = useCallback(async () => {
     setPhase("connecting");
     setFailed(false);
+    setFailure(null);
+    setAgentReply(null);
+    setHeard(null);
+    setNotice(null);
     try {
-      const { url, token } = await tokenQuery.refetch().then((r) => r.data!);
+      const { url, token } = await tokenQuery.refetch().then((r) => {
+        if (!r.data) {
+          // 503 (clés LiveKit absentes) ou 409 (aucun dossier) : le serveur le dit,
+          // on ne tente pas de deviner pourquoi en se connectant quand même.
+          const detail =
+            r.error instanceof Error ? r.error.message : "service vocal indisponible";
+          throw new Error(detail);
+        }
+        return r.data;
+      });
       const stream = await takeMic();
 
       // Expose l'analyseur du micro pour que l'orbe réagisse au volume réel (listening)
@@ -80,7 +98,6 @@ export default function VoicePage() {
           src.connect(an);
           an.connect(actx.destination);
           window.dispatchEvent(new CustomEvent("sama:analyser", { detail: an }));
-          setPhase("speaking");
         },
       };
 
@@ -88,6 +105,26 @@ export default function VoicePage() {
         onRemoteAudio: cbRef.current.onRemoteAudio,
         onRemoteDisconnected: () => setPhase("listening"),
         onError: () => setPhase("idle"),
+        /* ── Le worker parle enfin au client ─────────────────────────────
+           La phase affichée vient de `agent_state`, donc du serveur. Avant,
+           elle était déduite localement d'événements VAD et ne pouvait pas
+           distinguer « l'agent calcule » de « l'agent est coincé ». */
+        onAgentEvent: (event) => {
+          if (event.type === "agent_state") {
+            setPhase(event.state);
+            if (event.state === "listening") setNotice(null);
+            return;
+          }
+          if (event.type === "agent_text") {
+            // `role` vient du serveur : on ne devine pas qui parle.
+            if (event.role === "user") setHeard(event.text || null);
+            else setAgentReply(event.text || null);
+            return;
+          }
+          // agent_error : dégradé honnête. Le message vient du serveur, avec son code.
+          setNotice(`${event.message} (${event.code})`);
+          setPhase("listening");
+        },
       });
       setConnected(true);
 
@@ -104,15 +141,21 @@ export default function VoicePage() {
           const segmentId = startSegment();
           // Durée RÉELLE du segment (produit par le VAD, 16 kHz)
           const durationMs = Math.round((segment.length / 16_000) * 1000);
+          // L'audio, lui, transite par la track micro publiée : cet événement ne
+          // fait que dire « le segment est clos, traite-le ». (Le VAD local n'a pas
+          // à réencoder : ce serait un doublon, et deux chemins audio divergent.)
           room.send({ type: "user_segment", segmentId, durationMs });
           endSegment();
           setPhase("thinking");
+          setHeard(null);
+          setAgentReply(null);
         },
       });
     } catch (err) {
       console.error("voice start failed", err);
       setPhase("idle");
       setFailed(true); // fallback texte honnête (§120)
+      setFailure(err instanceof Error ? err.message : "micro ou service vocal indisponible");
     }
   }, [setPhase, setConnected, setActive, startSegment, endSegment, tokenQuery]);
 
@@ -159,6 +202,12 @@ export default function VoicePage() {
             Micro, VAD ou connexion LiveKit indisponibles. Vous pouvez continuer par écrit sans
             attendre.
           </p>
+          {/* La cause réelle, quand le serveur l'a dite (503 clés absentes, 409 sans dossier). */}
+          {failure ? (
+            <p className="w-full break-words rounded-lg bg-surface-2 p-3 text-left text-xs text-text2">
+              {failure}
+            </p>
+          ) : null}
           <div className="flex w-full flex-col gap-2">
             <Button variant="gradient" size="lg" onClick={() => router.push("/app/home")}>
               Continuer par texte
@@ -173,13 +222,21 @@ export default function VoicePage() {
           <div className="flex flex-1 flex-col items-center justify-center gap-8 py-6">
             <VoiceCore state={coreState} size="xl" ariaLabel="Session vocale Sama Agent" />
             <PhaseHeader state={coreState} />
-            {/* Transcript : n'affiche que du texte RÉEL côté client (aucune fabrication) */}
-            <p
+            {/* Ce qui suit vient du WORKER (agent_text) ou du serveur (agent_error).
+                Aucune phrase en dur : tant qu'aucun texte réel n'est arrivé, on affiche
+                une zone vide — pas un mensonge rassurant (« Je vous écoute… »). */}
+            <div
               aria-live="polite"
-              className="min-h-[1.5rem] max-w-xl text-center text-base italic text-text2"
+              className="min-h-[3rem] w-full max-w-xl space-y-2 text-center"
             >
-              {coreState === "listening" ? "Je vous écoute…" : "\u00A0"}
-            </p>
+              {notice ? (
+                <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-text2">{notice}</p>
+              ) : null}
+              {heard ? <p className="text-sm text-text2">Vous : {heard}</p> : null}
+              {agentReply ? (
+                <p className="text-base font-semibold text-text1">{agentReply}</p>
+              ) : null}
+            </div>
           </div>
           <CancelButton onCancel={cancel} />
         </>

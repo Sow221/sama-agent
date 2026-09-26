@@ -7,7 +7,7 @@
  */
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Badge, Button, Card, EmptyState, Progress } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Hydrating, Progress } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { useDossierStore, usePersistReady } from "@/lib/state/stores";
 import { useEvidence } from "@/lib/query/hooks";
@@ -26,7 +26,10 @@ export default function MemoryDetailPage() {
   const ready = usePersistReady();
   const evidence = useEvidence(requirementId);
 
-  if (!ready) return null;
+  // Le garde-fou reste (agir sur un store non hydraté perdrait les analyses) :
+  // c'est le rendu qui changeait — `return null` affichait un écran VIDE pendant
+  // l'hydratation, pas un chargement.
+  if (!ready) return <Hydrating />;
 
   if (!analysis) {
     return (

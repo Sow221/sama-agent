@@ -25,7 +25,9 @@ def _clarify(req: IntentRequest, message: str) -> IntentResponse:
     return IntentResponse(
         intent=enums.Intent.driving_license,
         action=enums.IntentAction.unknown,
-        language=req.language or enums.Language.FR,
+        # `enums.Language.fr` (minuscules) : les membres sont fr/wo, pas FR/WO.
+        # Une faute de casse ici levait un AttributeError -> 503 sur TOUTE clarification.
+        language=req.language or enums.Language.fr,
         confidence=0.0,
         needsClarification=True,
         clarificationQuestion=message,
@@ -57,7 +59,7 @@ def infer_intent(req: IntentRequest, llm: GlmLlm | None = None) -> IntentRespons
         return IntentResponse(
             intent=enums.Intent.driving_license,
             action=enums.IntentAction.new_application,
-            language=req.language or enums.Language.FR,
+            language=req.language or enums.Language.fr,
             confidence=0.6,
             needsClarification=False,
         )
