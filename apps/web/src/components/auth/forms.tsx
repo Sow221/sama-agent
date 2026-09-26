@@ -5,6 +5,7 @@
  * Login · Signup (nom+email+mdp) · Forgot (envoi du lien réel) · Reset (nouveau mdp) ·
  * Verify (boîte mail). En harnais (auth non configurée) : retour direct à l'espace.
  */
+import { MailIcon } from "@/components/icons";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -371,9 +372,7 @@ function VerifyEmailNotice() {
       }
     >
       <div role="status" className="flex flex-col items-center gap-4 rounded-lg border border-accent-soft bg-accent-soft/30 p-6 text-center">
-        <span aria-hidden className="text-4xl">
-          📬
-        </span>
+        <MailIcon className="h-10 w-10 text-accent-ai" />
         <p className="text-sm text-text2">
           Cliquez sur le lien reçu pour activer votre compte, puis connectez-vous. Sans confirmation
           reçue, vérifiez votre dossier spam ou renouvelez l'opération d'inscription.

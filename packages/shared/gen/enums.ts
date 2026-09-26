@@ -19,6 +19,17 @@ export type JOURNEY_STATUS = (typeof JOURNEY_STATUS)[number];
 export const DOCUMENT_STATUS = ["MISSING", "PROVIDED", "ANALYZED", "NEEDS_REVIEW", "UNEXPECTED", "UNKNOWN"] as const;
 export type DOCUMENT_STATUS = (typeof DOCUMENT_STATUS)[number];
 
+export const DOCUMENT_STATUS_LABEL = {
+  MISSING: "À fournir",
+  PROVIDED: "Reçu, analyse en cours",
+  ANALYZED: "Analysé",
+  NEEDS_REVIEW: "À vérifier par le service",
+  UNEXPECTED: "Ne correspond pas",
+  UNKNOWN: "Indéterminé",
+} as const;
+export type DocumentStatusLabel = keyof typeof DOCUMENT_STATUS_LABEL;
+export type DocumentStatusLabelValue = (typeof DOCUMENT_STATUS_LABEL)[DocumentStatusLabel];
+
 export const JOURNEY_STATUS_LABEL = {
   NOT_STARTED: "Pas encore commencé",
   IN_PROGRESS: "En cours de préparation",

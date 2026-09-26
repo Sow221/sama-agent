@@ -1,18 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertIcon, CheckIcon } from "@/components/icons";
+import { AlertIcon, CheckIcon, ChevronRightIcon, PlusIcon } from "@/components/icons";
 import { Badge } from "@/components/ui";
 import type { JourneyDocument } from "@/lib/schemas";
-
-const LABELS: Record<string, string> = {
-  ANALYZED: "Conforme",
-  PROVIDED: "Fourni",
-  MISSING: "Manquant",
-  NEEDS_REVIEW: "À vérifier",
-  UNEXPECTED: "Inattendu",
-  UNKNOWN: "Inconnu",
-};
+import { documentStatusLabel, requirementLabel } from "@/lib/labels";
 
 /** Carte document du dossier (✓ / !) — lien vers l'écran Preuve (G7). */
 export function DocumentCard({
@@ -44,14 +36,14 @@ export function DocumentCard({
           ) : warn ? (
             <AlertIcon className="h-5 w-5" />
           ) : (
-            <span className="text-lg font-bold">+</span>
+            <PlusIcon className="h-5 w-5" />
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{doc.name}</p>
-          <Badge tone={ok ? "ok" : warn ? "warn" : "danger"}>{LABELS[doc.status]}</Badge>
+          <p className="truncate font-semibold">{doc.name || requirementLabel(doc.requirementId)}</p>
+          <Badge tone={ok ? "ok" : warn ? "warn" : "danger"}>{documentStatusLabel(doc.status)}</Badge>
         </div>
-        <span className="text-xl text-text2">›</span>
+        <ChevronRightIcon className="h-5 w-5 shrink-0 text-text2" />
       </div>
     </Link>
   );

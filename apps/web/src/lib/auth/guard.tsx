@@ -22,7 +22,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (configured && !loading && !session && !sessionError) router.replace("/auth");
+    if (configured && !loading && !session && !sessionError) router.replace("/login");
   }, [configured, loading, session, sessionError, router]);
 
   if (!configured) return <>{children}</>;

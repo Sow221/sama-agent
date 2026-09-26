@@ -5,9 +5,10 @@
  * Les actions RÉELLES de votre parcours : étapes du moteur (statuts serveur) et
  * prochaine action issue de `nextAction` — jamais générées côté client.
  */
+import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import Link from "next/link";
 import { Button, Card, EmptyState, Hydrating } from "@/components/ui";
-import { ArrowRightIcon, CheckIcon } from "@/components/icons";
+import { ActionIcon, ArrowRightIcon, CheckIcon } from "@/components/icons";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 
 export default function ActionsPage() {
@@ -21,7 +22,7 @@ export default function ActionsPage() {
   if (!journey) {
     return (
       <EmptyState
-        emoji="⚡"
+        emoji={<ActionIcon className="h-9 w-9" />}
         title="Aucune action pour l'instant"
         description="Commencez un parcours : l'agent établit la liste des pièces et les étapes à suivre, que vous retrouverez ici."
         action={
@@ -38,14 +39,14 @@ export default function ActionsPage() {
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight">Actions</h1>
         <p className="mt-1 text-sm text-text2">
-          Étapes du parcours « {journey.procedureId} » — statuts réels du moteur.
+          {procedureLabel(journey.procedureId)} — étapes calculées à partir de votre dossier.
         </p>
       </div>
 
       {journey.nextActionLabel ? (
         <div className="flex items-start gap-3 rounded-xl border border-primary-soft bg-primary/10 p-4">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            ⚡
+            <ActionIcon className="h-5 w-5" />
           </span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-widest text-primary">

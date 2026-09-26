@@ -4,50 +4,23 @@
  * Écran 4 — Dossier : les documents du parcours (✓ / !) + compteur dérivé (G3).
  * Un document manquant mène à l'écran Preuve pour le fournir (analyse réelle).
  */
-import { useEffect } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ThinkingDots } from "@/components/ui";
+import { Button, ErrorNotice, ThinkingDots } from "@/components/ui";
+import { ArrowRightIcon } from "@/components/icons";
 import { DocumentCard } from "@/components/journey/DocumentCard";
-import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
-import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
-import { procedureIdOf } from "@/lib/auth/journey-id";
+import { useJourneyState } from "@/lib/query/journey-state";
 
 export default function DossierPage() {
   const params = useParams<{ id: string }>();
   const journeyId = params.id;
-  const { response, setResponse } = useJourneyStore();
-  const analyses = useDossierStore((s) => s.analyses);
-  const persistReady = usePersistReady();
-
-  const mutation = useJourneyMutation(setResponse);
-  // Reprise : l'état vient d'abord du SERVEUR (GET resume — source de vérité §7.3).
-  const resume = useJourneyResume(journeyId, persistReady && !response);
-
-  useEffect(() => {
-    if (resume.data) setResponse(resume.data);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resume.data]);
-
-  useEffect(() => {
-    // Repli uniquement si reprise impossible (parcours non persisté côté serveur).
-    if (journeyId && !response && persistReady && resume.isError && resume.isFetched) {
-      // Point 6 : même principe que Parcours — le refetch ne peut pas effacer d'analyses,
-      // il les embarque pour que le moteur serveur dérive le même état.
-      const known = Object.entries(analyses).map(([requirementId, a]) => ({
-        requirementId,
-        status: a.status,
-      }));
-      const base = { journeyId, procedureId: procedureIdOf(journeyId) };
-      mutation.mutate(known.length ? { ...base, documents: known } : base);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);
+  const { journey: response, failed, error, retry } = useJourneyState(journeyId);
 
   if (!response) {
     return (
       <div className="flex justify-center py-16">
-        {mutation.isError ? (
-          <p role="alert" className="text-danger">Le dossier est indisponible. Réessayez.</p>
+        {failed ? (
+          <ErrorNotice error={error} action="La lecture du dossier" onRetry={retry} className="w-full max-w-md" />
         ) : (
           <ThinkingDots label="Chargement de votre dossier…" />
         )}
@@ -67,10 +40,29 @@ export default function DossierPage() {
         </p>
       </div>
 
+      <p className="text-sm text-text2">
+        Touchez une pièce pour voir ce qui est exigé, la source officielle, et déposer
+        votre document.
+      </p>
+
       <div className="flex flex-col gap-3">
         {response.documents.map((doc) => (
           <DocumentCard key={doc.requirementId} doc={doc} journeyId={journeyId} />
         ))}
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Link href={`/app/next-action?journey=${encodeURIComponent(journeyId)}`} className="w-full">
+          <Button className="w-full" size="lg" variant="gradient">
+            Voir la prochaine action
+            <ArrowRightIcon className="h-5 w-5" />
+          </Button>
+        </Link>
+        <Link href={`/app/journey/${journeyId}`} className="w-full">
+          <Button className="w-full" size="lg" variant="secondary">
+            Revenir au parcours
+          </Button>
+        </Link>
       </div>
     </section>
   );

@@ -6,6 +6,15 @@ import { z } from "zod";
 import { newTraceId } from "@/lib/trace";
 import { authBearerHeaders } from "@/lib/auth/supabase";
 import {
+  agentTurnResponseSchema,
+  conversationMessageSchema,
+  conversationSchema,
+  memoryItemSchema,
+  type AgentTurnResponse,
+  type Conversation,
+  type ConversationMessage,
+  type MemoryKind,
+  type ServerMemoryItem,
   documentAnalysisSchema,
   evidenceSchema,
   intentResponseSchema,
@@ -121,5 +130,55 @@ export const api = {
       method: "POST",
       body: JSON.stringify(journeyId ? { journeyId } : {}),
     });
+  },
+
+  /* ── Conversations (historique serveur, isolé par usager) ── */
+  conversations(): Promise<Conversation[]> {
+    return request("/api/conversations?limit=50", z.object({ items: z.array(conversationSchema) }))
+      .then((r) => r.items);
+  },
+  conversation(id: string): Promise<Conversation> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, conversationSchema);
+  },
+  createConversation(body: { title?: string; journeyId?: string }): Promise<Conversation> {
+    return request("/api/conversations", conversationSchema, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  renameConversation(id: string, title: string): Promise<Conversation> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, conversationSchema, {
+      method: "PATCH",
+      body: JSON.stringify({ title }),
+    });
+  },
+  deleteConversation(id: string): Promise<unknown> {
+    return request(`/api/conversations/${encodeURIComponent(id)}`, z.unknown(), { method: "DELETE" });
+  },
+  messages(conversationId: string): Promise<ConversationMessage[]> {
+    return request(
+      `/api/conversations/${encodeURIComponent(conversationId)}/messages?limit=200`,
+      z.object({ items: z.array(conversationMessageSchema) })
+    ).then((r) => r.items);
+  },
+
+  /** POST /api/agent/turn — tour réel : intent → dossier → réponse + mémoire + historique. */
+  agentTurn(body: { text: string; journeyId?: string; conversationId?: string }): Promise<AgentTurnResponse> {
+    return request("/api/agent/turn", agentTurnResponseSchema, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /* ── Mémoire long terme (serveur, purgeable) ── */
+  memories(): Promise<ServerMemoryItem[]> {
+    return request("/api/memory?limit=100", z.object({ items: z.array(memoryItemSchema) }))
+      .then((r) => r.items);
+  },
+  createMemory(body: { kind: MemoryKind; content: string; source?: string; journeyId?: string }): Promise<ServerMemoryItem> {
+    return request("/api/memory", memoryItemSchema, { method: "POST", body: JSON.stringify(body) });
+  },
+  deleteMemory(id: string): Promise<unknown> {
+    return request(`/api/memory/${encodeURIComponent(id)}`, z.unknown(), { method: "DELETE" });
   },
 };

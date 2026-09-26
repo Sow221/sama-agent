@@ -101,7 +101,7 @@ const FRENCH_AUTH_ERRORS: Record<string, string> = {
   provider_disabled: "Cette méthode de connexion n'est pas disponible.",
 };
 
-function frenchAuthError(error: unknown): Error {
+export function frenchAuthError(error: unknown): Error {
   if (error instanceof Error) {
     const code = (error as { code?: string }).code;
     if (code && FRENCH_AUTH_ERRORS[code]) return new Error(FRENCH_AUTH_ERRORS[code]);
@@ -111,6 +111,10 @@ function frenchAuthError(error: unknown): Error {
     if (msg === "User already registered") return new Error("Un compte existe déjà avec cette adresse e-mail.");
     if (/rate limit|too .* request/i.test(msg)) {
       return new Error("Trop de tentatives récentes. Réessayez dans quelques minutes.");
+    }
+    // Réseau coupé / service d'authentification injoignable (fetch rejeté).
+    if (/failed to fetch|network|load failed|fetch failed/i.test(msg) || error.name === "AuthRetryableFetchError") {
+      return new Error("Connexion au service impossible. Vérifiez votre réseau, puis réessayez.");
     }
     return error;
   }

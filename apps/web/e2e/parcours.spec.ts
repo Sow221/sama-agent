@@ -44,7 +44,7 @@ test("parcours complet : demande → parcours → document → analyse → recal
     page.getByText("je veux faire ma première demande de permis de conduire")
   ).toBeVisible();
   await expect(page.getByText(/Demande reconnue/)).toBeVisible();
-  await expect(page.getByText(/première demande/)).toBeVisible();
+  await expect(page.getByText(/Demande reconnue/)).toContainText("première demande");
 
   // Les 3 exigences officielles affichées.
   await expect(page.getByText("Pièce d'identité").first()).toBeVisible();
@@ -114,7 +114,8 @@ test("parcours complet : demande → parcours → document → analyse → recal
   await expect(page.getByText(/Verification nécessaire|Vérification nécessaire/)).toBeVisible();
 
   const after = await (await request.get(`${API}/api/journey/${journeyId}`)).json();
-  expect(after.completion.provided).toBe(1);
+  // Une pièce « à vérifier » n'est pas comptée : jamais plus optimiste que la vérité.
+  expect(after.completion.provided).toBe(0);
   expect(after.nextAction).toBe("REVIEW_DOCUMENT");
   expect(after.status).toBe("NEEDS_REVIEW");
 });

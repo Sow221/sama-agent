@@ -8,23 +8,23 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button, GlassCard } from "@/components/ui";
-import { ArrowRightIcon } from "@/components/icons";
+import { ArrowRightIcon, CompassIcon, FileIcon, Mic } from "@/components/icons";
 import { VoiceCore } from "@/components/voice/VoiceCore";
 import { isOnboardingDone } from "@/lib/auth/onboarding";
 
 const STEPS = [
   {
-    emoji: "🎤",
+    Icon: Mic,
     title: "Parlez",
     text: "Écrivez votre demande en français ou parlez en wolof : « je veux faire ma première demande de permis ».",
   },
   {
-    emoji: "🧭",
+    Icon: CompassIcon,
     title: "Comprenez",
-    text: "L'agent vous montre les pièces officielles exigées, avec la source légale qui les justifie.",
+    text: "L'agent vous montre les pièces officielles exigées, avec la source officielle qui les justifie.",
   },
   {
-    emoji: "📁",
+    Icon: FileIcon,
     title: "Agissez",
     text: "Un dossier personnel, suivi étape par étape jusqu'au dépôt — rien que pour vous.",
   },
@@ -93,8 +93,8 @@ export default function WelcomePage() {
         </h2>
         {STEPS.map((s, i) => (
           <GlassCard key={s.title} className="flex items-start gap-4 p-5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-xl">
-              {s.emoji}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-accent-ai">
+              <s.Icon className="h-5 w-5" />
             </span>
             <div>
               <p className="text-sm font-semibold uppercase tracking-widest text-primary">

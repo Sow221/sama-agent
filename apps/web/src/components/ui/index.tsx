@@ -14,6 +14,7 @@ import {
 } from "react";
 import { Spinner } from "./spinner";
 import { ThinkingDots } from "./thinking";
+import { AlertIcon, FileIcon, UserIcon, WifiOffIcon } from "@/components/icons";
 
 /* ═══════════════ Button (§108) ═══════════════ */
 export type ButtonVariant =
@@ -146,7 +147,7 @@ export function Avatar({
       aria-hidden
       className={`inline-flex items-center justify-center rounded-full bg-gradient-to-br from-primary/40 to-accent-ai/30 font-bold text-text1 ${AVATAR_SIZES[size]} ${className}`}
     >
-      {initials || "?"}
+      {initials || <UserIcon className="h-[60%] w-[60%]" />}
     </span>
   );
 }
@@ -239,7 +240,12 @@ export function Tabs<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <div role="tablist" className="flex gap-1 rounded-full border border-border bg-surface p-1">
+    // Défile horizontalement si les onglets dépassent (mobile 360–390 px) au lieu
+    // d'élargir la page entière (défilement horizontal de tout l'écran).
+    <div
+      role="tablist"
+      className="flex max-w-full gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1 [scrollbar-width:none]"
+    >
       {items.map((it) => {
         const active = it.id === value;
         return (
@@ -248,7 +254,7 @@ export function Tabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(it.id)}
-            className={`focus-visible flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors duration-micro ${
+            className={`focus-visible flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold transition-colors duration-micro sm:px-4 ${
               active ? "bg-primary text-[#04211a]" : "text-text2 hover:text-text1"
             }`}
           >
@@ -356,19 +362,22 @@ export function SkeletonCard({ lines = 3, className = "" }: { lines?: number; cl
 /* ═══════════════ États de page (§37, §65-68) ═══════════════ */
 
 export function EmptyState({
-  emoji = "🗂️",
+  emoji = <FileIcon className="h-9 w-9" />,
   title,
   description,
   action,
 }: {
-  emoji?: string;
+  /** Icône SVG de l'état vide (jamais un emoji : rendu variable selon l'OS). */
+  emoji?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-12 text-center">
-      <span aria-hidden className="text-4xl">{emoji}</span>
+      <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-accent-ai">
+        {emoji}
+      </span>
       <h3 className="text-lg font-bold text-text1">{title}</h3>
       {description ? <p className="max-w-sm text-sm text-text2">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
@@ -390,7 +399,7 @@ export function ErrorState({
       role="alert"
       className="flex flex-col items-center gap-3 rounded-xl border border-error/25 bg-error/10 px-6 py-10 text-center"
     >
-      <span className="text-3xl">⚠️</span>
+      <AlertIcon className="h-8 w-8 text-error" />
       <h3 className="text-lg font-bold text-text1">{title}</h3>
       {description ? <p className="max-w-sm text-sm text-text2">{description}</p> : null}
       {onRetry ? (
@@ -408,7 +417,7 @@ export function OfflineBanner({ text = "Vous êtes hors ligne." }: { text?: stri
       role="status"
       className="flex items-center gap-2 rounded-full border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-medium text-warning"
     >
-      <span aria-hidden>📡</span> {text}
+      <WifiOffIcon className="h-4 w-4" /> {text}
     </p>
   );
 }

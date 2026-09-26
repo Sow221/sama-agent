@@ -83,6 +83,7 @@ export function VoiceCore({
   transcript,
   onPress,
   ariaLabel = "Parler à Sama Agent",
+  focusable = true,
   className = "",
 }: {
   state?: CoreState;
@@ -92,6 +93,9 @@ export function VoiceCore({
   transcript?: string;
   onPress?: () => void;
   ariaLabel?: string;
+  /** false quand un bouton texte voisin porte déjà la même action (évite un
+   *  double arrêt clavier et une double annonce au lecteur d'écran). */
+  focusable?: boolean;
   className?: string;
 }) {
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -137,6 +141,8 @@ export function VoiceCore({
       <button
         type="button"
         aria-label={ariaLabel}
+        aria-hidden={focusable ? undefined : true}
+        tabIndex={focusable ? undefined : -1}
         aria-live="polite"
         disabled={!interactive || state === "offline" || state === "error"}
         onClick={onPress}

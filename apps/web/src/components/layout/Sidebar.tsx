@@ -162,26 +162,26 @@ export function Sidebar() {
       {journey && (
         <div className="flex-1 overflow-y-auto">
           <p className={cn("mb-1 px-4 text-xs font-semibold uppercase tracking-widest text-text-muted", collapsed && "px-0 text-center")}>
-            {collapsed ? "▪" : "Récent"}
+            {collapsed ? "" : "Récent"}
           </p>
           {collapsed ? (
             <div className="px-0 text-center">
               <Tooltip label="Parcours en cours">
                 <Link
-                  href={`/app/chats/${journey.journeyId}`}
+                  href={`/app/journey/${journey.journeyId}`}
                   aria-label="Parcours en cours"
                   className="focus-visible inline-flex h-11 w-11 items-center justify-center rounded-xl text-text2 hover:bg-surface-hover hover:text-text1"
                 >
-                  <ChatIcon className="h-5 w-5" />
+                  <ActionIcon className="h-5 w-5" />
                 </Link>
               </Tooltip>
             </div>
           ) : (
             <Link
-              href={`/app/chats/${journey.journeyId}`}
+              href={`/app/journey/${journey.journeyId}`}
               className="focus-visible mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-text2 hover:bg-surface-hover hover:text-text1"
             >
-              <ChatIcon className="h-5 w-5 shrink-0" />
+              <ActionIcon className="h-5 w-5 shrink-0" />
               <span className="truncate">Parcours en cours</span>
             </Link>
           )}

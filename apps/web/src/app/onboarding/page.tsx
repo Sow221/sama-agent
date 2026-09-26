@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, GlassCard } from "@/components/ui";
 import { VoiceCore } from "@/components/voice/VoiceCore";
+import { CompassIcon, MemoryIcon, Mic } from "@/components/icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { completeOnboarding, isOnboardingDone } from "@/lib/auth/onboarding";
 
@@ -89,8 +90,8 @@ export default function OnboardingPage() {
 
       {step === 0 ? (
         <GlassCard className="flex flex-col items-center gap-4 p-8 text-center">
-          <span aria-hidden className="text-5xl">
-            👋
+          <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/[0.05] text-accent-ai">
+            <CompassIcon className="h-9 w-9" />
           </span>
           <h1 className="text-2xl font-extrabold tracking-tight">
             Rencontrez {""}
@@ -108,16 +109,16 @@ export default function OnboardingPage() {
           <VoiceCore state="listening" size="md" interactive={false} />
           <h1 className="text-2xl font-extrabold tracking-tight">Testons votre voix</h1>
           <p className="text-base text-text2">
-            Appuyez sur le micro et dites « Bonjour ». Dans l'écran voix, l'agent écoute réellement vos
-            segments audio.
+            Depuis l'écran Voix, parlez en wolof comme à un conseiller : l'agent écoute réellement
+            votre voix, puis vous répond et met votre dossier à jour.
           </p>
         </GlassCard>
       ) : null}
 
       {step === 2 ? (
         <GlassCard className="flex flex-col items-center gap-4 p-8 text-center">
-          <span aria-hidden className="text-5xl">
-            🎙️
+          <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/[0.05] text-accent-ai">
+            <Mic className="h-9 w-9" />
           </span>
           <h1 className="text-2xl font-extrabold tracking-tight">Permission micro</h1>
           <p className="text-base text-text2">
@@ -156,8 +157,8 @@ export default function OnboardingPage() {
 
       {step === 3 ? (
         <GlassCard className="flex flex-col items-center gap-4 p-8 text-center">
-          <span aria-hidden className="text-5xl">
-            🧠
+          <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/[0.05] text-accent-ai">
+            <MemoryIcon className="h-9 w-9" />
           </span>
           <h1 className="text-2xl font-extrabold tracking-tight">Une mémoire, sous contrôle</h1>
           <p className="text-base text-text2">

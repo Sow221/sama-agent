@@ -5,10 +5,11 @@
  * Données réelles de l'analyse vision (status ANALYZED ≠ VALIDATED, G11),
  * observations factuelles, révision humaine requise, lien vers la preuve officielle.
  */
+import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge, Button, Card, EmptyState, Hydrating, Progress } from "@/components/ui";
-import { ArrowRightIcon } from "@/components/icons";
+import { ArrowRightIcon, MemoryIcon } from "@/components/icons";
 import { useDossierStore, usePersistReady } from "@/lib/state/stores";
 import { useEvidence } from "@/lib/query/hooks";
 
@@ -34,9 +35,9 @@ export default function MemoryDetailPage() {
   if (!analysis) {
     return (
       <EmptyState
-        emoji="🧠"
+        emoji={<MemoryIcon className="h-9 w-9" />}
         title="Pièce introuvable"
-        description={`Aucune analyse enregistrée pour « ${requirementId} » dans cette session.`}
+        description={`Aucune analyse enregistrée pour « ${requirementLabel(requirementId)} » dans cette session.`}
       />
     );
   }
@@ -45,14 +46,14 @@ export default function MemoryDetailPage() {
     <div className="flex max-w-2xl flex-col gap-6">
       <div>
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">Pièce de dossier</p>
-        <h1 className="mt-1 truncate text-2xl font-extrabold">{analysis.fileName ?? requirementId}</h1>
-        <p className="mt-1 text-sm text-text2">{requirementId}</p>
+        <h1 className="mt-1 truncate text-2xl font-extrabold">{analysis.fileName ?? requirementLabel(requirementId)}</h1>
+        <p className="mt-1 text-sm text-text2">{requirementLabel(requirementId)}</p>
       </div>
 
       <Card className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-semibold uppercase tracking-widest text-text-muted">Analyse par vision</span>
-          <Badge tone={statusTone(analysis.status)}>{analysis.status}</Badge>
+          <Badge tone={statusTone(analysis.status)}>{documentStatusLabel(analysis.status)}</Badge>
         </div>
 
         {analysis.confidence != null ? (
@@ -81,7 +82,7 @@ export default function MemoryDetailPage() {
 
         {analysis.requiresHumanReview ? (
           <p role="status" className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
-            ⚠️ Cette pièce demande une vérification humaine avant d'être retenue.
+            Cette pièce demande une vérification humaine avant d'être retenue.
           </p>
         ) : null}
       </Card>

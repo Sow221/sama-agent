@@ -5,6 +5,7 @@
  * Compte · Agent · Voix · Préférences · Confidentialité · Aide.
  * Préférences = choix locaux réels (lib/prefs) ; données de compte = session réelle.
  */
+import { CompassIcon, Mic } from "@/components/icons";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar, Badge, Button, Card, EmptyState } from "@/components/ui";
@@ -150,7 +151,7 @@ export default function YouSectionPage() {
             />
           </Card>
           <Card className="flex items-start gap-3">
-            <span aria-hidden className="text-xl">🎙️</span>
+            <Mic className="mt-0.5 h-5 w-5 shrink-0 text-accent-ai" />
             <p className="text-sm text-text2">
               La session vocale utilise votre micro (VAD Silero), LiveKit pour le transport et le
               worker pour la reconnaissance (Kiriku) et la synthèse (xTTS wolof).
@@ -245,7 +246,7 @@ export default function YouSectionPage() {
     default:
       return (
         <EmptyState
-          emoji="🧭"
+          emoji={<CompassIcon className="h-9 w-9" />}
           title="Section introuvable"
           description={`« ${section} » n'est pas une section du profil.`}
           action={

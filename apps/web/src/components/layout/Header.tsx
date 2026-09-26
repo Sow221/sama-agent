@@ -50,7 +50,7 @@ export function Header() {
             </div>
           ) : configured && !loading ? (
             <Link
-              href="/auth"
+              href="/login"
               className="focus-visible rounded-full bg-primary/15 px-3 py-1 text-sm font-semibold text-primary"
             >
               Connexion

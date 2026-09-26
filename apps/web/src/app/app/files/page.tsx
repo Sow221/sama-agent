@@ -5,6 +5,7 @@
  * Vos pièces réelles : les analyses vision de la session (dossier store) ainsi que
  * les exigences du parcours. Aucun fichier fictif : tout provient de vos dépôts.
  */
+import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import Link from "next/link";
 import { Badge, Button, Card, EmptyState, ListItem } from "@/components/ui";
 import { FileIcon, PlusIcon } from "@/components/icons";
@@ -46,7 +47,7 @@ export default function FilesPage() {
 
       {ready && pieces.length === 0 ? (
         <EmptyState
-          emoji="📁"
+          emoji={<FileIcon className="h-9 w-9" />}
           title="Aucun fichier pour l'instant"
           description="Déposez une pièce pour votre parcours : l'analyse (vision) sera conservée ici et dans votre dossier."
           action={
@@ -73,8 +74,8 @@ export default function FilesPage() {
               <Card key={r.requirementId} className="p-2">
                 <ListItem
                   icon={<FileIcon className="h-5 w-5" />}
-                  title={r.name}
-                  description={r.requirementId}
+                  title={r.name || requirementLabel(r.requirementId)}
+                  description="À déposer depuis votre dossier"
                   trailing={<Badge tone="neutral">À fournir</Badge>}
                   href={`/app/dossier/${journey.journeyId}`}
                 />
@@ -92,13 +93,13 @@ function AnalysisFile({ requirementId, a }: { requirementId: string; a: Document
     <Card className="p-2">
       <ListItem
         icon={<FileIcon className="h-5 w-5" />}
-        title={a.fileName ?? requirementId}
-        description={requirementId}
+        title={a.fileName ?? requirementLabel(requirementId)}
+        description={requirementLabel(requirementId)}
         trailing={
           <Badge tone={fileTone(a.status)}>
             {a.confidence != null && a.status === "ANALYZED"
               ? `${Math.round(a.confidence * 100)}%`
-              : a.status}
+              : documentStatusLabel(a.status)}
           </Badge>
         }
         href={`/app/memory/${encodeURIComponent(requirementId)}`}

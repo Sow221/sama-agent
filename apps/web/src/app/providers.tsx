@@ -2,6 +2,15 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { documentTitle } from "@/lib/routes";
+
+/** Titre d'onglet par écran. Les pages sont des composants client (pas de
+ *  `metadata`) : React 19 hisse ce <title> dans <head>, au rendu serveur comme
+ *  à chaque navigation — un `document.title` en effet était écrasé par Next. */
+function RouteTitle() {
+  return <title>{documentTitle(usePathname())}</title>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -13,5 +22,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <RouteTitle />
+      {children}
+    </QueryClientProvider>
+  );
 }

@@ -16,7 +16,8 @@ import { Button, Card, OfflineBanner, SearchInput } from "@/components/ui";
 import { Modal, useToast } from "@/components/ui/overlays";
 import { FileIcon, MemoryIcon, UserIcon } from "@/components/icons";
 import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
-import { useMemoryStore } from "@/lib/state/memory";
+import { useMemories } from "@/lib/query/conversations";
+import { procedureLabel, requirementLabel } from "@/lib/labels";
 
 interface Result {
   key: string;
@@ -36,7 +37,7 @@ export function AppSystemUI() {
 
   const journey = useJourneyStore((s) => s.response);
   const analyses = useDossierStore((s) => s.analyses);
-  const memoryItems = useMemoryStore((s) => s.items);
+  const memoryItems = useMemories().data ?? [];
 
   /* Cmd/Ctrl+K → recherche globale (§81) */
   useEffect(() => {
@@ -83,33 +84,33 @@ export function AppSystemUI() {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const out: Result[] = [];
-    if (journey && journey.procedureId.toLowerCase().includes(q)) {
+    if (journey && procedureLabel(journey.procedureId).toLowerCase().includes(q)) {
       out.push({
         key: "journey",
         kind: "journey",
-        title: journey.procedureId,
+        title: procedureLabel(journey.procedureId),
         subtitle: "Parcours en cours",
         href: `/app/journey/${journey.journeyId}`,
       });
     }
     for (const [requirementId, a] of Object.entries(analyses)) {
       const name = (a.fileName ?? requirementId).toLowerCase();
-      if (name.includes(q) || requirementId.toLowerCase().includes(q)) {
+      if (name.includes(q) || requirementLabel(requirementId).toLowerCase().includes(q)) {
         out.push({
           key: `piece-${requirementId}`,
           kind: "piece",
-          title: a.fileName ?? requirementId,
-          subtitle: requirementId,
+          title: a.fileName ?? requirementLabel(requirementId),
+          subtitle: requirementLabel(requirementId),
           href: `/app/memory/${encodeURIComponent(requirementId)}`,
         });
       }
     }
     for (const item of memoryItems) {
-      if (item.text.toLowerCase().includes(q)) {
+      if (item.content.toLowerCase().includes(q)) {
         out.push({
           key: item.id,
           kind: "souvenir",
-          title: item.text,
+          title: item.content,
           subtitle: "Souvenir mémorisé",
           href: "/app/memory?tab=souvenirs",
         });

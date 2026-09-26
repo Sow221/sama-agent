@@ -217,3 +217,54 @@ export const voiceTokenSchema = z.object({
   ttl: z.number().int().positive(),
 });
 export type VoiceToken = z.infer<typeof voiceTokenSchema>;
+/* ── Conversations, tour d'agent, mémoire (contrat serveur — fastapi.py) ── */
+
+export const conversationSchema = z.object({
+  id: z.string(),
+  title: z.string().nullable(),
+  status: z.string(),
+  journeyId: z.string().nullable(),
+  createdAt: z.string(),
+  lastActivityAt: z.string().nullable().optional(),
+});
+export type Conversation = z.infer<typeof conversationSchema>;
+
+export const conversationMessageSchema = z.object({
+  id: z.string(),
+  conversationId: z.string(),
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  language: z.string().nullable().optional(),
+  journeyId: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+export type ConversationMessage = z.infer<typeof conversationMessageSchema>;
+
+export const MEMORY_KINDS = ["SELF", "PREFERENCE", "FACT", "TEMPORARY", "CONVERSATION"] as const;
+export const memoryKindSchema = z.enum(MEMORY_KINDS);
+export type MemoryKind = z.infer<typeof memoryKindSchema>;
+
+export const memoryItemSchema = z.object({
+  id: z.string(),
+  kind: memoryKindSchema,
+  content: z.string(),
+  source: z.string().nullable().optional(),
+  journeyId: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().nullable().optional(),
+});
+export type ServerMemoryItem = z.infer<typeof memoryItemSchema>;
+
+export const agentTurnResponseSchema = z.object({
+  answer: z.string(),
+  intent: z.string(),
+  language: z.string(),
+  confidence: z.number(),
+  needsClarification: z.boolean(),
+  journeyStatus: z.string().nullable(),
+  nextAction: z.string().nullable(),
+  memoryUsed: z.array(z.object({ kind: z.string(), content: z.string() })),
+  newMemories: z.array(memoryItemSchema),
+  conversation: z.array(conversationMessageSchema),
+});
+export type AgentTurnResponse = z.infer<typeof agentTurnResponseSchema>;

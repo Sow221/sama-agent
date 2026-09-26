@@ -18,7 +18,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { CloseIcon } from "@/components/icons";
+import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "@/components/icons";
 import { cn } from "@/lib/cn";
 
 function useMounted() {
@@ -267,7 +267,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             )}
           >
             <span aria-hidden className="mt-0.5 text-base">
-              {t.tone === "success" ? "✅" : t.tone === "error" ? "⚠️" : t.tone === "info" ? "ℹ️" : "•"}
+              {t.tone === "success" ? (
+                <CheckIcon className="h-4 w-4 text-success" />
+              ) : t.tone === "error" ? (
+                <AlertIcon className="h-4 w-4 text-error" />
+              ) : (
+                <InfoIcon className="h-4 w-4 text-accent-ai" />
+              )}
             </span>
             <span className="min-w-0">
               <span className="block text-sm font-semibold text-text1">{t.title}</span>

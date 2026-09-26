@@ -36,6 +36,14 @@ class DocumentStatus(str, Enum):
     UNEXPECTED = "UNEXPECTED"
     UNKNOWN = "UNKNOWN"
 
+class DocumentStatusLabel(str, Enum):
+    MISSING = "À fournir"
+    PROVIDED = "Reçu, analyse en cours"
+    ANALYZED = "Analysé"
+    NEEDS_REVIEW = "À vérifier par le service"
+    UNEXPECTED = "Ne correspond pas"
+    UNKNOWN = "Indéterminé"
+
 class JourneyStatusLabel(str, Enum):
     NOT_STARTED = "Pas encore commencé"
     IN_PROGRESS = "En cours de préparation"

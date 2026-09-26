@@ -260,3 +260,60 @@ export function LogOutIcon({ className = "" }: IconProps) {
     </Svg>
   );
 }
+export function CameraIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </Svg>
+  );
+}
+
+export function BuildingIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M3 21h18" />
+      <path d="M5 21V10l7-5 7 5v11" />
+      <path d="M9 21v-6h6v6" />
+    </Svg>
+  );
+}
+
+export function CompassIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m16.2 7.8-2.1 6.3-6.3 2.1 2.1-6.3z" />
+    </Svg>
+  );
+}
+
+export function MailIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 6L2 7" />
+    </Svg>
+  );
+}
+
+export function WifiOffIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M2 2l20 20" />
+      <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+      <path d="M5 13a10 10 0 0 1 5.2-2.8" />
+      <path d="M19 13a10 10 0 0 0-2.5-1.8" />
+      <path d="M12 20h.01" />
+    </Svg>
+  );
+}
+
+export function FlagIcon({ className = "" }: IconProps) {
+  return (
+    <Svg className={className}>
+      <path d="M4 22V4" />
+      <path d="M4 4h13l-2 4 2 4H4" />
+    </Svg>
+  );
+}

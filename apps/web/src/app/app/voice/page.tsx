@@ -9,6 +9,7 @@
  * - Aucune transcription factice : le transcript n'apparaît que si du texte RÉEL
  *   est disponible côté client.
  */
+import { Mic } from "@/components/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { VoiceCore, type CoreState } from "@/components/voice/VoiceCore";
@@ -16,6 +17,7 @@ import { PhaseHeader } from "@/components/voice/PhaseHeader";
 import { CancelButton } from "@/components/voice/CancelButton";
 import { Button, Card } from "@/components/ui";
 import { useVoiceStore } from "@/lib/state/stores";
+import { agentErrorMessage, voiceFailure, type VoiceFailure } from "@/lib/voice/messages";
 import { VoiceRoom } from "@/lib/voice/livekit";
 import { createMicVad, type SileroVad } from "@/lib/voice/vad";
 import { useVoiceToken } from "@/lib/query/hooks";
@@ -35,7 +37,7 @@ export default function VoicePage() {
   const mediaRef = useRef<MediaStream | null>(null);
   const cbRef = useRef<{ onRemoteAudio: (el: HTMLAudioElement) => void } | null>(null);
   const [failed, setFailed] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<VoiceFailure | null>(null);
   /* Ce que le WORKER a réellement dit/reçu. Jamais deviné, jamais codé en dur. */
   const [agentReply, setAgentReply] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
@@ -70,9 +72,7 @@ export default function VoicePage() {
         if (!r.data) {
           // 503 (clés LiveKit absentes) ou 409 (aucun dossier) : le serveur le dit,
           // on ne tente pas de deviner pourquoi en se connectant quand même.
-          const detail =
-            r.error instanceof Error ? r.error.message : "service vocal indisponible";
-          throw new Error(detail);
+          throw r.error ?? new Error("service vocal indisponible");
         }
         return r.data;
       });
@@ -122,7 +122,7 @@ export default function VoicePage() {
             return;
           }
           // agent_error : dégradé honnête. Le message vient du serveur, avec son code.
-          setNotice(`${event.message} (${event.code})`);
+          setNotice(agentErrorMessage(event.code));
           setPhase("listening");
         },
       });
@@ -155,7 +155,7 @@ export default function VoicePage() {
       console.error("voice start failed", err);
       setPhase("idle");
       setFailed(true); // fallback texte honnête (§120)
-      setFailure(err instanceof Error ? err.message : "micro ou service vocal indisponible");
+      setFailure(voiceFailure(err));
     }
   }, [setPhase, setConnected, setActive, startSegment, endSegment, tokenQuery]);
 
@@ -194,32 +194,36 @@ export default function VoicePage() {
     <div className="flex min-h-[calc(100dvh-9rem)] flex-col items-center justify-center gap-8">
       {failed ? (
         <Card className="flex w-full max-w-sm flex-col items-center gap-4 p-8 text-center">
-          <span aria-hidden className="text-4xl">
-            🎙️
+          <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-accent-ai">
+            <Mic className="h-8 w-8" />
           </span>
-          <h2 className="text-xl font-extrabold">Voix indisponible</h2>
+          <h1 className="text-xl font-extrabold">Voix indisponible</h1>
+          {/* La cause réelle (serveur ou navigateur), traduite — jamais le texte technique. */}
           <p className="text-sm text-text2">
-            Micro, VAD ou connexion LiveKit indisponibles. Vous pouvez continuer par écrit sans
-            attendre.
+            {failure?.message ?? "La session vocale n'a pas pu démarrer."} Vous pouvez aussi
+            continuer par écrit.
           </p>
-          {/* La cause réelle, quand le serveur l'a dite (503 clés absentes, 409 sans dossier). */}
-          {failure ? (
-            <p className="w-full break-words rounded-lg bg-surface-2 p-3 text-left text-xs text-text2">
-              {failure}
-            </p>
-          ) : null}
           <div className="flex w-full flex-col gap-2">
-            <Button variant="gradient" size="lg" onClick={() => router.push("/app/home")}>
-              Continuer par texte
-            </Button>
-            <Button variant="secondary" onClick={start}>
-              Réessayer
-            </Button>
+            {failure?.remedy === "start_journey" ? (
+              <Button variant="gradient" size="lg" onClick={() => router.push("/app/home")}>
+                Commencer un parcours
+              </Button>
+            ) : (
+              <Button variant="gradient" size="lg" onClick={() => router.push("/app/home")}>
+                Continuer par écrit
+              </Button>
+            )}
+            {failure?.remedy !== "start_journey" ? (
+              <Button variant="secondary" onClick={start}>
+                Réessayer
+              </Button>
+            ) : null}
           </div>
         </Card>
       ) : (
         <>
           <div className="flex flex-1 flex-col items-center justify-center gap-8 py-6">
+            <h1 className="sr-only">Session vocale avec Sama Agent</h1>
             <VoiceCore state={coreState} size="xl" ariaLabel="Session vocale Sama Agent" />
             <PhaseHeader state={coreState} />
             {/* Ce qui suit vient du WORKER (agent_text) ou du serveur (agent_error).

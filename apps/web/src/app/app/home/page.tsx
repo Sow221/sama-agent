@@ -13,6 +13,8 @@ import { ArrowRightIcon } from "@/components/icons";
 import { VoiceCore } from "@/components/voice/VoiceCore";
 import { useIntentMutation } from "@/lib/query/hooks";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
+import { procedureLabel } from "@/lib/labels";
+import { JOURNEY_STATUS_LABEL } from "@sama/shared/gen/enums";
 
 export default function HomePage() {
   const router = useRouter();
@@ -56,6 +58,7 @@ export default function HomePage() {
           size="lg"
           onPress={() => router.push("/app/voice")}
           ariaLabel="Parler à Sama Agent"
+          focusable={false}
         />
         <Button variant="gradient" size="lg" onClick={() => router.push("/app/voice")}>
           Parler à Sama Agent
@@ -101,17 +104,17 @@ export default function HomePage() {
       {journey && ready ? (
         <div className="flex flex-col gap-3">
           <h2 className="text-xl font-extrabold tracking-tight">Votre parcours en cours</h2>
-          <Link href={`/app/chats/${journey.journeyId}`} className="focus-visible">
+          <Link href={`/app/journey/${journey.journeyId}`} className="focus-visible">
             <Card className="transition-colors hover:border-primary/40">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-bold">{journey.procedureId}</p>
+                  <p className="truncate text-base font-bold">{procedureLabel(journey.procedureId)}</p>
                   <p className="mt-0.5 text-sm text-text2">
                     {journey.nextActionLabel ?? "Étape suivante à venir"}
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full border border-accent-ai/30 bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-ai">
-                  En cours
+                  {JOURNEY_STATUS_LABEL[journey.status]}
                 </span>
               </div>
               <div className="mt-3">

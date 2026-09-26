@@ -10,12 +10,13 @@ import { useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, GlassCard, ThinkingDots } from "@/components/ui";
-import { UploadIcon, CheckIcon, CloseIcon } from "@/components/icons";
+import { ArrowLeftIcon, ArrowRightIcon, UploadIcon, CheckIcon, CloseIcon } from "@/components/icons";
 import { EvidencePanel } from "@/components/journey/EvidencePanel";
 import { useEvidence, useAnalyzeMutation, useJourneyMutation } from "@/lib/query/hooks";
 import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor, procedureIdOf } from "@/lib/auth/journey-id";
+import { documentStatusLabel, requirementLabel } from "@/lib/labels";
 
 export default function PreuvePage() {
   const params = useParams<{ requirement: string }>();
@@ -61,14 +62,19 @@ export default function PreuvePage() {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <Link href={`/app/dossier/${journeyId}`} className="text-sm font-medium text-accent-ai">
-          ‹ Mon dossier
+        <Link
+          href={`/app/dossier/${journeyId}`}
+          className="focus-visible inline-flex items-center gap-1 text-sm font-medium text-accent-ai"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          Mon dossier
         </Link>
+        <br />
         <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
           4 · Preuve
         </p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight capitalize">
-          {requirement}
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
+          {requirementLabel(requirement, journey)}
         </h1>
       </div>
 
@@ -140,7 +146,8 @@ export default function PreuvePage() {
           </Button>
           {analyze.isError ? (
             <p role="alert" className="text-sm text-danger">
-              L'analyse a échoué : le fichier n'a pas pu être traité. Réessayez.
+              L'analyse a échoué : le fichier n'a pas pu être traité. Vérifiez qu'il
+              s'agit d'une image ou d'un PDF de moins de 10 Mo, puis réessayez.
             </p>
           ) : null}
         </form>
@@ -149,8 +156,12 @@ export default function PreuvePage() {
       {result ? (
         <GlassCard className={`p-5 ${result.status === "ANALYZED" ? "" : "border-warning/30"}`}>
           <p className="font-semibold">
-            Résultat de l'analyse{" "}
-            {result.status === "ANALYZED" ? "✓ semble correspondre" : `— ${result.status}`}
+            Résultat de l'analyse :{" "}
+            <span className={result.status === "ANALYZED" ? "text-primary" : "text-warning"}>
+              {result.status === "ANALYZED"
+                ? "le document semble correspondre"
+                : documentStatusLabel(result.status).toLowerCase()}
+            </span>
           </p>
           {result.reason ? <p className="mt-1 text-sm text-text2">{result.reason}</p> : null}
           {result.observations?.length ? (
@@ -165,13 +176,23 @@ export default function PreuvePage() {
               ? "Une vérification humaine peut être nécessaire avant toute utilisation officielle."
               : "Analyse automatique : pas de certification officielle."}
           </p>
-          <Button
-            className="mt-3 w-full"
-            variant="ghost"
-            onClick={() => router.push(`/app/dossier/${journeyId}`)}
-          >
-            Retourner au dossier
-          </Button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button
+              className="w-full"
+              variant="gradient"
+              onClick={() => router.push(`/app/next-action?journey=${encodeURIComponent(journeyId)}`)}
+            >
+              Voir la prochaine action
+              <ArrowRightIcon className="h-5 w-5" />
+            </Button>
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={() => router.push(`/app/dossier/${journeyId}`)}
+            >
+              Retourner au dossier
+            </Button>
+          </div>
         </GlassCard>
       ) : null}
     </section>

@@ -150,3 +150,20 @@ def test_runtime_turn_uses_the_persisted_dossier() -> None:
     journey = apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"))
     assert journey.status == enums.JourneyStatus.NEEDS_DOCUMENT
     assert _runtime(_Room(), jid)._turn("permis de conduire")
+
+
+def test_formulation_names_the_real_pieces() -> None:
+    """La réponse (texte et voix) nomme les pièces réelles et suit la priorité du moteur."""
+    from agent.application.dialogue import formulate
+    from agent.application.use_cases.get_journey import get_journey
+
+    def say(docs):
+        return formulate(get_journey(JourneyRequest(
+            journeyId="driving_license_new", procedureId="driving_license_new", documents=docs)))
+
+    empty = say(None)
+    assert "Pièce d'identité" in empty and "Photographies" in empty and "0 sur 3" in empty
+    review = say([{"requirementId": "identity", "status": "NEEDS_REVIEW"}])
+    assert "« Pièce d'identité »" in review and "vérifiée" in review
+    ready = say([{"requirementId": r, "status": "ANALYZED"} for r in ("identity", "medical", "photos")])
+    assert "complet" in ready and "3 pièces sur 3" in ready

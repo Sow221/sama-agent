@@ -9,24 +9,20 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Badge, Button, Card, EmptyState, ListItem, SearchInput, Tabs } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ListItem, SearchInput, SkeletonCard, Tabs } from "@/components/ui";
 import { Modal, useToast } from "@/components/ui/overlays";
 import { FileIcon, InfoIcon, MemoryIcon } from "@/components/icons";
 import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
-import {
-  MEMORY_CATEGORY_LABEL,
-  useMemoryHydrated,
-  useMemoryStore,
-  type MemoryItem,
-} from "@/lib/state/memory";
-import type { DocumentAnalysis } from "@/lib/schemas";
+import { MEMORY_KIND_LABEL, useDeleteMemory, useMemories } from "@/lib/query/conversations";
+import { documentStatusLabel, requirementLabel } from "@/lib/labels";
+import type { DocumentAnalysis, ServerMemoryItem } from "@/lib/schemas";
 
 type Tab = "pieces" | "preferences" | "important" | "souvenirs";
 
 function statusTone(status: string): "ok" | "warn" | "danger" | "neutral" {
   if (status === "ANALYZED") return "ok";
   if (status === "NEEDS_REVIEW") return "warn";
-  if (status === "REJECTED" || status === "INVALID") return "danger";
+  if (status === "UNEXPECTED") return "danger";
   return "neutral";
 }
 
@@ -34,13 +30,14 @@ export default function MemoryPage() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("pieces");
   const [query, setQuery] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<MemoryItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ServerMemoryItem | null>(null);
   const analyses = useDossierStore((s) => s.analyses);
   const journey = useJourneyStore((s) => s.response);
   const ready = usePersistReady();
-  const items = useMemoryStore((s) => s.items);
-  const remove = useMemoryStore((s) => s.remove);
-  const memoryHydrated = useMemoryHydrated();
+  // Mémoire SERVEUR : celle que l'agent relit à chaque tour (/api/memory).
+  const memories = useMemories();
+  const items = memories.data ?? [];
+  const forget = useDeleteMemory();
   const toast = useToast();
 
   /* Cible d'onglet depuis la recherche globale (AppSystemUI → ?tab=souvenirs) */
@@ -55,9 +52,9 @@ export default function MemoryPage() {
     (a.fileName ?? a.requirementId).toLowerCase().includes(query.trim().toLowerCase())
   );
 
-  function confirmForget() {
+  async function confirmForget() {
     if (!pendingDelete) return;
-    remove(pendingDelete.id);
+    await forget.mutateAsync(pendingDelete.id);
     toast.toast({ title: "Souvenir oublié.", tone: "neutral" });
     setPendingDelete(null);
   }
@@ -131,11 +128,13 @@ export default function MemoryPage() {
       ) : null}
 
       {tab === "souvenirs" ? (
-        memoryHydrated && items.length === 0 ? (
+        memories.isLoading ? (
+          <SkeletonCard lines={2} />
+        ) : items.length === 0 ? (
           <EmptyState
-            emoji="💭"
+            emoji={<MemoryIcon className="h-9 w-9" />}
             title="Rien de mémorisé pour l'instant"
-            description="Dans une conversation, choisissez « Mémoriser » sous un message : Sama Agent gardera ce point pour la suite de votre session."
+            description="Dans une conversation, choisissez « Mémoriser » sous une réponse, ou confiez une information à l'agent : il la gardera pour vos prochains échanges."
           />
         ) : (
           <div className="flex flex-col gap-2">
@@ -143,9 +142,9 @@ export default function MemoryPage() {
               <Card key={item.id} className="p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-text1">{item.text}</p>
+                    <p className="text-sm text-text1">{item.content}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge tone="info">{MEMORY_CATEGORY_LABEL[item.category]}</Badge>
+                      <Badge tone="info">{MEMORY_KIND_LABEL[item.kind]}</Badge>
                       <span className="text-xs text-text-muted">
                         {new Date(item.createdAt).toLocaleDateString("fr-FR", {
                           day: "numeric",
@@ -181,7 +180,7 @@ export default function MemoryPage() {
             <Button variant="ghost" onClick={() => setPendingDelete(null)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={confirmForget}>
+            <Button variant="destructive" onClick={confirmForget} loading={forget.isPending}>
               Oublier
             </Button>
           </>
@@ -193,7 +192,7 @@ export default function MemoryPage() {
           <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher une pièce" />
           {ready && entries.length === 0 ? (
             <EmptyState
-              emoji="🧠"
+              emoji={<MemoryIcon className="h-9 w-9" />}
               title="Rien de mémorisé pour l'instant"
               description="Les pièces que vous déposerez pour votre dossier apparaîtront ici (analyse réelle par vision)."
               action={
@@ -224,13 +223,13 @@ function AnalysisRow({ requirementId, analysis }: { requirementId: string; analy
     <Card className="p-2">
       <ListItem
         icon={<FileIcon className="h-5 w-5" />}
-        title={analysis.fileName ?? requirementId}
-        description={requirementId}
+        title={analysis.fileName ?? requirementLabel(requirementId)}
+        description={requirementLabel(requirementId)}
         trailing={
           <Badge tone={statusTone(analysis.status)}>
             {analysis.confidence != null && analysis.status === "ANALYZED"
               ? `${Math.round(analysis.confidence * 100)}%`
-              : analysis.status}
+              : documentStatusLabel(analysis.status)}
           </Badge>
         }
         href={`/app/memory/${encodeURIComponent(requirementId)}`}

@@ -1,58 +1,87 @@
 "use client";
 
 /**
- * Conversation — `/app/chats/[conversationId]` (UI/UX Master Spec §16-17, §34, §113).
- * Workspace : en-tête + messages + composer (texte réel → intent avec contexte dossier).
- * L'état du parcours vient du SERVEUR (reprise par dossier, référence §7.3) : étapes,
- * progression, prochaine action — jamais reconstruit depuis le navigateur.
+ * Conversation — `/app/chats/[conversationId]`.
+ *
+ * Tout est réel et serveur :
+ *   - la conversation et son historique (GET /api/conversations/:id[/messages]) ;
+ *   - chaque réponse vient d'un tour d'agent (POST /api/agent/turn) : intention,
+ *     état du dossier calculé par le moteur, mémoire de l'usager — et les deux
+ *     messages sont persistés par le serveur ;
+ *   - « Mémoriser » écrit dans la mémoire serveur (POST /api/memory), que l'agent
+ *     relit au tour suivant.
+ * Avant : réponse fixe construite côté client, historique en session, mémoire
+ * locale que l'agent ne voyait jamais.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Card, EmptyState, Progress, SkeletonCard, Textarea } from "@/components/ui";
-import { useToast } from "@/components/ui/overlays";
-import { ArrowRightIcon, SendIcon } from "@/components/icons";
-import { useIntentMutation, useJourneyResume } from "@/lib/query/hooks";
-import { useChatStore } from "@/lib/state/stores";
+import { JOURNEY_STATUS_LABEL, type JOURNEY_STATUS } from "@sama/shared/gen/enums";
 import {
-  MEMORY_CATEGORY_LABEL,
-  useMemoryStore,
-  type MemoryCategory,
-} from "@/lib/state/memory";
+  Button,
+  Card,
+  EmptyState,
+  ErrorNotice,
+  Progress,
+  SkeletonCard,
+  Textarea,
+  ThinkingDots,
+} from "@/components/ui";
+import { Modal, useToast } from "@/components/ui/overlays";
+import { ArrowRightIcon, ChatIcon, SendIcon } from "@/components/icons";
+import { useJourneyResume } from "@/lib/query/hooks";
+import {
+  MEMORY_KIND_LABEL,
+  useAgentTurn,
+  useConversation,
+  useCreateMemory,
+  useMessages,
+} from "@/lib/query/conversations";
+import { procedureLabel } from "@/lib/labels";
+import type { MemoryKind } from "@/lib/schemas";
 
-const MEMORY_CATEGORIES: MemoryCategory[] = ["you", "projects", "goals", "preferences", "important"];
+const SAVE_KINDS: MemoryKind[] = ["SELF", "PREFERENCE", "FACT"];
 
 export default function ConversationPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const router = useRouter();
-  const [text, setText] = useState("");
-  const [proposal, setProposal] = useState<string | null>(null);
-  const [category, setCategory] = useState<MemoryCategory>("important");
-  const messages = useChatStore((s) => s.messages);
-  const addMessage = useChatStore((s) => s.addMessage);
-  const addMemory = useMemoryStore((s) => s.add);
   const toast = useToast();
+  const [text, setText] = useState("");
+  const [lastSent, setLastSent] = useState<string | null>(null);
+  const [proposal, setProposal] = useState<string | null>(null);
+  const [kind, setKind] = useState<MemoryKind>("FACT");
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const resume = useJourneyResume(conversationId, true);
-  const journey = resume.data;
+  const conversation = useConversation(conversationId);
+  const journeyId = conversation.data?.journeyId ?? undefined;
+  const journey = useJourneyResume(journeyId, Boolean(journeyId)).data;
+  const messages = useMessages(conversation.data ? conversationId : undefined);
+  const turn = useAgentTurn(conversationId);
+  const saveMemory = useCreateMemory();
 
-  const intent = useIntentMutation((r) => {
-    const reply =
-      r.clarificationQuestion ??
-      (r.needsClarification
-        ? "J'ai besoin d'un détail pour comprendre votre demande."
-        : r.transcript
-          ? `Votre demande est comprise (confiance ${Math.round((r.confidence ?? 0) * 100)}%).`
-          : "Votre demande est comprise.");
-    addMessage({ role: "agent", text: reply });
-  });
+  const canSend = useMemo(() => text.trim().length > 0 && !turn.isPending, [text, turn.isPending]);
 
-  const canSend = useMemo(() => text.trim().length > 0 && !intent.isPending, [text, intent.isPending]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.data?.length, turn.isPending]);
 
-  function send() {
-    if (!canSend) return;
-    addMessage({ role: "user", text: text.trim() });
-    intent.mutate({ transcript: text.trim(), language: "fr", context: { journeyId: conversationId } });
+  function send(content = text.trim()) {
+    if (!content || turn.isPending) return;
+    setLastSent(content);
+    turn.mutate(
+      { text: content, journeyId },
+      {
+        onSuccess: (r) => {
+          if (r.newMemories.length) {
+            toast.toast({
+              title: "Mémorisé",
+              description: r.newMemories.map((m) => m.content).join(" · "),
+              tone: "success",
+            });
+          }
+        },
+      }
+    );
     setText("");
   }
 
@@ -65,26 +94,24 @@ export default function ConversationPage() {
     }
   }
 
-  function saveProposal() {
+  async function confirmMemory() {
     if (!proposal) return;
-    addMemory(proposal, category);
-    toast.toast({ title: "Mémorisé dans la mémoire.", tone: "success" });
+    await saveMemory.mutateAsync({ kind, content: proposal, source: "chat", journeyId });
+    toast.toast({ title: "Ajouté à votre mémoire.", tone: "success" });
     setProposal(null);
   }
 
-  if (resume.isLoading) {
-    return <SkeletonCard lines={4} />;
-  }
+  if (conversation.isLoading) return <SkeletonCard lines={4} />;
 
-  if (resume.isError || !journey) {
+  if (conversation.isError || !conversation.data) {
     return (
       <EmptyState
-        emoji="🗂️"
-        title="Parcours introuvable"
-        description="Ce dossier n'existe pas encore sur le serveur. Commencez une nouvelle conversation pour créer votre parcours."
+        emoji={<ChatIcon className="h-9 w-9" />}
+        title="Conversation introuvable"
+        description="Elle a peut-être été supprimée. Retrouvez vos échanges dans Chats."
         action={
-          <Button variant="gradient" size="lg" onClick={() => router.push("/app/home")}>
-            Nouvelle conversation
+          <Button variant="gradient" size="lg" onClick={() => router.push("/app/chats")}>
+            Voir mes conversations
           </Button>
         }
       />
@@ -93,158 +120,113 @@ export default function ConversationPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Résumé du parcours (données serveur) */}
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary">
-              Parcours en cours
-            </p>
-            <h1 className="mt-1 truncate text-xl font-extrabold">{journey.procedureId}</h1>
-          </div>
-          <span className="shrink-0 rounded-full border border-accent-ai/30 bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-ai">
-            {Math.round(journey.completion.ratio * 100)}%
-          </span>
-        </div>
-
-        <div className="mt-4">
-          <Progress value={journey.completion.ratio} label="Progression du parcours" />
-          <p className="mt-1 text-xs text-text-muted">
-            {journey.completion.provided}/{journey.completion.required} pièces fournies
-          </p>
-        </div>
-
-        {journey.nextActionLabel ? (
-          <div className="mt-4 rounded-lg border border-primary-soft bg-primary/10 p-3">
-            <p className="text-sm font-semibold text-primary">Action suivante</p>
-            <p className="mt-0.5 text-sm text-text1">{journey.nextActionLabel}</p>
-            {journey.nextActionReason ? (
-              <p className="mt-0.5 text-xs text-text2">{journey.nextActionReason}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Link href={`/app/journey/${journey.journeyId}`} className="flex-1 focus-visible">
-            <Button variant="secondary" className="w-full">
-              Parcours détaillé
-              <ArrowRightIcon className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Link href={`/app/dossier/${journey.journeyId}`} className="flex-1 focus-visible">
-            <Button variant="ghost" className="w-full">
-              Pièces du dossier
-            </Button>
-          </Link>
-        </div>
-
-        {/* Étapes réelles du moteur */}
-        <ol className="mt-4 flex flex-col gap-2">
-          {journey.steps.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 text-sm">
-              <span
-                aria-hidden
-                className={
-                  s.status === "done"
-                    ? "text-success"
-                    : s.status === "active"
-                      ? "text-primary"
-                      : "text-text-disabled"
-                }
-              >
-                {s.status === "done" ? "✓" : s.status === "active" ? "●" : "○"}
-              </span>
-              <span className={s.status === "todo" ? "text-text-muted" : "text-text1"}>{s.name}</span>
-            </li>
-          ))}
-        </ol>
-      </Card>
-
-      {/* Messages (conversation textuelle réelle de session) */}
-      {messages.length > 0 ? (
-        <div className="flex flex-col gap-3" aria-live="polite">
-          {messages.map((m) => (
-            <div key={m.id} className="flex flex-col gap-1.5">
-              <div
-                className={
-                  m.role === "user"
-                    ? "self-end max-w-[85%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-base text-[#04211a]"
-                    : "self-start max-w-[85%] rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-base text-text1"
-                }
-              >
-                {m.text}
-              </div>
-              {/* Actions de message (§24-26) : uniquement sur les réponses agent */}
-              {m.role === "agent" ? (
-                <div className="flex items-center gap-1 self-start pl-1">
-                  <button
-                    type="button"
-                    onClick={() => copyMessage(m.text)}
-                    className="min-h-11 rounded-full px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text1"
-                  >
-                    Copier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProposal(m.text)}
-                    className="min-h-11 rounded-full px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text1"
-                  >
-                    Mémoriser
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          ))}
-          {intent.isPending ? (
-            <div className="self-start rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-base text-text2">
-              J'analyse…
-            </div>
-          ) : null}
-          {intent.isError ? (
-            <p role="alert" className="text-sm text-error">
-              L'analyse a échoué. Réessayez.
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <p className="text-center text-sm text-text-muted">
-          Écrivez un message pour poursuivre avec l'agent (contexte : dossier {journey.journeyId}).
+      <div>
+        <h1 className="truncate text-2xl font-extrabold tracking-tight">
+          {conversation.data.title || "Conversation"}
+        </h1>
+        <p className="mt-1 text-sm text-text2">
+          L'agent répond à partir de l'état réel de votre dossier et de ce que vous lui avez confié.
         </p>
-      )}
+      </div>
 
-      {/* Proposition de mémorisation (§35) */}
-      {proposal ? (
-        <Card className="border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-semibold text-text1">Voulez-vous que je mémorise cela ?</p>
-          <p className="mt-1 line-clamp-2 text-sm text-text2">{proposal}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {MEMORY_CATEGORIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCategory(c)}
-                className={
-                  category === c
-                    ? "min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-[#04211a] transition-colors"
-                    : "min-h-11 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-text2 transition-colors hover:bg-surface-hover"
-                }
-              >
-                {MEMORY_CATEGORY_LABEL[c]}
-              </button>
-            ))}
+      {/* Contexte : le dossier lié (données serveur) */}
+      {journey ? (
+        <Card>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Dossier lié</p>
+              <p className="mt-1 truncate font-bold">{procedureLabel(journey.procedureId)}</p>
+            </div>
+            <span className="shrink-0 rounded-full border border-accent-ai/30 bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-ai">
+              {JOURNEY_STATUS_LABEL[journey.status as JOURNEY_STATUS]}
+            </span>
           </div>
-          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="ghost" onClick={() => setProposal(null)}>
-              Pas maintenant
-            </Button>
-            <Button onClick={saveProposal}>Mémoriser</Button>
+          <div className="mt-3">
+            <Progress value={journey.completion.ratio} label="Progression du dossier" />
+            <p className="mt-1 text-xs text-text-muted">
+              {journey.completion.provided}/{journey.completion.required} pièces analysées
+              {journey.nextActionLabel ? ` · Prochaine action : ${journey.nextActionLabel}` : ""}
+            </p>
           </div>
+          <Link
+            href={`/app/journey/${journey.journeyId}`}
+            className="focus-visible mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent-ai"
+          >
+            Ouvrir le parcours <ArrowRightIcon className="h-4 w-4" />
+          </Link>
         </Card>
       ) : null}
 
-      {/* Composer (§35) */}
+      {/* Historique (serveur) */}
+      <div className="flex flex-col gap-3" aria-live="polite">
+        {messages.isLoading ? <ThinkingDots label="Chargement de l'historique…" /> : null}
+        {!messages.isLoading && !messages.data?.length && !turn.isPending ? (
+          <p className="text-center text-sm text-text-muted">
+            Posez votre question : « Qu'est-ce qu'il me manque ? », « Où déposer mon dossier ? »…
+          </p>
+        ) : null}
+        {messages.data?.map((m) => (
+          <div key={m.id} className="flex flex-col gap-1.5">
+            <div
+              className={
+                m.role === "user"
+                  ? "max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-4 py-3 text-base text-[#04211a]"
+                  : "max-w-[85%] self-start whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-base text-text1"
+              }
+            >
+              {m.content}
+            </div>
+            {m.role === "assistant" ? (
+              <div className="flex items-center gap-1 self-start pl-1">
+                <button
+                  type="button"
+                  onClick={() => copyMessage(m.content)}
+                  className="focus-visible min-h-11 rounded-full px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text1"
+                >
+                  Copier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProposal(m.content)}
+                  className="focus-visible min-h-11 rounded-full px-3 text-sm font-medium text-text-muted transition-colors hover:bg-surface-hover hover:text-text1"
+                >
+                  Mémoriser
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ))}
+        {turn.isPending ? (
+          <>
+            {lastSent ? (
+              <div className="max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/70 px-4 py-3 text-base text-[#04211a]">
+                {lastSent}
+              </div>
+            ) : null}
+            <div className="self-start rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3">
+              <ThinkingDots label="L'agent réfléchit…" />
+            </div>
+          </>
+        ) : null}
+        {turn.isError ? (
+          <ErrorNotice
+            error={turn.error}
+            action="La réponse de l'agent"
+            onRetry={lastSent ? () => send(lastSent) : undefined}
+          />
+        ) : null}
+        <div ref={endRef} />
+      </div>
+
+      {/* Composer */}
       <div className="sticky bottom-24 md:bottom-4">
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2 shadow-elevated backdrop-blur-xl">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+          className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2 shadow-elevated backdrop-blur-xl"
+        >
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -260,16 +242,48 @@ export default function ConversationPage() {
             className="max-h-40 border-0 bg-transparent focus:ring-0"
           />
           <button
-            type="button"
+            type="submit"
             aria-label="Envoyer"
             disabled={!canSend}
-            onClick={send}
             className="focus-visible flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#04211a] transition-transform duration-micro active:scale-[0.95] disabled:opacity-40"
           >
             <SendIcon className="h-5 w-5" />
           </button>
-        </div>
+        </form>
       </div>
+
+      <Modal
+        open={Boolean(proposal)}
+        onClose={() => setProposal(null)}
+        title="Mémoriser cette information ?"
+        description="L'agent s'en servira dans vos prochains échanges. Vous pouvez l'oublier à tout moment depuis Mémoire."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setProposal(null)}>Pas maintenant</Button>
+            <Button onClick={confirmMemory} loading={saveMemory.isPending}>Mémoriser</Button>
+          </>
+        }
+      >
+        <p className="line-clamp-3 text-sm text-text2">{proposal}</p>
+        <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Type de mémoire">
+          {SAVE_KINDS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={kind === k}
+              onClick={() => setKind(k)}
+              className={
+                kind === k
+                  ? "focus-visible min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-[#04211a]"
+                  : "focus-visible min-h-11 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-text2 hover:bg-surface-hover"
+              }
+            >
+              {MEMORY_KIND_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }

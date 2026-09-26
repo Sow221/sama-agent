@@ -1,6 +1,15 @@
 "use client";
 
 import type { JourneyResponse } from "@/lib/schemas";
+import {
+  BuildingIcon,
+  CameraIcon,
+  ChatIcon,
+  FileIcon,
+  InfoIcon,
+  SearchIcon,
+} from "@/components/icons";
+import { requirementLabel } from "@/lib/labels";
 
 /**
  * Prochaine action — label + raison FOURNIS par le moteur déterministe
@@ -16,24 +25,25 @@ const FALLBACK_LABELS: Record<string, string> = {
   CLARIFY: "Préciser la demande",
 };
 
-const ICONS: Record<string, string> = {
-  PROVIDE_DOCUMENT: "📄",
-  PROVIDE_PHOTOS: "📷",
-  REVIEW_DOCUMENT: "🔎",
-  READ_INFORMATION: "📖",
-  CONTACT_SERVICE: "🏛️",
-  CLARIFY: "💬",
+const ICONS: Record<string, typeof FileIcon> = {
+  PROVIDE_DOCUMENT: FileIcon,
+  PROVIDE_PHOTOS: CameraIcon,
+  REVIEW_DOCUMENT: SearchIcon,
+  READ_INFORMATION: InfoIcon,
+  CONTACT_SERVICE: BuildingIcon,
+  CLARIFY: ChatIcon,
 };
 
 export function NextActionCard({ journey }: { journey: JourneyResponse }) {
   if (!journey.nextAction) return null;
   const label =
-    journey.nextActionLabel ?? FALLBACK_LABELS[journey.nextAction] ?? journey.nextAction;
+    journey.nextActionLabel ?? FALLBACK_LABELS[journey.nextAction] ?? "Étape suivante";
+  const Icon = ICONS[journey.nextAction] ?? InfoIcon;
   return (
     <div className="rounded-card border border-accent-ai/30 bg-gradient-to-br from-primary/[0.12] via-white/[0.05] to-accent-ai/[0.12] p-5 backdrop-blur-md">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 to-accent-ai/25 text-xl">
-          {ICONS[journey.nextAction] ?? "→"}
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 to-accent-ai/25 text-accent-ai">
+          <Icon className="h-5 w-5" />
         </span>
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-widest text-text2">
@@ -45,7 +55,7 @@ export function NextActionCard({ journey }: { journey: JourneyResponse }) {
           ) : null}
           {journey.nextActionRequirement ? (
             <p className="mt-1 text-xs text-text2">
-              Élément : {journey.nextActionRequirement}
+              Pièce concernée : {requirementLabel(journey.nextActionRequirement, journey)}
             </p>
           ) : null}
         </div>

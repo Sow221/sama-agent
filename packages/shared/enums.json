@@ -20,6 +20,14 @@
     "UNEXPECTED",
     "UNKNOWN"
   ],
+  "document_status_label": {
+    "MISSING": "À fournir",
+    "PROVIDED": "Reçu, analyse en cours",
+    "ANALYZED": "Analysé",
+    "NEEDS_REVIEW": "À vérifier par le service",
+    "UNEXPECTED": "Ne correspond pas",
+    "UNKNOWN": "Indéterminé"
+  },
   "journey_status_label": {
     "NOT_STARTED": "Pas encore commencé",
     "IN_PROGRESS": "En cours de préparation",

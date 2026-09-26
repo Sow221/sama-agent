@@ -6,6 +6,7 @@
  * exigences du parcours, fichiers. Résultats vides = état honnête (aucun faux
  * résultat produit, §153).
  */
+import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge, Card, EmptyState, ListItem, SearchInput } from "@/components/ui";
@@ -56,7 +57,7 @@ export default function SearchPage() {
 
       {ready && empty ? (
         <EmptyState
-          emoji="🔎"
+          emoji={<SearchIcon className="h-9 w-9" />}
           title={q ? "Aucun résultat" : "Rien à chercher pour l'instant"}
           description={
             q
@@ -88,8 +89,8 @@ export default function SearchPage() {
                   <ListItem
                     icon={<HomeIcon className="h-5 w-5" />}
                     title={r.name}
-                    description={r.requirementId}
-                    trailing={<Badge tone="neutral">{r.status}</Badge>}
+                    description={requirementLabel(r.requirementId)}
+                    trailing={<Badge tone="neutral">{documentStatusLabel(r.status)}</Badge>}
                     href={journey ? `/app/dossier/${journey.journeyId}` : `/app/evidence/${encodeURIComponent(r.requirementId)}`}
                   />
                 </Card>
@@ -103,8 +104,8 @@ export default function SearchPage() {
                 <Card key={`piece-${requirementId}`} className="p-2">
                   <ListItem
                     icon={<FileIcon className="h-5 w-5" />}
-                    title={a.fileName ?? requirementId}
-                    description={requirementId}
+                    title={a.fileName ?? requirementLabel(requirementId)}
+                    description={requirementLabel(requirementId)}
                     href={`/app/memory/${encodeURIComponent(requirementId)}`}
                   />
                 </Card>

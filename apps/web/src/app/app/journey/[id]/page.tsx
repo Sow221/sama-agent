@@ -4,22 +4,21 @@
  * Écran 3 — Parcours (G7) : 4 étapes + état + bouton vers le dossier.
  * Les données viennent du moteur déterministe (completion TOUJOURS dérivée, G3).
  */
-import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { JOURNEY_STATUS_LABEL, type JOURNEY_STATUS } from "@sama/shared/gen/enums";
-import { Button, GlassCard, ThinkingDots, StatusPill, type BadgeTone } from "@/components/ui";
+import { Button, ErrorNotice, GlassCard, ThinkingDots, StatusPill, type BadgeTone } from "@/components/ui";
 import { JourneySteps } from "@/components/journey/JourneySteps";
 import { NextActionCard } from "@/components/journey/NextActionCard";
-import { useJourneyMutation, useJourneyResume } from "@/lib/query/hooks";
-import { useDossierStore, useJourneyStore, usePersistReady } from "@/lib/state/stores";
-import { procedureIdOf } from "@/lib/auth/journey-id";
+import { AskAgentButton } from "@/components/journey/AskAgentButton";
+import { ArrowRightIcon } from "@/components/icons";
+import { useJourneyState } from "@/lib/query/journey-state";
 
 /** Pourquoi un élément bloque (point 20 — « ce qui manque / pourquoi »). */
 const STATUS_WHY: Record<string, string> = {
   MISSING: "à fournir",
   PROVIDED: "fourni, analyse en cours",
-  NEEDS_REVIEW: "à vérifier — analyse en cours",
+  NEEDS_REVIEW: "à vérifier par le service",
   UNEXPECTED: "inattendu, à remplacer",
   UNKNOWN: "non déterminable",
 };
@@ -51,45 +50,13 @@ export const STATUS_TONE: Record<JOURNEY_STATUS, BadgeTone> = {
 export default function ParcoursPage() {
   const params = useParams<{ id: string }>();
   const journeyId = params.id;
-  const { response, setResponse } = useJourneyStore();
-  const analyses = useDossierStore((s) => s.analyses);
-  const persistReady = usePersistReady();
-
-  const mutation = useJourneyMutation(setResponse);
-  // Reprise : l'état vient d'abord du SERVEUR (GET resume). Si le parcours n'a
-  // jamais été persisté (404), l'effet de repli ci-dessous le crée via le POST.
-  const resume = useJourneyResume(journeyId, persistReady && !response);
-
-  useEffect(() => {
-    if (resume.data) setResponse(resume.data);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resume.data]);
-
-  useEffect(() => {
-    // Repli uniquement si reprise impossible (parcours non persisté côté serveur).
-    if (journeyId && !response && persistReady && resume.isError && resume.isFetched) {
-      // Point 6 : on ne demande JAMAIS un état qui efface des analyses — le refetch
-      // embarque les documents déjà analysés pour que le moteur dérive le même état.
-      // (les `name` sont backfillés par le moteur serveur)
-      const known = Object.entries(analyses).map(([requirementId, a]) => ({
-        requirementId,
-        status: a.status,
-      }));
-      // procedureId explicite : un dossier par-usager (journeyId suffixé) ne doit
-      // jamais être confondu avec une procédure du référentiel.
-      const base = { journeyId, procedureId: procedureIdOf(journeyId) };
-      mutation.mutate(known.length ? { ...base, documents: known } : base);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [journeyId, response, analyses, persistReady, resume.isError, resume.isFetched]);
+  const { journey: response, failed, error, retry } = useJourneyState(journeyId);
 
   if (!response) {
     return (
       <div className="flex justify-center py-16">
-        {mutation.isError ? (
-          <p role="alert" className="text-danger">
-            Le parcours est indisponible. Réessayez.
-          </p>
+        {failed ? (
+          <ErrorNotice error={error} action="La lecture du parcours" onRetry={retry} className="w-full max-w-md" />
         ) : (
           <ThinkingDots label="Chargement de votre parcours…" />
         )}
@@ -125,6 +92,7 @@ export default function ParcoursPage() {
             phrase entière, et data-testid donne un point d'ancrage stable. */}
         <p
           data-testid="completion"
+          role="group"
           aria-label={`${response.completion.provided} sur ${response.completion.required} éléments fournis`}
           className="text-5xl font-extrabold tracking-tight text-gradient"
         >
@@ -160,11 +128,20 @@ export default function ParcoursPage() {
 
       <NextActionCard journey={response} />
 
-      <Link href={`/app/dossier/${journeyId}`} className="w-full">
-        <Button className="w-full" size="lg" variant="gradient">
-          Voir mon dossier
-        </Button>
-      </Link>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Link href={`/app/dossier/${journeyId}`} className="w-full">
+          <Button className="w-full" size="lg" variant="gradient">
+            Voir mon dossier
+            <ArrowRightIcon className="h-5 w-5" />
+          </Button>
+        </Link>
+        <Link href={`/app/next-action?journey=${encodeURIComponent(journeyId)}`} className="w-full">
+          <Button className="w-full" size="lg" variant="secondary">
+            Prochaine action
+          </Button>
+        </Link>
+      </div>
+      <AskAgentButton journeyId={journeyId} procedureId={response.procedureId} />
     </section>
   );
 }

@@ -1,67 +1,66 @@
 /**
- * MobileHeader (§12) — back + titre + actions ; sur l'accueil : salutation + avatar.
+ * MobileHeader (§12) — retour + titre + aide ; sur l'accueil : salutation + avatar.
+ * Le titre et l'écran parent viennent de la table unique `lib/routes.ts`.
+ * Le titre de page (h1) appartient à chaque écran : ici, un simple libellé.
  */
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Avatar, IconButton } from "@/components/ui";
-import { ArrowLeftIcon, MoreIcon } from "@/components/icons";
+import { ArrowLeftIcon, InfoIcon } from "@/components/icons";
 import { useAuth } from "@/lib/auth/auth-context";
+import { routeInfo } from "@/lib/routes";
 
-const TITLES: Record<string, string> = {
-  "/app/voice": "Nouvelle conversation",
-  "/app/chats": "Chats",
-  "/app/memory": "Mémoire",
-  "/app/files": "Fichiers",
-  "/app/actions": "Actions",
-  "/app/search": "Recherche",
-  "/app/you": "Moi",
-};
+/** Prénom affichable : nom saisi à l'inscription, sinon rien (jamais « ? »). */
+function firstName(user: ReturnType<typeof useAuth>["user"]): string | null {
+  const meta = (user?.user_metadata ?? {}) as { name?: string; full_name?: string };
+  const name = (meta.name || meta.full_name || "").trim();
+  return name ? name.split(/\s+/)[0] : null;
+}
 
 export function MobileHeader() {
   const pathname = usePathname();
+  const search = useSearchParams();
   const { user } = useAuth();
-  const isHome = pathname === "/app/home";
+  const info = routeInfo(pathname);
 
-  // Segment de navigation : /app/... ; les routes profondes gardent le retour.
-  const title = Object.entries(TITLES)
-    .filter(([prefix]) => pathname.startsWith(prefix))
-    .sort((a, b) => b[0].length - a[0].length)[0]?.[1];
-  const isDeep = (pathname.match(/\//g) ?? []).length > 2; // au-delà de /app/xxx
-
-  if (isHome) {
-    const first = (user?.email ?? "").split("@")[0];
+  if (pathname === "/app/home") {
+    const first = firstName(user);
     return (
       <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(10,18,32,0.72)] backdrop-blur-xl md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
-          <p className="text-lg font-bold">
-            Bonjour{first ? `, ${first.replace(/[._-].*$/, "")}` : ""}
-          </p>
-          <Link href="/app/you" aria-label="Mon profil">
-            <Avatar name={user?.email ?? null} size="lg" />
+          <p className="text-lg font-bold">{first ? `Bonjour, ${first}` : "Bonjour"}</p>
+          <Link href="/app/you" aria-label="Mon profil" className="focus-visible rounded-full">
+            <Avatar name={first ?? user?.email ?? null} size="lg" />
           </Link>
         </div>
       </header>
     );
   }
 
+  const parent = info?.parent?.(pathname, new URLSearchParams(search.toString()));
+
   return (
     <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(10,18,32,0.72)] backdrop-blur-xl md:hidden">
       <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-2">
         <div className="flex min-w-0 items-center gap-1">
-          {isDeep ? (
-            <Link href="/app/chats" aria-label="Retour">
+          {parent ? (
+            <Link href={parent} aria-label="Retour" className="focus-visible rounded-full">
               <IconButton label="Retour" tabIndex={-1}>
                 <ArrowLeftIcon className="h-5 w-5" />
               </IconButton>
             </Link>
-          ) : null}
-          <h1 className="truncate text-base font-bold text-text1">{title ?? "Sama Agent"}</h1>
+          ) : (
+            <span className="w-2" />
+          )}
+          <p className="truncate text-base font-bold text-text1">{info?.title ?? "Sama Agent"}</p>
         </div>
-        <IconButton label="Plus d'options" tabIndex={-1}>
-          <MoreIcon className="h-5 w-5" />
-        </IconButton>
+        <Link href="/limits" aria-label="Aide et limites" className="focus-visible rounded-full">
+          <IconButton label="Aide et limites" tabIndex={-1}>
+            <InfoIcon className="h-5 w-5" />
+          </IconButton>
+        </Link>
       </div>
     </header>
   );
