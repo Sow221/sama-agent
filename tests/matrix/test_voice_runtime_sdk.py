@@ -286,3 +286,84 @@ def test_session_displays_french_and_speaks_the_reply_object() -> None:
     texts = [e["text"] for e in result["events"] if e["type"] == "agent_text"]
     assert texts == ["sama permis", "Il manque la pièce."]
     assert spoken == [{"wo": "Dafa des"}]
+
+
+# ── Adia phrase par phrase (latence perçue, même voix, jamais de mélange) ───
+def test_split_sentences_keeps_short_natural_units() -> None:
+    from agent.infrastructure.tts.tts_wolof import split_sentences
+
+    parts = split_sentences("Dafa des kàrtu identite bi ak nataal yi. Tàmbalil ak kàrtu identite bi.")
+    assert parts == ["Dafa des kàrtu identite bi ak nataal yi.", "Tàmbalil ak kàrtu identite bi."]
+    assert split_sentences("Waaw. Baax na.") == ["Waaw. Baax na."]  # pas de micro-phrase isolée
+    assert all(len(p) <= 180 for p in split_sentences("wax " * 200))
+
+
+def _stream(monkeypatch, wolof_impl):
+    from agent import mode as app_mode
+    from agent.infrastructure import tts
+    from agent.infrastructure.tts import tts_wolof
+
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    monkeypatch.setattr(tts, "synthesize", lambda text, speaker_wav=None: b"FR:" + text.encode())
+    monkeypatch.setattr(tts_wolof, "synthesize", wolof_impl)
+    return list(tts.stream_reply("Il manque des pièces.", "Dafa des nataal yi ak kàrtu bi. Tàmbalil ak kàrtu bi."))
+
+
+def test_stream_reply_speaks_wolof_sentence_by_sentence_with_one_voice(monkeypatch) -> None:
+    engines = []
+
+    def ok(text, only=None):
+        engines.append(only)
+        return b"WO:" + text.encode(), "adia"
+
+    out = _stream(monkeypatch, ok)
+    assert [lang for _, lang in out] == ["wo", "wo"]
+    assert engines == [None, "adia"]  # 2e phrase imposée au moteur de la 1re : même voix
+
+
+def test_stream_reply_falls_back_to_french_only_if_first_sentence_fails(monkeypatch) -> None:
+    from agent.infrastructure.tts import tts_wolof
+
+    def down(text, only=None):
+        raise tts_wolof.WolofTtsUnavailableError("GPU")
+
+    assert _stream(monkeypatch, down) == [(b"FR:Il manque des pi\xc3\xa8ces.", "fr")]
+
+    calls = {"n": 0}
+
+    def breaks_later(text, only=None):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise tts_wolof.WolofTtsUnavailableError("coupure")
+        return b"WO", "adia"
+
+    # Panne en cours de réponse : on s'arrête, sans enchaîner en français (pas de mélange).
+    assert [lang for _, lang in _stream(monkeypatch, breaks_later)] == ["wo"]
+
+
+def test_speak_publishes_all_sentences_on_one_track() -> None:
+    from agent.voice import audio
+
+    room = _Room()
+    rt = _runtime(room)
+    wav = audio.pcm_to_wav(b"\x00\x00" * (audio.TTS_SAMPLE_RATE // 10), audio.TTS_SAMPLE_RATE)
+    turn_id = rt.session.enqueue_segment(b"x")
+    asyncio.run(rt._speak(iter([wav, wav]), turn_id))
+    states = [e.get("state") for e in room.local_participant.data if e["type"] == "agent_state"]
+    assert states == [protocol.ST_SPEAKING, protocol.ST_LISTENING]
+    assert len(room.local_participant.published) == 1  # une seule piste pour toute la réponse
+
+
+def test_speak_reports_voice_failure_honestly() -> None:
+    room = _Room()
+    rt = _runtime(room)
+    turn_id = rt.session.enqueue_segment(b"x")
+
+    def broken():
+        raise RuntimeError("Adia non chargé")
+        yield b""  # noqa: unreachable — générateur
+
+    asyncio.run(rt._speak(broken(), turn_id))
+    kinds = [(e["type"], e.get("code") or e.get("state")) for e in room.local_participant.data]
+    assert kinds == [("agent_error", protocol.ERR_TTS_UNAVAILABLE), ("agent_state", protocol.ST_LISTENING)]
+    assert room.local_participant.published == []  # jamais « je parle » sans voix

@@ -69,7 +69,7 @@ except ImportError as exc:  # pragma: no cover - depend du poste de dev
 # déterministe (le front bascule alors en texte).
 from agent.application.orchestration.agent_orchestrator import voice_turn
 from agent.infrastructure.stt import asr_kiriku
-from agent.infrastructure.tts import synthesize_reply as tts_synthesize_reply
+from agent.infrastructure.tts import stream_reply as tts_stream_reply
 from agent.infrastructure.tts import tts_wolof
 
 #: Borne mémoire explicite : segment de 30 s en PCM mono 48 kHz / 16 bits.
@@ -111,12 +111,17 @@ class VoiceRuntime:
         reply = voice_turn(text, self.journey_id)
         return reply.display, reply
 
-    def _synthesize(self, reply) -> bytes:
-        # Voix réelle : wolof (Adia → MMS) si disponible, sinon la phrase française
-        # (Edge). Toute panne remonte en agent_error honnête (le front bascule en texte).
-        wav, lang = tts_synthesize_reply(reply.display, reply.spoken, speaker_wav=self.speaker)
-        log.info("voix de l'agent : %s", "wolof" if lang == "wo" else "français (repli)")
-        return wav
+    def _synthesize(self, reply):
+        """Voix réelle, PHRASE PAR PHRASE : générateur paresseux de WAV (aucun
+        calcul ici — la synthèse avance pendant la lecture, dans _speak)."""
+        def _stream():
+            for i, (wav, lang) in enumerate(
+                tts_stream_reply(reply.display, reply.spoken, speaker_wav=self.speaker)
+            ):
+                if i == 0:
+                    log.info("voix de l'agent : %s", "wolof (Adia)" if lang == "wo" else "français (repli)")
+                yield wav
+        return _stream()
 
     # ── Canal de données ───────────────────────────────────────────────────
     async def send(self, event: dict) -> None:
@@ -211,21 +216,45 @@ class VoiceRuntime:
             log.info("tour %s abandonne avant publication (barge-in)", turn_id)
             return
 
-        await self.send(protocol.agent_state(protocol.ST_SPEAKING, turn_id))
-        await self._publish(result["audio"], turn_id)
-        await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
+        await self._speak(result["audio"], turn_id)
 
-    async def _publish(self, wav: bytes, turn_id: str) -> None:
-        """Publie le WAV synthétisé trame par trame, en respectant le barge-in."""
+    async def _speak(self, speech, turn_id: str) -> None:
+        """Dit la réponse : un WAV, ou un flux de WAV (une phrase chacun).
+
+        La première phrase est attendue AVANT d'annoncer « speaking » : une panne
+        de voix devient une erreur honnête, jamais un faux état « je parle ».
+        """
+        segments = iter([speech]) if isinstance(speech, (bytes, bytearray)) else iter(speech)
         try:
-            chunks = await asyncio.to_thread(audio.wav_to_chunks, wav, audio.TTS_SAMPLE_RATE, 100)
-        except audio.AudioFormatError as exc:
-            # Format inattendu : la réponse texte est déjà partie, on le signale.
-            await self.send(protocol.agent_error(protocol.ERR_TURN_FAILED, str(exc), turn_id))
+            first = await asyncio.to_thread(next, segments, None)
+        except Exception as exc:
+            log.warning("voix indisponible : %s", exc)
+            await self.send(protocol.agent_error(protocol.ERR_TTS_UNAVAILABLE, str(exc), turn_id))
+            await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
             return
-        if not chunks:
+        if first is None or self.session.is_superseded(turn_id):
+            if first is None:
+                await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
             return
+        await self.send(protocol.agent_state(protocol.ST_SPEAKING, turn_id))
+        await self._publish(first, turn_id, rest=segments)
+        if not self.session.is_superseded(turn_id):
+            await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
 
+    @staticmethod
+    def _next_or_none(segments):
+        """Phrase suivante ; None en fin de flux OU sur panne en cours de réponse
+        (le texte est déjà affiché : la voix s'arrête là, sans inventer)."""
+        try:
+            return next(segments, None)
+        except Exception:
+            log.warning("voix interrompue en cours de réponse", exc_info=True)
+            return None
+
+    async def _publish(self, wav: bytes, turn_id: str, rest=None) -> None:
+        """Publie la réponse sur UN track, phrase après phrase, en respectant le
+        barge-in. La phrase suivante se synthétise PENDANT la lecture de la
+        courante (prélecture dans un thread)."""
         source = rtc.AudioSource(sample_rate=audio.TTS_SAMPLE_RATE, num_channels=1)
         track = rtc.LocalAudioTrack.create_audio_track("agent-voice", source)
         pub = await self.room.local_participant.publish_track(
@@ -233,21 +262,35 @@ class VoiceRuntime:
         )
         self._source, self._track = source, pub
         interrupted = False
+        current: bytes | None = wav
         try:
-            for chunk in chunks:
-                if self._stop.is_set() or self.session.is_superseded(turn_id):
-                    interrupted = True
-                    break
-                await source.capture_frame(
-                    rtc.AudioFrame(
-                        data=chunk.data,
-                        sample_rate=chunk.sample_rate,
-                        num_channels=chunk.num_channels,
-                        samples_per_channel=chunk.samples_per_channel,
-                    )
+            while current is not None and not interrupted:
+                prefetch = (
+                    asyncio.ensure_future(asyncio.to_thread(self._next_or_none, rest))
+                    if rest is not None else None
                 )
-                # Rythme réel : 100 ms d'audio par trame.
-                await asyncio.sleep(0.1)
+                try:
+                    chunks = await asyncio.to_thread(
+                        audio.wav_to_chunks, current, audio.TTS_SAMPLE_RATE, 100)
+                except audio.AudioFormatError as exc:
+                    # Format inattendu : la réponse texte est déjà partie, on le signale.
+                    await self.send(protocol.agent_error(protocol.ERR_TURN_FAILED, str(exc), turn_id))
+                    chunks = []
+                for chunk in chunks:
+                    if self._stop.is_set() or self.session.is_superseded(turn_id):
+                        interrupted = True
+                        break
+                    await source.capture_frame(
+                        rtc.AudioFrame(
+                            data=chunk.data,
+                            sample_rate=chunk.sample_rate,
+                            num_channels=chunk.num_channels,
+                            samples_per_channel=chunk.samples_per_channel,
+                        )
+                    )
+                    # Rythme réel : 100 ms d'audio par trame.
+                    await asyncio.sleep(0.1)
+                current = await prefetch if (prefetch is not None and not interrupted) else None
             if interrupted:
                 # Barge-in : l'audio déjà en file (jusqu'à 1 s) ne doit plus sortir.
                 source.clear_queue()

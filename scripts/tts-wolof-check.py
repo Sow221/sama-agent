@@ -4,8 +4,10 @@
     SAMA_MODE=live python ../../scripts/tts-wolof-check.py
 
 Pour chaque moteur (adia, mms) : les VRAIES phrases de l'agent (dialogue.WOLOF)
-sont synthétisées, enregistrées dans var/tts-check/<moteur>-<n>.wav, et la
-latence mesurée est affichée. Écoutez les fichiers, puis fixez l'ordre dans
+sont synthétisées phrase par phrase (comme l'agent), enregistrées dans
+var/tts-check/<moteur>-<n>-<phrase>.wav, avec la latence mesurée (« 1re voix » =
+attente avant que l'agent parle). Pour essayer une autre voix Adia :
+    ADIA_DESCRIPTION="A warm, calm female voice, speaking slowly and clearly" python … Écoutez les fichiers, puis fixez l'ordre dans
 ~/sama.env : SAMA_TTS_WOLOF=adia,mms (ou mms,adia, ou un seul).
 """
 from __future__ import annotations
@@ -42,9 +44,15 @@ for name, engine in tts_wolof.ENGINES.items():
         print(f"INDISPONIBLE : {exc}")
         continue
     for i, text in enumerate(PHRASES, 1):
+        # Comme l'agent : phrase par phrase. « 1re voix » = attente avant d'entendre l'agent.
+        sentences = tts_wolof.split_sentences(text)
         t0 = time.perf_counter()
-        wav = engine.synthesize(text)
-        path = out / f"{name}-{i}.wav"
-        path.write_bytes(wav)
-        print(f"{time.perf_counter() - t0:5.2f} s  {path.relative_to(ROOT)}  « {text[:60]}… »")
+        first = None
+        for j, sentence in enumerate(sentences, 1):
+            wav = engine.synthesize(sentence)
+            first = first or time.perf_counter() - t0
+            path = out / f"{name}-{i}-{j}.wav"
+            path.write_bytes(wav)
+        print(f"1re voix {first:5.2f} s · total {time.perf_counter() - t0:5.2f} s · "
+              f"{len(sentences)} phrase(s)  var/tts-check/{name}-{i}-*.wav  « {text[:50]}… »")
 print("\nÉcoutez les fichiers de var/tts-check/ puis réglez SAMA_TTS_WOLOF dans ~/sama.env.")

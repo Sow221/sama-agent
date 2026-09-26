@@ -114,24 +114,59 @@ class MmsWolof(_Engine):
 
 
 class AdiaWolof(_Engine):
+    """CONCREE/Adia_TTS — voix wolof principale.
+
+    Réglages qui font la différence à l'oreille :
+      · deux tokenizers : Adia dérive de parler-tts-mini-MULTILINGUAL, dont la
+        description de voix passe par le tokenizer de l'encodeur de texte (flan-t5)
+        et la phrase par celui du modèle — les confondre dégrade la voix ;
+      · graine fixe à chaque phrase : sinon Parler-TTS échantillonne une voix
+        légèrement différente d'une phrase à l'autre ;
+      · demi-précision (bf16/fp16) + attention SDPA sur GPU ; une phrase de
+        préchauffage au chargement (noyaux GPU prêts avant le premier usager).
+    """
+
     name = "adia"
 
     def _load(self):  # pragma: no cover - GPU / hub
+        import torch
         from parler_tts import ParlerTTSForConditionalGeneration
         from transformers import AutoTokenizer
 
         repo = os.getenv("WOLOF_ADIA_MODEL", "CONCREE/Adia_TTS")
-        model = ParlerTTSForConditionalGeneration.from_pretrained(repo).to(_device()).eval()
-        return model, AutoTokenizer.from_pretrained(repo)
+        device = _device()
+        dtype = torch.float32
+        if device == "cuda":
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        try:
+            model = ParlerTTSForConditionalGeneration.from_pretrained(
+                repo, torch_dtype=dtype, attn_implementation="sdpa")
+        except (TypeError, ValueError):  # version de parler-tts sans SDPA
+            model = ParlerTTSForConditionalGeneration.from_pretrained(repo, torch_dtype=dtype)
+        model = model.to(device).eval()
+        prompt_tok = AutoTokenizer.from_pretrained(repo)
+        try:
+            desc_tok = AutoTokenizer.from_pretrained(model.config.text_encoder._name_or_path)
+        except Exception:
+            desc_tok = prompt_tok
+        loaded = (model, prompt_tok, desc_tok)
+        self._synth(loaded, os.getenv("ADIA_WARMUP_TEXT", "Na nga def."))  # préchauffage GPU
+        return loaded
 
     def _synth(self, model, text: str) -> bytes:  # pragma: no cover - GPU
         import torch
 
-        parler, tokenizer = model
-        desc = tokenizer(ADIA_DESCRIPTION, return_tensors="pt").input_ids.to(parler.device)
-        prompt = tokenizer(text, return_tensors="pt").input_ids.to(parler.device)
+        parler, prompt_tok, desc_tok = model
+        desc = desc_tok(ADIA_DESCRIPTION, return_tensors="pt").to(parler.device)
+        prompt = prompt_tok(text, return_tensors="pt").to(parler.device)
+        torch.manual_seed(int(os.getenv("ADIA_SEED", "42")))  # même voix à chaque phrase
         with torch.no_grad():
-            audio = parler.generate(input_ids=desc, prompt_input_ids=prompt)
+            audio = parler.generate(
+                input_ids=desc.input_ids,
+                attention_mask=desc.attention_mask,
+                prompt_input_ids=prompt.input_ids,
+                prompt_attention_mask=prompt.attention_mask,
+            )
         return _float_to_wav(audio[0].float().cpu().numpy(), parler.config.sampling_rate)
 
 
@@ -139,16 +174,42 @@ ENGINES: dict[str, _Engine] = {"adia": AdiaWolof(), "mms": MmsWolof()}
 
 
 def engine_order() -> list[str]:
-    raw = os.getenv("SAMA_TTS_WOLOF", "adia,mms").strip().lower()
+    raw = os.getenv("SAMA_TTS_WOLOF", "adia,mms").strip().lower()  # Adia d'abord
     if raw in ("", "off", "none"):
         return []
     return [n.strip() for n in raw.split(",") if n.strip() in ENGINES]
 
 
-def synthesize(text: str) -> tuple[bytes, str]:
-    """WAV wolof réel + nom du moteur utilisé. Lève si aucun moteur n'aboutit."""
+def split_sentences(text: str, max_chars: int = 180) -> list[str]:
+    """Découpe en phrases courtes : Parler-TTS est plus juste sur des phrases
+    brèves, et l'agent peut parler dès la PREMIÈRE phrase prête (latence perçue)."""
+    import re
+
+    parts = [p.strip() for p in re.split(r"(?<=[.!?:;])\s+", text) if p.strip()]
+    out: list[str] = []
+    for part in parts:
+        if out and len(out[-1]) + len(part) < 40:  # pas de micro-phrase isolée
+            out[-1] = f"{out[-1]} {part}"
+        elif len(part) > max_chars:
+            words, cur = part.split(), ""
+            for w in words:
+                if cur and len(cur) + len(w) + 1 > max_chars:
+                    out.append(cur)
+                    cur = w
+                else:
+                    cur = f"{cur} {w}".strip()
+            if cur:
+                out.append(cur)
+        else:
+            out.append(part)
+    return out
+
+
+def synthesize(text: str, only: str | None = None) -> tuple[bytes, str]:
+    """WAV wolof réel + nom du moteur utilisé. Lève si aucun moteur n'aboutit.
+    `only` impose un moteur (les phrases d'une même réponse gardent la même voix)."""
     errors: list[str] = []
-    for name in engine_order():
+    for name in ([only] if only else engine_order()):
         try:
             return ENGINES[name].synthesize(text), name
         except WolofTtsUnavailableError as exc:

@@ -118,4 +118,36 @@ def synthesize_reply(display_fr: str, spoken_wo: str | None,
     return synthesize(display_fr, speaker_wav=speaker_wav), "fr"
 
 
-__all__ = ["synthesize", "synthesize_reply", "XttsUnavailableError"]
+def stream_reply(display_fr: str, spoken_wo: str | None, speaker_wav: str | None = None):
+    """Voix de l'agent PHRASE PAR PHRASE : générateur de (WAV, langue).
+
+    L'agent parle dès la première phrase prête ; la suivante se synthétise
+    pendant la lecture (latence perçue divisée). Wolof d'abord (même moteur pour
+    toute la réponse = même voix) ; si la PREMIÈRE phrase wolof échoue, toute la
+    réponse est dite en français. Un échec en cours de réponse arrête la voix
+    (le texte, lui, est déjà affiché) : jamais un mélange de langues.
+    """
+    from agent import mode as app_mode
+    from agent.infrastructure.tts import tts_wolof
+
+    if not app_mode.is_live():
+        raise XttsUnavailableError(
+            "TTS non disponible en mode deterministic (Version B : saisie texte)"
+        )
+    sentences = tts_wolof.split_sentences(spoken_wo) if spoken_wo else []
+    if sentences:
+        engine: str | None = None
+        for i, sentence in enumerate(sentences):
+            try:
+                wav, engine = tts_wolof.synthesize(sentence, only=engine)
+            except tts_wolof.WolofTtsUnavailableError:
+                if i == 0:
+                    break  # aucune voix wolof : repli français ci-dessous
+                return
+            yield wav, "wo"
+        else:
+            return
+    yield synthesize(display_fr, speaker_wav=speaker_wav), "fr"
+
+
+__all__ = ["synthesize", "synthesize_reply", "stream_reply", "XttsUnavailableError"]
