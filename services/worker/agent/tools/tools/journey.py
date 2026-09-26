@@ -6,6 +6,7 @@ l'état calculé (statuts, DocumentsStatus, NextAction — jamais formulés par 
 """
 from __future__ import annotations
 
+from agent import mode as app_mode
 from agent.schemas import JourneyDocument, JourneyRequest
 from agent.application.use_cases.get_journey import get_journey
 import enums
@@ -25,22 +26,33 @@ def _documents_of(arguments: dict) -> list[JourneyDocument] | None:
     return docs
 
 
-def get_journey_state(arguments: dict) -> dict:
+def _journey(arguments: dict):
+    """État du dossier vu par l'outil.
+
+    Live : le dossier persisté fait foi (resume_journey) — des statuts proposés
+    par le MODÈLE ne peuvent jamais rendre un dossier plus prêt que la base.
+    Harnais deterministic : les documents fournis amorcent les scénarios de test.
+    """
     journey_id = arguments["journey_id"]
-    journey = get_journey(JourneyRequest(journeyId=journey_id, documents=_documents_of(arguments)))
-    return journey.model_dump()
+    if app_mode.is_live():
+        from agent.application.use_cases.persist_journey import resume_journey
+
+        return resume_journey(journey_id)
+    return get_journey(JourneyRequest(journeyId=journey_id, documents=_documents_of(arguments)))
+
+
+def get_journey_state(arguments: dict) -> dict:
+    return _journey(arguments).model_dump()
 
 
 def get_missing_requirements(arguments: dict) -> dict:
-    journey_id = arguments["journey_id"]
-    journey = get_journey(JourneyRequest(journeyId=journey_id, documents=_documents_of(arguments)))
+    journey = _journey(arguments)
     missing = [d.model_dump() for d in journey.documents if d.status == enums.DocumentStatus.MISSING]
     return {"journeyId": journey.journeyId, "count": len(missing), "missing": missing}
 
 
 def get_next_action(arguments: dict) -> dict:
-    journey_id = arguments["journey_id"]
-    journey = get_journey(JourneyRequest(journeyId=journey_id, documents=_documents_of(arguments)))
+    journey = _journey(arguments)
     return {
         "journeyId": journey.journeyId,
         "status": journey.status,

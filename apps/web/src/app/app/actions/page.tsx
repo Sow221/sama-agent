@@ -21,16 +21,19 @@ export default function ActionsPage() {
 
   if (!journey) {
     return (
-      <EmptyState
-        emoji={<ActionIcon className="h-9 w-9" />}
-        title="Aucune action pour l'instant"
-        description="Commencez un parcours : l'agent établit la liste des pièces et les étapes à suivre, que vous retrouverez ici."
-        action={
-          <Link href="/app/home" className="focus-visible">
-            <Button variant="gradient" size="lg">Décrire ma démarche</Button>
-          </Link>
-        }
-      />
+      <div className="flex flex-col gap-6">
+        <h1 className="text-3xl font-extrabold tracking-tight">Actions</h1>
+        <EmptyState
+          emoji={<ActionIcon className="h-9 w-9" />}
+          title="Aucune action pour l'instant"
+          description="Commencez un parcours : l'agent établit la liste des pièces et les étapes à suivre, que vous retrouverez ici."
+          action={
+            <Link href="/app/home" className="focus-visible">
+              <Button variant="gradient" size="lg">Décrire ma démarche</Button>
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
