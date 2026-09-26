@@ -17,7 +17,7 @@ python -m agent.api.fastapi &
 API_PID=$!
 
 echo "[3/4] Agent voix (room ${LIVEKIT_ROOM:-sama-demo})"
-python -m agent.voice.main &
+python -m agent.voice.main start &
 VOICE_PID=$!
 
 echo "[4/4] Première vérification (healthz)"

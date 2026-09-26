@@ -94,7 +94,7 @@ cd services/worker && python -m alembic upgrade head
 cd services/worker && pip install -e . && python -m agent.api.fastapi &
 
 # 4. Agent voix (boucle vocale réelle)
-python -m agent.voice.main &
+python -m agent.voice.main start &   # « start » obligatoire (sinon : aide, puis sortie)
 ```
 
 ## Vérifications post-démarrage (aucune ne doit être « visuelle seule »)

@@ -29,8 +29,12 @@ def _synthesize_async(text: str, voice: str, out: BinaryIO) -> None:  # pragma: 
     import edge_tts
 
     async def _run() -> None:
+        # `Communicate.save()` attend un CHEMIN (open(path, "wb")) : un tampon
+        # mémoire y lève TypeError. On lit donc le flux audio nous-mêmes.
         communicate = edge_tts.Communicate(text, voice=voice)
-        await communicate.save(out)
+        async for message in communicate.stream():
+            if message["type"] == "audio":
+                out.write(message["data"])
 
     asyncio.run(_run())
 

@@ -30,7 +30,7 @@ export NVIDIA_EXTRACT_MODEL=z-ai/glm-5.3-flash                   # structuration
 export LIVEKIT_URL=ws://localhost:7880 LIVEKIT_API_KEY=... LIVEKIT_API_SECRET=...
 cd services/worker && pip install -e .
 python -m agent.api.fastapi      # API :8000
-python -m agent.voice.main       # agent voix (LiveKit)
+python -m agent.voice.main start # agent voix (LiveKit) — « start » obligatoire
 ```
 
 ## Lancer localement (Windows / dev, sans GPU)

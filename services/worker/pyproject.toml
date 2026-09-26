@@ -20,6 +20,9 @@ dependencies = [
     "torch>=2.4",
     "transformers>=4.46",
     "numpy>=1.26",
+    # Voix de l'agent (repli réel quand xTTS wolof n'a pas de poids) : Edge neural FR.
+    "edge-tts>=6.1",
+    "miniaudio>=1.59",
 ]
 
 [project.optional-dependencies]

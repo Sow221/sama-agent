@@ -167,3 +167,25 @@ def test_formulation_names_the_real_pieces() -> None:
     assert "« Pièce d'identité »" in review and "vérifiée" in review
     ready = say([{"requirementId": r, "status": "ANALYZED"} for r in ("identity", "medical", "photos")])
     assert "complet" in ready and "3 pièces sur 3" in ready
+
+
+def test_edge_tts_streams_into_memory_buffer(monkeypatch) -> None:
+    """edge-tts 7.x : `save()` exige un chemin (open(path)). Un tampon mémoire y
+    levait TypeError → l'agent ne parlait jamais. On lit le flux `stream()`."""
+    import io
+    import edge_tts
+    from agent.infrastructure.tts import tts_edge
+
+    class _FakeCommunicate:
+        def __init__(self, text, voice):
+            self.text = text
+
+        async def stream(self):
+            yield {"type": "audio", "data": b"ID3"}
+            yield {"type": "WordBoundary", "offset": 0}
+            yield {"type": "audio", "data": b"-mp3"}
+
+    monkeypatch.setattr(edge_tts, "Communicate", _FakeCommunicate)
+    out = io.BytesIO()
+    tts_edge._synthesize_async("bonjour", "fr-FR-DeniseNeural", out)
+    assert out.getvalue() == b"ID3-mp3"
