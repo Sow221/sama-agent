@@ -103,7 +103,9 @@ export default function ConversationPage() {
 
   if (conversation.isLoading) return <SkeletonCard lines={4} />;
 
-  if (conversation.isError || !conversation.data) {
+  // Seulement si RIEN n'est chargé : un rechargement raté (retour sur l'onglet,
+  // tunnel lent) ne doit pas remplacer la conversation affichée ni sa zone de saisie.
+  if (!conversation.data) {
     return (
       <EmptyState
         emoji={<ChatIcon className="h-9 w-9" />}
@@ -218,14 +220,16 @@ export default function ConversationPage() {
         <div ref={endRef} />
       </div>
 
-      {/* Composer */}
-      <div className="sticky bottom-24 md:bottom-4">
+      {/* Composer — fond OPAQUE : les messages ne défilent jamais « à travers ».
+          Mobile : collé au-dessus de la barre d'onglets (encoche iPhone comprise). */}
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 -mx-4 bg-bg px-4 pb-2 pt-2 sm:-mx-6 sm:px-6 md:bottom-0 md:mx-0 md:px-0 md:pb-4">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-t from-bg to-transparent" />
         <form
           onSubmit={(e) => {
             e.preventDefault();
             send();
           }}
-          className="flex items-end gap-2 rounded-2xl border border-border bg-surface p-2 shadow-elevated backdrop-blur-xl"
+          className="relative flex items-end gap-2 rounded-2xl border border-border bg-surface-elevated p-2 shadow-elevated"
         >
           <Textarea
             value={text}
@@ -237,7 +241,7 @@ export default function ConversationPage() {
               }
             }}
             rows={1}
-            placeholder="Écrivez votre message… (Entrée pour envoyer)"
+            placeholder="Écrivez votre message…"
             aria-label="Votre message"
             className="max-h-40 border-0 bg-transparent focus:ring-0"
           />
