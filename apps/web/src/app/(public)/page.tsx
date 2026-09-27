@@ -24,6 +24,16 @@ import { FaqList } from "@/components/help/HelpContent";
 import { ArrowRightIcon, BuildingIcon, CheckIcon, Mic, SearchIcon } from "@/components/icons";
 import { BrandTon } from "@/components/brand/Logo";
 
+/**
+ * Survol des cartes de contenu (problèmes, étapes, engagements) : la carte se
+ * soulève, sa bordure s'éclaire et son fond remonte d'un cran. Le déplacement est
+ * coupé si `prefers-reduced-motion` (règle §85) — le changement de couleur, non :
+ * ce n'est pas du mouvement. `shadow-glow` et non `shadow-elevated` : sur le fond
+ * encre #11110F une ombre noire est invisible, le halo sauge se voit.
+ */
+const CARD_HOVER =
+  "transition-all duration-ui ease-[var(--ease-out)] hover:-translate-y-1 hover:border-primary/40 hover:bg-surface-2 hover:shadow-glow motion-reduce:transition-none motion-reduce:hover:translate-y-0";
+
 const PROBLEMS = [
   {
     Icon: BuildingIcon,
@@ -81,9 +91,14 @@ const FEATURES = [
   },
 ];
 
-const TECH = [
-  { name: "NVIDIA", role: "Compréhension et vision" },
-  { name: "Kiriku", role: "Reconnaissance du wolof" },
+/**
+ * Crédits « Propulsé par ». Un `logo` n'est renseigné que si un fichier de logo
+ * versionné existe — aucun logo n'est reconstitué ni redessiné à la main.
+ * Voir `LICENCES.md` (« Logos de partenaires ») pour l'origine de chaque fichier.
+ */
+const TECH: { name: string; role: string; logo?: string }[] = [
+  { name: "NVIDIA", role: "Compréhension et vision", logo: "/partners/nvidia.svg" },
+  { name: "Kiriku", role: "Reconnaissance du wolof", logo: "/partners/kiriku.webp" },
   { name: "Adia", role: "Voix wolof" },
   { name: "CAPP Karangë", role: "Source officielle" },
 ];
@@ -193,7 +208,13 @@ export default function WelcomePage() {
           <ul className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 md:gap-x-12">
             {TECH.map((t) => (
               <li key={t.name} className="flex flex-col">
-                <span className="text-base font-bold text-text1">{t.name}</span>
+                <span className="flex items-center gap-2 text-base font-bold text-text1">
+                  {t.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- logo de partenaire statique, aucune optimisation utile
+                    <img src={t.logo} alt={`Logo ${t.name}`} width={28} height={28} className="h-7 w-7 shrink-0" />
+                  ) : null}
+                  {t.name}
+                </span>
                 <span className="text-xs text-text-muted">{t.role}</span>
               </li>
             ))}
@@ -212,16 +233,19 @@ export default function WelcomePage() {
         </div>
         <ul className="mt-10 grid gap-4 md:grid-cols-3">
           {PROBLEMS.map((p) => (
-            <li key={p.pain} className="flex flex-col gap-4 rounded-card border border-border bg-surface p-6">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-soft text-accent-ai">
-                <p.Icon className="h-5 w-5" />
-              </span>
-              <h3 className="text-lg font-bold">{p.pain}</h3>
-              <p className="flex gap-2 text-text2">
-                <ArrowRightIcon className="mt-1 h-4 w-4 shrink-0 text-primary" />
-                <span>{p.answer}</span>
-              </p>
-            </li>
+              <li
+                key={p.pain}
+                className={`flex flex-col gap-4 rounded-card border border-border bg-surface p-6 ${CARD_HOVER}`}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-soft text-accent-ai">
+                  <p.Icon className="h-5 w-5" />
+                </span>
+                <h3 className="text-lg font-bold">{p.pain}</h3>
+                <p className="flex gap-2 text-text2">
+                  <ArrowRightIcon className="mt-1 h-4 w-4 shrink-0 text-primary" />
+                  <span>{p.answer}</span>
+                </p>
+              </li>
           ))}
         </ul>
       </section>
@@ -238,7 +262,10 @@ export default function WelcomePage() {
           </div>
           <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
-              <li key={s.n} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-5">
+              <li
+                key={s.n}
+                className={`flex flex-col gap-3 rounded-card border border-border bg-surface p-5 ${CARD_HOVER}`}
+              >
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai font-bold text-[#11110f]">
                   {s.n}
                 </span>
@@ -307,7 +334,10 @@ export default function WelcomePage() {
           </div>
           <ul className="grid gap-4 sm:grid-cols-2">
             {COMMITMENTS.map((c) => (
-              <li key={c.title} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-5">
+              <li
+                key={c.title}
+                className={`flex flex-col gap-2 rounded-card border border-border bg-surface p-5 ${CARD_HOVER}`}
+              >
                 <CheckIcon className="h-5 w-5 text-primary" />
                 <h3 className="font-bold">{c.title}</h3>
                 <p className="text-sm text-text2">{c.text}</p>

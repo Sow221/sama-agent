@@ -9,7 +9,13 @@ export function FaqList({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
       {FAQ.map((f) => (
-        <details key={f.q} className="group rounded-card border border-border bg-surface p-5 open:bg-white/[0.07]">
+        <details
+          key={f.q}
+          // Survol : même élévation que les cartes de la page d'accueil. Le fond n'est pas
+          // touché — `open:bg-white/[0.07]` en garde la propriété. Déplacement coupé si
+          // `prefers-reduced-motion` (règle §85).
+          className="group rounded-card border border-border bg-surface p-5 open:bg-white/[0.07] transition-all duration-ui ease-[var(--ease-out)] hover:-translate-y-1 hover:border-primary/40 hover:shadow-glow motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        >
           <summary className="focus-visible flex cursor-pointer list-none items-center justify-between gap-4 rounded-md font-semibold">
             {f.q}
             <span aria-hidden className="text-xl text-text2 transition-transform group-open:rotate-45">

@@ -35,6 +35,17 @@ au-delà de la démo requiert la relecture des licences de chaque modèle.
 
 Attribution à citer à la démo : « Voix wolof : Adia TTS (Concree) / MMS (Meta) ».
 
+## Logos de partenaires
+
+| Logo | Source | Notes |
+|---|---|---|
+| `apps/web/public/partners/nvidia.svg` | Simple Icons (CC0-1.0) — marque NVIDIA | usage **nominatif** : le logo NVIDIA est une marque déposée, il ne s'agit pas d'un contenu Sama Agent |
+| `apps/web/public/partners/kiriku.webp` | IA Hub Sénégal — fichier fourni pour la démo, **origine et droits à confirmer** | usage **nominatif** : logo de Kiriku (IA Hub Sénégal), cité comme fournisseur de la reconnaissance du wolof |
+
+Adia (Concree) et CAPP Karangë **n'ont pas de fichier de logo versionné** : ils restent
+cités en texte dans la section « Propulsé par » de la page d'accueil et dans le pied de
+page. Aucun logo n'est reconstitué ni redessiné à la main.
+
 ## Code Sama Agent
 
 Code produit du hackathon GOMYCODE × NVIDIA — propriété de l'équipe ; non publié.
