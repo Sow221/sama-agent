@@ -186,3 +186,21 @@ def test_noisy_room_from_the_start_is_calibrated_not_mistaken_for_speech() -> No
     voice = [ep.feed(_pcm(9000)) for _ in range(120)]
     tail = [ep.feed(_pcm(900)) for _ in range(100)]
     assert [e[0] for e in voice + tail if e] == [START, END]
+
+
+def test_agent_does_not_interrupt_itself_with_its_own_voice() -> None:
+    """Prod : la voix de l'agent, captée par le micro, était prise pour une
+    interruption et le coupait. Pendant qu'il parle, le micro est ignoré."""
+    from agent.voice.endpoint import Endpointer
+
+    runtime = main.VoiceRuntime.__new__(main.VoiceRuntime)
+    runtime.endpointer = Endpointer(sample_rate=48_000)
+    runtime._speaking = True
+    runtime._stop = asyncio.Event()
+    interrupted: list[bool] = []
+    runtime.session = SimpleNamespace(current_turn="t1", interrupt=lambda: interrupted.append(True))
+    for _ in range(100):
+        runtime.on_audio_frame(SimpleNamespace(data=_pcm(40)))
+    for _ in range(100):
+        runtime.on_audio_frame(SimpleNamespace(data=_pcm(12000)))   # sa propre voix, forte
+    assert interrupted == [] and not runtime._stop.is_set()

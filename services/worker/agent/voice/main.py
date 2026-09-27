@@ -36,6 +36,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 
 from agent import bootstrap  # noqa: F401  (met sys.path avant les imports agent)
 from agent.domain.naming import journey_id_of
@@ -149,6 +150,13 @@ class VoiceRuntime:
         thread média de LiveKit. La conversion WAV/16 k a lieu au flush.
         """
         pcm = bytes(frame.data)
+        # Chacun son tour : pendant que l'agent réfléchit ou PARLE (et 0,6 s après),
+        # le micro est ignoré. Sinon sa propre voix, captée par le micro, était prise
+        # pour une interruption et le coupait dès sa première phrase (constaté en prod).
+        if getattr(self, "_busy", False) or self._speaking or time.monotonic() < getattr(self, "_mute_until", 0.0):
+            if self.endpointer.speaking:
+                self.endpointer.reset()
+            return
         event = self.endpointer.feed(pcm, strict=self._speaking)
         if event is None:
             return
@@ -196,6 +204,14 @@ class VoiceRuntime:
 
     async def flush_segment(self, pcm: bytes | None = None) -> None:
         """Fin d'énoncé : WAV → ASR → tour → publication. Chaîne réelle."""
+        self._busy = True
+        try:
+            await self._flush_segment(pcm)
+        finally:
+            self._busy = False
+            self._mute_until = time.monotonic() + 0.6
+
+    async def _flush_segment(self, pcm: bytes | None = None) -> None:
         pcm_48k = pcm if pcm is not None else self.session.flush_segment()
         self._buffered = 0
         self._buffered_bytes = 0
