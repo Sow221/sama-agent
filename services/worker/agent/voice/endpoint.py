@@ -39,18 +39,25 @@ class Endpointer:
 
     sample_rate: int = 48_000
     start_ms: int = 150        # parole soutenue avant de déclarer un début
-    end_ms: int = 800          # silence qui clôt l'énoncé
+    end_ms: int = 700          # silence qui clôt l'énoncé
     preroll_ms: int = 400      # audio gardé AVANT le début (1re syllabe)
     min_speech_ms: int = 300   # plus court : bruit, pas un énoncé
-    max_ms: int = 20_000       # énoncé coupé au-delà (borne mémoire)
+    max_ms: int = 15_000       # énoncé coupé au-delà (borne mémoire)
     start_factor: float = 3.0  # seuil = bruit ambiant × facteur
     min_threshold: float = 300.0
     floor: float = 150.0       # bruit ambiant estimé (moyenne glissante)
+    calibration_ms: int = 500  # écoute initiale : mesure du bruit de la pièce
+    _calib_ms: float = 0.0
+    _calib_sum: float = 0.0
+    _calib_n: int = 0
     _speaking: bool = False
     _loud_ms: float = 0.0
     _quiet_ms: float = 0.0
     _speech_ms: float = 0.0
     _voiced_ms: float = 0.0
+    _peak: float = 0.0         # niveau de la VOIX de l'usager pendant l'énoncé
+    _quiet_sum: float = 0.0    # niveau des pauses de l'énoncé = bruit de fond réel
+    _quiet_n: int = 0
     _pre: deque = field(default_factory=deque, repr=False)
     _pre_ms: float = 0.0
     _utt: list = field(default_factory=list, repr=False)
@@ -69,6 +76,9 @@ class Endpointer:
     def reset(self) -> None:
         self._speaking = False
         self._loud_ms = self._quiet_ms = self._speech_ms = self._pre_ms = self._voiced_ms = 0.0
+        self._peak = 0.0
+        self._quiet_sum = 0.0
+        self._quiet_n = 0
         self._pre.clear()
         self._utt.clear()
 
@@ -78,6 +88,13 @@ class Endpointer:
             return None
         ms = self._ms(pcm)
         level = rms_int16(pcm)
+        if self._calib_ms < self.calibration_ms:
+            # Première demi-seconde : on apprend le bruit de la pièce, sans décider.
+            self._calib_ms += ms
+            self._calib_sum += level
+            self._calib_n += 1
+            self.floor = max(self._calib_sum / self._calib_n, 20.0)
+            return None
         loud = level >= self.threshold(strict)
 
         if not self._speaking:
@@ -87,12 +104,15 @@ class Endpointer:
             while self._pre_ms > self.preroll_ms and len(self._pre) > 1:
                 self._pre_ms -= self._ms(self._pre.popleft())
             if loud:
+                # Un bruit CONSTANT finit par relever le seuil (quelques secondes).
+                self.floor += 0.003 * (level - self.floor)
                 self._loud_ms += ms
                 if self._loud_ms >= self.start_ms:
                     self._speaking = True
                     self._utt = list(self._pre)
                     self._speech_ms = self._pre_ms
                     self._voiced_ms = self._loud_ms
+                    self._peak = level
                     self._quiet_ms = 0.0
                     self._pre.clear()
                     self._pre_ms = 0.0
@@ -105,13 +125,24 @@ class Endpointer:
 
         self._utt.append(pcm)
         self._speech_ms += ms
-        voiced = level >= self.threshold() * 0.6
+        # « Silence » = nettement sous la voix de l'usager, pas seulement sous un seuil
+        # absolu : avec un bruit de fond constant (ventilateur, rue, clim), l'ancien
+        # critère ne voyait jamais la fin de la phrase → écoute jusqu'à 20 s.
+        self._peak = max(self._peak * 0.995, level)
+        voiced = level >= max(self.threshold() * 0.6, self._peak * 0.2)
         self._quiet_ms = 0.0 if voiced else self._quiet_ms + ms
         if voiced:
             self._voiced_ms += ms
+        else:
+            self._quiet_sum += level
+            self._quiet_n += 1
         if self._quiet_ms >= self.end_ms or self._speech_ms >= self.max_ms:
             voiced_ms = self._voiced_ms
             utterance = b"".join(self._utt)
+            if self._quiet_n:
+                # Le bruit entendu pendant les pauses devient la référence : il ne
+                # redéclenchera pas un faux début de phrase juste après.
+                self.floor = max(self.floor, self._quiet_sum / self._quiet_n)
             self.reset()
             if voiced_ms < self.min_speech_ms:
                 return None

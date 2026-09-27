@@ -169,6 +169,12 @@ class MessageCreate(BaseModel):
     journeyId: str | None = None
 
 
+class SpeakRequest(BaseModel):
+    """Dire une réponse du chat en wolof (texte wolof + audio)."""
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=6000)
+
+
 class AgentTurnRequest(BaseModel):
     """Tour d'agent conversationnel — histoire/mémoire/tools réels côté serveur."""
     model_config = ConfigDict(extra="forbid")

@@ -161,3 +161,28 @@ def test_attach_reads_tracks_already_subscribed(monkeypatch) -> None:
 
     assert seen == [b"frame-1", b"frame-2"]
     assert "TR_existing" in runtime._audio_tasks
+
+def test_end_of_speech_is_found_despite_constant_background_noise() -> None:
+    """Pièce bruyante : le bruit de fond reste au-dessus du seuil absolu, mais
+    nettement sous la voix → la fin de phrase doit être détectée en < 1 s."""
+    from agent.voice.endpoint import END, START, Endpointer
+
+    ep = Endpointer(sample_rate=48_000)
+    events = [ep.feed(_pcm(30)) for _ in range(50)]
+    events += [ep.feed(_pcm(9000)) for _ in range(150)]       # 1,5 s de voix
+    noise_events = [ep.feed(_pcm(900)) for _ in range(100)]    # 1 s de bruit de fond
+    kinds = [e[0] for e in events + noise_events if e]
+    assert kinds == [START, END]
+    end_at = next(i for i, e in enumerate(noise_events) if e)
+    assert end_at * 10 <= 900  # fin détectée en moins de 0,9 s de « silence »
+
+
+def test_noisy_room_from_the_start_is_calibrated_not_mistaken_for_speech() -> None:
+    from agent.voice.endpoint import END, START, Endpointer
+
+    ep = Endpointer(sample_rate=48_000)
+    noise = [ep.feed(_pcm(900)) for _ in range(200)]          # 2 s de bruit dès l'ouverture
+    assert not any(noise)
+    voice = [ep.feed(_pcm(9000)) for _ in range(120)]
+    tail = [ep.feed(_pcm(900)) for _ in range(100)]
+    assert [e[0] for e in voice + tail if e] == [START, END]
