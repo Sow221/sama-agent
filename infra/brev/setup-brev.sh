@@ -20,6 +20,10 @@ pip install -e services/worker
 # Non bloquant : sans lui, la voix wolof passe par MMS (facebook/mms-tts-wol).
 pip install "git+https://github.com/huggingface/parler-tts.git" \
   || echo "⚠ parler-tts non installé : voix wolof via MMS uniquement"
+# parler-tts tire protobuf 4.x (via descript-audiotools) alors que livekit exige
+# protobuf ≥ 5 : sans cette ligne, l'agent vocal plante à l'import (constaté sur Brev).
+pip install "protobuf>=6.33.5,<8"
+python -c "import livekit.rtc, livekit.agents, transformers, torch; print('  imports OK — transformers', transformers.__version__, '— GPU', torch.cuda.is_available())"
 
 echo "[3/4] cloudflared (adresse HTTPS publique de l'API, sans compte)"
 if ! command -v cloudflared >/dev/null; then
