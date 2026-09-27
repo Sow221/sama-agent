@@ -14,7 +14,7 @@ export default function PublicLayout({
   return (
     <div className="min-h-dvh">
       <Header />
-      <div className="container-page">{children}</div>
+      <main className="container-page">{children}</main>
     </div>
   );
 }

@@ -177,7 +177,7 @@ export type BadgeTone = "ok" | "warn" | "danger" | "neutral" | "info";
 const BADGE_TONES: Record<BadgeTone, string> = {
   ok: "bg-success/15 text-success border border-success/30",
   warn: "bg-warning/15 text-warning border border-warning/30",
-  danger: "bg-error/15 text-error border border-error/30",
+  danger: "bg-error/15 text-[#fca5a5] border border-error/30",
   neutral: "bg-surface-2 text-text2 border border-border",
   info: "bg-accent-soft text-accent-ai border border-accent-ai/30",
 };
@@ -378,7 +378,7 @@ export function EmptyState({
       <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-accent-ai">
         {emoji}
       </span>
-      <h3 className="text-lg font-bold text-text1">{title}</h3>
+      <h2 className="text-lg font-bold text-text1">{title}</h2>
       {description ? <p className="max-w-sm text-sm text-text2">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
@@ -400,7 +400,7 @@ export function ErrorState({
       className="flex flex-col items-center gap-3 rounded-xl border border-error/25 bg-error/10 px-6 py-10 text-center"
     >
       <AlertIcon className="h-8 w-8 text-error" />
-      <h3 className="text-lg font-bold text-text1">{title}</h3>
+      <h2 className="text-lg font-bold text-text1">{title}</h2>
       {description ? <p className="max-w-sm text-sm text-text2">{description}</p> : null}
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry} className="mt-2">

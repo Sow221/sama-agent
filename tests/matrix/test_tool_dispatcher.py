@@ -143,3 +143,20 @@ def test_every_call_is_traced() -> None:
     assert trace.status == "success"
     assert trace.latency_ms >= 0
     assert trace.arguments == {"journey_id": "driving_license_new"}
+
+def test_live_tools_read_the_database_not_model_supplied_statuses(monkeypatch) -> None:
+    """Live : un modèle qui « déclare » des pièces ANALYZED ne rend pas le dossier prêt."""
+    import uuid
+
+    from agent import mode as app_mode
+    from agent.application.use_cases.persist_journey import apply_journey
+    from agent.schemas import JourneyRequest
+
+    jid = f"tool_{uuid.uuid4().hex[:10]}"
+    apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"))
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    forged = [{"requirement_id": r, "status": "ANALYZED"} for r in ("identity", "medical", "photos")]
+    result = execute_tool("get_journey_state", {"journey_id": jid, "documents": forged})
+    assert result["status"] == "success"
+    assert result["result"]["status"] == enums.JourneyStatus.NEEDS_DOCUMENT
+    assert result["result"]["completion"]["provided"] == 0
