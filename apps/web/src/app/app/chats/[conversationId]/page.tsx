@@ -39,6 +39,10 @@ import {
 } from "@/lib/query/conversations";
 import { procedureLabel } from "@/lib/labels";
 import type { MemoryKind } from "@/lib/schemas";
+import { api } from "@/lib/api-client/client";
+
+/** Voix wolof d'une réponse : génération, texte wolof, lecture. */
+type WolofVoice = { status: "loading" | "ready" | "error"; wolof?: string; url?: string };
 
 const SAVE_KINDS: MemoryKind[] = ["SELF", "PREFERENCE", "FACT"];
 
@@ -52,6 +56,33 @@ export default function ConversationPage() {
   const [kind, setKind] = useState<MemoryKind>("FACT");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [voices, setVoices] = useState<Record<string, WolofVoice>>({});
+  const playerRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Redit la réponse en wolof (LLM) puis la fait prononcer par la voix Adia. */
+  async function playWolof(id: string, content: string) {
+    const known = voices[id];
+    if (known?.status === "loading") return;
+    if (known?.status === "ready" && known.url) {
+      playerRef.current?.pause();
+      playerRef.current = new Audio(known.url);
+      void playerRef.current.play().catch(() => {});
+      return;
+    }
+    setVoices((v) => ({ ...v, [id]: { status: "loading" } }));
+    try {
+      const r = await api.speakWolof(content);
+      const bytes = Uint8Array.from(atob(r.audio), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: r.mime }));
+      setVoices((v) => ({ ...v, [id]: { status: "ready", wolof: r.wolof, url } }));
+      playerRef.current?.pause();
+      playerRef.current = new Audio(url);
+      // Lecture automatique si le navigateur l'autorise ; sinon le bouton reste là.
+      void playerRef.current.play().catch(() => {});
+    } catch {
+      setVoices((v) => ({ ...v, [id]: { status: "error" } }));
+    }
+  }
 
   const conversation = useConversation(conversationId);
   const journeyId = conversation.data?.journeyId ?? undefined;
@@ -85,6 +116,9 @@ export default function ConversationPage() {
       { text: content, journeyId },
       {
         onSuccess: (r) => {
+          // La réponse est aussi DITE en wolof, sans rien avoir à toucher.
+          const reply = [...r.conversation].reverse().find((m) => m.role === "assistant");
+          if (reply) void playWolof(reply.id, reply.content);
           if (r.newMemories.length) {
             toast.toast({
               title: "Mémorisé",
@@ -192,8 +226,25 @@ export default function ConversationPage() {
             >
               <Linkified text={m.content} />
             </div>
+            {m.role === "assistant" && voices[m.id]?.wolof ? (
+              <p lang="wo" className="max-w-[85%] self-start pl-1 text-sm italic text-text2">
+                {voices[m.id]?.wolof}
+              </p>
+            ) : null}
             {m.role === "assistant" ? (
-              <div className="flex items-center gap-1 self-start pl-1">
+              <div className="flex flex-wrap items-center gap-1 self-start pl-1">
+                <button
+                  type="button"
+                  onClick={() => playWolof(m.id, m.content)}
+                  disabled={voices[m.id]?.status === "loading"}
+                  className="focus-visible min-h-11 rounded-full px-3 text-sm font-semibold text-accent-ai transition-colors hover:bg-surface-hover disabled:opacity-60"
+                >
+                  {voices[m.id]?.status === "loading"
+                    ? "Voix wolof en préparation…"
+                    : voices[m.id]?.status === "error"
+                      ? "Voix wolof indisponible · réessayer"
+                      : "Écouter en wolof"}
+                </button>
                 <button
                   type="button"
                   onClick={() => copyMessage(m.content)}

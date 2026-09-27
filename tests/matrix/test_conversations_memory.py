@@ -304,3 +304,36 @@ def test_search_query_keeps_the_question_of_a_paragraph() -> None:
             "ma carte d'identité et mon permis.\nComment refaire ma carte d'identité ?")
     assert search_query(para) == "Comment refaire ma carte d'identité ?"
     assert len(search_query("mot " * 60).split()) == 18
+
+
+def test_speak_wolof_endpoint(monkeypatch) -> None:
+    """/api/speak : la réponse est redite en wolof et prononcée (WAV réel concaténé)."""
+    import base64
+    import io
+    import wave
+
+    from agent import mode as app_mode
+    from agent.application.use_cases import speak_wolof as sw
+    from agent.infrastructure.tts import tts_wolof
+
+    def _wav(n):
+        out = io.BytesIO()
+        with wave.open(out, "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000)
+            w.writeframes(b"\x01\x00" * n)
+        return out.getvalue()
+
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    monkeypatch.setattr(sw, "to_spoken_wolof", lambda text, llm=None: "Demal ci meeri bi. Indil sa kàrt.")
+    monkeypatch.setattr(tts_wolof, "synthesize", lambda s, only=None: (_wav(100), "adia"))
+    app.dependency_overrides[require_user] = lambda: AuthContext(user_id="user-speak", provider="test")
+    try:
+        r = client.post("/api/speak", json={"text": "Allez à la mairie avec votre carte."})
+    finally:
+        app.dependency_overrides.pop(require_user, None)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["wolof"] == "Demal ci meeri bi. Indil sa kàrt."
+    with wave.open(io.BytesIO(base64.b64decode(body["audio"]))) as w:
+        # une synthèse par segment, réunies en UN seul fichier
+        assert w.getnframes() == 100 * len(tts_wolof.split_sentences(body["wolof"]))

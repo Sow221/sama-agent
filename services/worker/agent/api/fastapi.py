@@ -24,7 +24,7 @@ from agent import mode as app_mode
 from agent.domain.naming import room_name as voice_room_name
 from agent.infrastructure.auth.supabase import AuthContext, require_user
 from agent.infrastructure.db.repositories import journey_belongs_to_user, latest_journey_of
-from agent.infrastructure.llm.glm import GlmLlm, provider_status
+from agent.infrastructure.llm.glm import GlmLlm, LlmUnavailableError, provider_status
 # Use cases — importés depuis leur module (pas via le façade `__init__`, qui ré-exporte
 # les fonctions : les noms de modules et de fonctions cohabiteraient de façon ambiguë).
 from agent.application.use_cases.process_intent import infer_intent
@@ -59,6 +59,7 @@ from agent.schemas import (
     MemoryCreate,
     MessageCreate,
     RequestTrace,
+    SpeakRequest,
     VoiceToken,
     VoiceTokenRequest,
 )
@@ -432,6 +433,21 @@ def agent_turn(body: AgentTurnRequest, request: Request,
         "model": os.getenv("NVIDIA_MODEL", "z-ai/glm-5.3") if app_mode.is_live() else "deterministic",
     }
     return result
+
+
+# ── Voix wolof du chat : la réponse redite en wolof et prononcée (Adia) ──────
+@app.post("/api/speak")
+def speak(body: SpeakRequest, user: AuthContext = Depends(require_user)) -> dict:
+    import base64
+
+    from agent.application.use_cases.speak_wolof import SpeakUnavailableError, speak_wolof
+
+    _check_rate_limit(user.user_id)
+    try:
+        wolof, wav = speak_wolof(body.text)
+    except (SpeakUnavailableError, LlmUnavailableError) as exc:
+        raise HTTPException(status_code=503, detail=f"voix wolof indisponible : {str(exc)[:200]}")
+    return {"wolof": wolof, "audio": base64.b64encode(wav).decode("ascii"), "mime": "audio/wav"}
 
 
 # ── Mémoire long terme (P1) — persistante, liée à l'usager, purgeable ────────

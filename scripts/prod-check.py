@@ -180,6 +180,18 @@ def main() -> int:
     else:
         step("10. Discussion écrite (réponse de l'agent + historique)", False, f"conversation HTTP {r.status_code} {r.text[:100]}")
 
+    # 13. Le chat PARLE wolof : une réponse redite en wolof et prononcée (Adia)
+    import base64 as _b64
+    import time as _t2
+    t0 = _t2.perf_counter()
+    sp = client.post(f"{api}/api/speak", headers=bearer,
+                     json={"text": "Pour refaire votre passeport, allez à la police avec votre extrait de naissance."})
+    body = sp.json() if sp.status_code == 200 else {}
+    audio_kb = len(_b64.b64decode(body.get("audio", ""))) // 1024 if body else 0
+    step("13. Réponse du chat dite en wolof", sp.status_code == 200 and audio_kb > 10,
+         f"{_t2.perf_counter() - t0:.1f} s · {audio_kb} Ko d'audio · « {body.get('wolof', '')[:100]} »"
+         if body else f"HTTP {sp.status_code} {sp.text[:150]}")
+
     # 11–12. L'agent vocal rejoint la room, puis une VRAIE phrase parlée est traitée
     if vt.get("token"):
         for name, ok, detail in asyncio.run(_voice_check(vt["url"], vt["token"])):

@@ -170,6 +170,15 @@ export const api = {
     });
   },
 
+  /** POST /api/speak — la réponse redite en wolof + audio réel (voix Adia). */
+  speakWolof(text: string): Promise<{ wolof: string; audio: string; mime: string }> {
+    return request(
+      "/api/speak",
+      z.object({ wolof: z.string(), audio: z.string(), mime: z.string() }),
+      { method: "POST", body: JSON.stringify({ text }) }
+    );
+  },
+
   /* ── Mémoire long terme (serveur, purgeable) ── */
   memories(): Promise<ServerMemoryItem[]> {
     return request("/api/memory?limit=100", z.object({ items: z.array(memoryItemSchema) }))
