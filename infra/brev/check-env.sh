@@ -6,7 +6,10 @@ ENV_FILE="${SAMA_ENV_FILE:-$HOME/sama.env}"
 missing=0
 for v in SAMA_MODE NVIDIA_BASE_URL NVIDIA_API_KEY NVIDIA_MODEL SAMA_DATABASE_URL \
          SUPABASE_URL LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET ALLOWED_ORIGINS; do
-  if [ -z "${!v:-}" ]; then echo "  ✗ $v manquante"; missing=1; else echo "  ✓ $v"; fi
+  if [ -z "${!v:-}" ]; then echo "  ✗ $v manquante"; missing=1
+  # Valeur d'exemple restée en place (constaté : NVIDIA_API_KEY=VOTRE_CLE_… → 401 NVIDIA).
+  elif printf '%s' "${!v}" | grep -qiE 'VOTRE|COLLER|YOUR[-_]|<.*>|xxxx'; then echo "  ✗ $v contient encore une valeur d'exemple"; missing=1
+  else echo "  ✓ $v"; fi
 done
 # Signature des connexions : clés asymétriques (SUPABASE_URL suffit) ou ancien
 # secret HS256 (SUPABASE_JWT_SECRET) — facultatif, seulement pour les anciens projets.
