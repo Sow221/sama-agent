@@ -302,18 +302,16 @@ def voice_token(
         log.warning("LIVEKIT_API_KEY/SECRET absents — clés de développement du harnais")
         key, secret = key or "devkey", secret or "devsecret"
 
-    journey_id = (body.journeyId or latest_journey_of(user.user_id) or "").strip()
-    if not journey_id:
-        raise HTTPException(
-            status_code=409,
-            detail="aucun dossier : créez un parcours avant de lancer la session vocale",
-        )
+    # Sans dossier : conversation vocale LIBRE, dans une room propre à l'usager
+    # (`libre-<sub>`), jamais une room partagée. L'agent y répond sans état de dossier.
+    free_id = f"libre-{user.user_id}"
+    journey_id = (body.journeyId or latest_journey_of(user.user_id) or "").strip() or free_id
     try:
         room = voice_room_name(journey_id)
     except ValueError as exc:
         # journeyId inexistant / trop long pour un nom de room : on le dit.
         raise HTTPException(status_code=422, detail=str(exc))
-    if not journey_belongs_to_user(journey_id, user.user_id):
+    if journey_id != free_id and not journey_belongs_to_user(journey_id, user.user_id):
         raise HTTPException(status_code=404, detail="parcours introuvable")
     identity = f"awa-{user.user_id}"[:64]
     ttl = max(60, min(int(body.ttl), 24 * 3600))

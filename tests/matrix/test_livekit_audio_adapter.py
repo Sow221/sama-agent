@@ -68,33 +68,76 @@ def test_audio_track_stream_is_consumed_and_closed(monkeypatch) -> None:
 
     monkeypatch.setattr(main.rtc, "AudioStream", make_stream)
     runtime = main.VoiceRuntime.__new__(main.VoiceRuntime)
-    runtime.session = _FrameBuffer()
-    runtime._buffered = 0
-    runtime._buffered_bytes = 0
-    runtime._audio_limit_hit = False
+    seen: list[bytes] = []
+    runtime.on_audio_frame = lambda frame: seen.append(frame.data)
 
     asyncio.run(runtime._read_audio_track(SimpleNamespace(sid="TR_test")))
 
-    assert runtime.session.frames == [b"frame-1", b"frame-2"]
-    assert runtime._buffered == 2
-    assert runtime._buffered_bytes == len(b"frame-1frame-2")
+    assert seen == [b"frame-1", b"frame-2"]
     assert streams[0].closed is True
 
 
-def test_audio_buffer_keeps_segments_longer_than_fifty_frames() -> None:
+def _pcm(amplitude: int, ms: int = 10, rate: int = 48_000) -> bytes:
+    import math
+    import struct
+
+    n = rate * ms // 1000
+    return b"".join(struct.pack("<h", int(amplitude * math.sin(i / 7.0))) for i in range(n))
+
+
+def test_server_endpointing_makes_one_turn_per_utterance() -> None:
+    """Silence → parole → silence : UN seul tour, avec l'audio de la phrase
+    (préécoute comprise). Aucun VAD navigateur n'est nécessaire."""
+    from agent.voice.endpoint import Endpointer
+
     runtime = main.VoiceRuntime.__new__(main.VoiceRuntime)
-    runtime.session = _FrameBuffer()
-    runtime._buffered = 0
-    runtime._buffered_bytes = 0
-    runtime._audio_limit_hit = False
-    frame = SimpleNamespace(data=b"\x00\x00" * 480)
+    runtime.endpointer = Endpointer(sample_rate=48_000)
+    runtime._speaking = False
+    runtime._stop = asyncio.Event()
+    runtime.session = SimpleNamespace(current_turn=None, interrupt=lambda: None)
+    sent: list[dict] = []
+    turns: list[bytes] = []
 
-    for _ in range(51):
-        runtime.on_audio_frame(frame)
+    async def send(event):
+        sent.append(event)
 
-    assert runtime._buffered == 51
-    assert runtime._buffered_bytes == 51 * 960
-    assert runtime._audio_limit_hit is False
+    async def flush(pcm=None):
+        turns.append(pcm)
+
+    runtime.send = send
+    runtime.flush_segment = flush
+
+    async def scenario():
+        for _ in range(100):
+            runtime.on_audio_frame(SimpleNamespace(data=_pcm(40)))      # 1 s de silence
+        for _ in range(120):
+            runtime.on_audio_frame(SimpleNamespace(data=_pcm(9000)))    # 1,2 s de parole
+        for _ in range(100):
+            runtime.on_audio_frame(SimpleNamespace(data=_pcm(40)))      # 1 s de silence
+        await asyncio.sleep(0)
+
+    asyncio.run(scenario())
+
+    assert len(turns) == 1
+    seconds = len(turns[0]) / 2 / 48_000
+    assert 1.2 <= seconds <= 2.5
+    assert sent and sent[0]["state"] == "listening"
+
+
+def test_endpointer_ignores_short_noise_and_barges_in_while_speaking() -> None:
+    from agent.voice.endpoint import END, START, Endpointer
+
+    ep = Endpointer(sample_rate=48_000)
+    events = [ep.feed(_pcm(30)) for _ in range(50)]
+    events += [ep.feed(_pcm(9000)) for _ in range(20)]   # 200 ms : un claquement
+    events += [ep.feed(_pcm(30)) for _ in range(100)]
+    assert [e[0] for e in events if e] == [START]         # début, mais pas d'énoncé
+    # Pendant que l'agent parle (strict), un écho résiduel (après annulation d'écho) ne coupe pas…
+    assert all(ep.feed(_pcm(700), strict=True) is None for _ in range(30))
+    # …mais une vraie voix, oui.
+    kinds = [e[0] for e in (ep.feed(_pcm(12000), strict=True) for _ in range(30)) if e]
+    assert kinds == [START]
+    assert END not in kinds
 
 
 def test_attach_reads_tracks_already_subscribed(monkeypatch) -> None:
@@ -106,11 +149,9 @@ def test_attach_reads_tracks_already_subscribed(monkeypatch) -> None:
     participant = SimpleNamespace(track_publications={"TR_existing": publication})
     runtime = main.VoiceRuntime.__new__(main.VoiceRuntime)
     runtime.room = _FakeRoom({"user": participant})
-    runtime.session = _FrameBuffer()
     runtime._audio_tasks = {}
-    runtime._buffered = 0
-    runtime._buffered_bytes = 0
-    runtime._audio_limit_hit = False
+    seen: list[bytes] = []
+    runtime.on_audio_frame = lambda frame: seen.append(frame.data)
 
     async def attach_and_drain():
         await runtime.attach()
@@ -118,5 +159,5 @@ def test_attach_reads_tracks_already_subscribed(monkeypatch) -> None:
 
     asyncio.run(attach_and_drain())
 
-    assert runtime.session.frames == [b"frame-1", b"frame-2"]
+    assert seen == [b"frame-1", b"frame-2"]
     assert "TR_existing" in runtime._audio_tasks

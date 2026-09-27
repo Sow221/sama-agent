@@ -40,6 +40,7 @@ import os
 from agent import bootstrap  # noqa: F401  (met sys.path avant les imports agent)
 from agent.domain.naming import journey_id_of
 from agent.voice import audio, protocol
+from agent.voice.endpoint import END, START, Endpointer
 from agent.voice.session import VoiceSession, _Superseded
 
 log = logging.getLogger("sama.worker.voice")
@@ -100,6 +101,9 @@ class VoiceRuntime:
         self._buffered = 0
         self._buffered_bytes = 0
         self._audio_limit_hit = False
+        # Détection de parole côté serveur (voir agent.voice.endpoint).
+        self.endpointer = Endpointer(sample_rate=audio.MIC_SAMPLE_RATE)
+        self._speaking = False
 
     # ── Fournisseurs (bloquants : toujours appelés via to_thread) ──────────
     def _transcribe(self, wav: bytes) -> str:
@@ -107,8 +111,10 @@ class VoiceRuntime:
 
     def _turn(self, text: str):
         # Le dossier est relu en base à chaque tour (G3 : jamais une copie en mémoire).
-        # Rend (texte affiché en français, réponse complète à dire).
-        reply = voice_turn(text, self.journey_id)
+        # Réponse LIBRE du LLM, avec l'historique de la session (sans le tour courant,
+        # déjà ajouté par la session). Rend (texte affiché, réponse complète à dire).
+        history = [h for h in self.session.history if h.get("text")][:-1]
+        reply = voice_turn(text, self.journey_id, history=history)
         return reply.display, reply
 
     def _synthesize(self, reply):
@@ -141,12 +147,22 @@ class VoiceRuntime:
         thread média de LiveKit. La conversion WAV/16 k a lieu au flush.
         """
         pcm = bytes(frame.data)
-        if self._buffered_bytes + len(pcm) > MAX_BUFFERED_AUDIO_BYTES:
-            self._audio_limit_hit = True
+        event = self.endpointer.feed(pcm, strict=self._speaking)
+        if event is None:
             return
-        self.session.push_audio(pcm)
-        self._buffered += 1
-        self._buffered_bytes += len(pcm)
+        kind, utterance = event
+        if kind == START:
+            log.info("parole détectée (seuil %.0f)", self.endpointer.threshold())
+            if self._speaking or self.session.current_turn is not None:
+                # Barge-in : l'usager coupe l'agent (réponse en cours abandonnée).
+                abandoned = self.session.interrupt()
+                if self._speaking:
+                    self._stop.set()  # coupe la voix de l'agent
+                log.info("barge-in : tour %s abandonné", abandoned)
+            asyncio.create_task(self.send(protocol.agent_state(protocol.ST_LISTENING)))
+        elif kind == END:
+            log.info("fin d'énoncé : %.1f s d'audio", len(utterance) / 2 / audio.MIC_SAMPLE_RATE)
+            asyncio.create_task(self.flush_segment(utterance))
 
     async def _read_audio_track(self, track) -> None:
         """Consomme les trames d'un track distant via l'API LiveKit AudioStream."""
@@ -176,9 +192,9 @@ class VoiceRuntime:
         log.info("micro abonné : %s", publication.name)
         self._audio_tasks[track_sid] = asyncio.create_task(self._read_audio_track(track))
 
-    async def flush_segment(self) -> None:
-        """Fin de segment VAD : WAV → ASR → tour → publication. Chaîne réelle."""
-        pcm_48k = self.session.flush_segment()
+    async def flush_segment(self, pcm: bytes | None = None) -> None:
+        """Fin d'énoncé : WAV → ASR → tour → publication. Chaîne réelle."""
+        pcm_48k = pcm if pcm is not None else self.session.flush_segment()
         self._buffered = 0
         self._buffered_bytes = 0
         limit_hit = self._audio_limit_hit
@@ -237,7 +253,12 @@ class VoiceRuntime:
                 await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
             return
         await self.send(protocol.agent_state(protocol.ST_SPEAKING, turn_id))
-        await self._publish(first, turn_id, rest=segments)
+        self._stop.clear()  # un ancien « stop » ne doit pas couper cette réponse
+        self._speaking = True
+        try:
+            await self._publish(first, turn_id, rest=segments)
+        finally:
+            self._speaking = False
         if not self.session.is_superseded(turn_id):
             await self.send(protocol.agent_state(protocol.ST_LISTENING, turn_id))
 
@@ -343,10 +364,12 @@ class VoiceRuntime:
         if not event:
             return
         kind = event.get("type")
-        if kind == protocol.EV_USER_SEGMENT:
-            # Un segment VAD est prêt : on planifie le tour sur la boucle.
-            asyncio.create_task(self.flush_segment())
-        elif kind in (protocol.EV_BARGE_IN, protocol.EV_CANCEL):
+        if kind in (protocol.EV_USER_SEGMENT, protocol.EV_BARGE_IN):
+            # Le serveur détecte lui-même début/fin de parole : les indices d'un
+            # VAD navigateur (anciens clients) sont ignorés pour ne pas couper un
+            # énoncé en deux.
+            return
+        if kind == protocol.EV_CANCEL:
             abandoned = self.session.interrupt()
             self._buffered = 0
             self._buffered_bytes = 0

@@ -2,10 +2,11 @@
 
 /**
  * Voice workspace — `/app/voice` (UI/UX Master Spec §30-32, §114, §117-120).
- * Chaîne TOUT réelle : LiveKit (WebRTC) + VAD Silero WASM → worker (Kiriku ASR →
- * GLM → Journey → xTTS wolof). Le Core domine, les distracteurs disparaissent.
+ * Chaîne TOUT réelle : LiveKit (WebRTC) → worker (détection de parole serveur →
+ * Kiriku ASR → LLM NVIDIA → voix wolof Adia). Le navigateur ne fait que publier
+ * son micro et jouer la voix : aucun VAD local (fragile sur mobile).
  * - Phases d'état pilotées par la session réelle (jamais devinées, §153).
- * - Fallback texte honnête si micro/VAD/LiveKit échouent (§120) — on ne bloque jamais.
+ * - Fallback texte honnête si micro/LiveKit échouent (§120) — on ne bloque jamais.
  * - Aucune transcription factice : le transcript n'apparaît que si du texte RÉEL
  *   est disponible côté client.
  */
@@ -19,7 +20,6 @@ import { Button, Card } from "@/components/ui";
 import { useVoiceStore } from "@/lib/state/stores";
 import { agentErrorMessage, voiceFailure, type VoiceFailure } from "@/lib/voice/messages";
 import { VoiceRoom } from "@/lib/voice/livekit";
-import { createMicVad, type SileroVad } from "@/lib/voice/vad";
 import { useVoiceToken } from "@/lib/query/hooks";
 
 const PHASE_TO_CORE: Record<string, CoreState> = {
@@ -33,9 +33,9 @@ const PHASE_TO_CORE: Record<string, CoreState> = {
 export default function VoicePage() {
   const router = useRouter();
   const roomRef = useRef<VoiceRoom | null>(null);
-  const vadRef = useRef<SileroVad | null>(null);
-  const mediaRef = useRef<MediaStream | null>(null);
-  const cbRef = useRef<{ onRemoteAudio: (el: HTMLAudioElement) => void } | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  /** Le navigateur bloque le son tant que l'usager n'a pas touché l'écran. */
+  const [soundBlocked, setSoundBlocked] = useState(false);
   const [failed, setFailed] = useState(false);
   const [failure, setFailure] = useState<VoiceFailure | null>(null);
   /* Ce que le WORKER a réellement dit/reçu. Jamais deviné, jamais codé en dur. */
@@ -47,17 +47,24 @@ export default function VoicePage() {
   const setPhase = useVoiceStore((s) => s.setPhase);
   const setConnected = useVoiceStore((s) => s.setConnected);
   const setActive = useVoiceStore((s) => s.setActive);
-  const startSegment = useVoiceStore((s) => s.startSegment);
-  const endSegment = useVoiceStore((s) => s.endSegment);
   const resetVoice = useVoiceStore((s) => s.reset);
 
   const tokenQuery = useVoiceToken();
 
-  const takeMic = useCallback(async () => {
-    if (mediaRef.current) return mediaRef.current;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRef.current = stream;
-    return stream;
+  /** Animation du Core : niveau réel d'une piste (micro, puis voix de l'agent).
+   * Purement visuel : si le contexte audio est suspendu, seule l'animation s'arrête. */
+  const analyse = useCallback((track: MediaStreamTrack) => {
+    try {
+      const ctx = audioCtxRef.current ?? new AudioContext();
+      audioCtxRef.current = ctx;
+      void ctx.resume().catch(() => {});
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      ctx.createMediaStreamSource(new MediaStream([track])).connect(analyser);
+      window.dispatchEvent(new CustomEvent("sama:analyser", { detail: analyser }));
+    } catch {
+      /* animation facultative */
+    }
   }, []);
 
   const start = useCallback(async () => {
@@ -69,95 +76,57 @@ export default function VoicePage() {
     setNotice(null);
     try {
       const { url, token } = await tokenQuery.refetch().then((r) => {
-        if (!r.data) {
-          // 503 (clés LiveKit absentes) ou 409 (aucun dossier) : le serveur le dit,
-          // on ne tente pas de deviner pourquoi en se connectant quand même.
-          throw r.error ?? new Error("service vocal indisponible");
-        }
+        if (!r.data) throw r.error ?? new Error("service vocal indisponible");
         return r.data;
       });
-      const stream = await takeMic();
-
-      // Expose l'analyseur du micro pour que l'orbe réagisse au volume réel (listening)
-      const ctx = new AudioContext();
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      window.dispatchEvent(new CustomEvent("sama:analyser", { detail: analyser }));
 
       const room = new VoiceRoom();
       roomRef.current = room;
-      cbRef.current = {
-        onRemoteAudio: (el) => {
-          // La voix IA réelle : bascule l'analyseur sur la sortie pendant « Je réponds… »
-          const actx = new AudioContext();
-          const src = actx.createMediaElementSource(el);
-          const an = actx.createAnalyser();
-          an.fftSize = 512;
-          src.connect(an);
-          an.connect(actx.destination);
-          window.dispatchEvent(new CustomEvent("sama:analyser", { detail: an }));
-        },
-      };
-
       await room.connect(url, token, {
-        onRemoteAudio: cbRef.current.onRemoteAudio,
+        onRemoteAudio: (_el, track) => analyse(track),
+        onPlaybackBlocked: setSoundBlocked,
         onRemoteDisconnected: () => setPhase("listening"),
         onError: () => setPhase("idle"),
-        /* ── Le worker parle enfin au client ─────────────────────────────
-           La phase affichée vient de `agent_state`, donc du serveur. Avant,
-           elle était déduite localement d'événements VAD et ne pouvait pas
-           distinguer « l'agent calcule » de « l'agent est coincé ». */
+        /* La phase affichée vient du serveur (`agent_state`) : c'est lui qui
+           détecte début et fin de parole, puis calcule et dit la réponse. */
         onAgentEvent: (event) => {
           if (event.type === "agent_state") {
             setPhase(event.state);
             if (event.state === "listening") setNotice(null);
+            if (event.state === "thinking") {
+              setHeard(null);
+              setAgentReply(null);
+            }
             return;
           }
           if (event.type === "agent_text") {
-            // `role` vient du serveur : on ne devine pas qui parle.
             if (event.role === "user") setHeard(event.text || null);
             else setAgentReply(event.text || null);
             return;
           }
-          // agent_error : dégradé honnête. Le message vient du serveur, avec son code.
           setNotice(agentErrorMessage(event.code));
           setPhase("listening");
         },
       });
       setConnected(true);
-
-      // VAD Silero (client, ADR-004) — barge-in + segmentation réelle
-      const vad = createMicVad();
-      vadRef.current = vad;
-      await vad.start(stream, {
-        onSpeechStart: () => {
-          room.send({ type: "barge_in" });
-          setPhase("listening");
-          setActive(true);
-        },
-        onSpeechEnd: (segment) => {
-          const segmentId = startSegment();
-          // Durée RÉELLE du segment (produit par le VAD, 16 kHz)
-          const durationMs = Math.round((segment.length / 16_000) * 1000);
-          // L'audio, lui, transite par la track micro publiée : cet événement ne
-          // fait que dire « le segment est clos, traite-le ». (Le VAD local n'a pas
-          // à réencoder : ce serait un doublon, et deux chemins audio divergent.)
-          room.send({ type: "user_segment", segmentId, durationMs });
-          endSegment();
-          setPhase("thinking");
-          setHeard(null);
-          setAgentReply(null);
-        },
-      });
+      setActive(true);
+      setPhase("listening");
+      const mic = room.micTrack();
+      if (mic) analyse(mic);
     } catch (err) {
       console.error("voice start failed", err);
       setPhase("idle");
       setFailed(true); // fallback texte honnête (§120)
       setFailure(voiceFailure(err));
     }
-  }, [setPhase, setConnected, setActive, startSegment, endSegment, tokenQuery]);
+  }, [setPhase, setConnected, setActive, tokenQuery, analyse]);
+
+  /** Geste de l'usager : débloque le son (mobile) et l'animation. */
+  const unlockSound = useCallback(async () => {
+    await roomRef.current?.startAudio().catch(() => {});
+    await audioCtxRef.current?.resume().catch(() => {});
+    setSoundBlocked(false);
+  }, []);
 
   const cancel = useCallback(async () => {
     const room = roomRef.current;
@@ -167,10 +136,8 @@ export default function VoicePage() {
       await room.disconnect();
       roomRef.current = null;
     }
-    vadRef.current?.destroy();
-    vadRef.current = null;
-    mediaRef.current?.getTracks().forEach((t) => t.stop());
-    mediaRef.current = null;
+    void audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current = null;
     setConnected(false);
     setActive(false);
     setPhase("idle");
@@ -180,8 +147,7 @@ export default function VoicePage() {
   useEffect(() => {
     start();
     return () => {
-      vadRef.current?.destroy();
-      mediaRef.current?.getTracks().forEach((t) => t.stop());
+      void audioCtxRef.current?.close().catch(() => {});
       roomRef.current?.disconnect();
       resetVoice();
     };
@@ -226,6 +192,11 @@ export default function VoicePage() {
             <h1 className="sr-only">Session vocale avec Sama Agent</h1>
             <VoiceCore state={coreState} size="xl" ariaLabel="Session vocale Sama Agent" />
             <PhaseHeader state={coreState} />
+            {soundBlocked ? (
+              <Button variant="gradient" size="lg" onClick={unlockSound}>
+                Activer le son
+              </Button>
+            ) : null}
             {/* Ce qui suit vient du WORKER (agent_text) ou du serveur (agent_error).
                 Aucune phrase en dur : tant qu'aucun texte réel n'est arrivé, on affiche
                 une zone vide — pas un mensonge rassurant (« Je vous écoute… »). */}
