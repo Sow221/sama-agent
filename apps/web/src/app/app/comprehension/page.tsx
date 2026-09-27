@@ -20,6 +20,7 @@ import { INTENT, INTENT_ACTION } from "@sama/shared/gen/enums";
 import { Button, ErrorNotice, GlassCard, Hydrating, ThinkingDots } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { useJourneyMutation } from "@/lib/query/hooks";
+import { useCreateConversation } from "@/lib/query/conversations";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor } from "@/lib/auth/journey-id";
@@ -70,6 +71,16 @@ export default function CompréhensionPage() {
     setJourneyResponse(r);
     router.push(`/app/journey/${r.journeyId}`);
   });
+
+  // Demande hors parcours guidé (passeport, extrait, casier…) : l'agent y répond
+  // quand même, en conversation libre avec recherche web et sources.
+  const createConversation = useCreateConversation();
+  const askAgent = async () => {
+    const transcript = understood?.transcript?.trim();
+    if (!transcript) return;
+    const c = await createConversation.mutateAsync({ title: transcript.slice(0, 80) });
+    router.push(`/app/chats/${c.id}?q=${encodeURIComponent(transcript)}`);
+  };
 
   const run = () =>
     journeyMutation.mutate({
@@ -149,12 +160,19 @@ export default function CompréhensionPage() {
             {question || "Pouvez-vous préciser votre demande ?"}
           </p>
           <p className="text-xs text-text-muted">
-            Le service n&apos;a pas reconnu votre demande&nbsp;: on ne peut pas
-            ouvrir un dossier qui ne vous correspondrait pas.
+            Cette demande n&apos;a pas encore de parcours guidé pas à pas. L&apos;agent
+            peut quand même vous répondre, avec des sources vérifiables.
           </p>
-          <Button variant="secondary" size="sm" onClick={() => router.push("/app/home")}>
-            Préciser ma demande
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {understood?.transcript ? (
+              <Button variant="gradient" size="sm" onClick={askAgent} loading={createConversation.isPending}>
+                Poser la question à l&apos;agent
+              </Button>
+            ) : null}
+            <Button variant="secondary" size="sm" onClick={() => router.push("/app/home")}>
+              Préciser ma demande
+            </Button>
+          </div>
         </div>
       ) : null}
 

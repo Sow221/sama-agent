@@ -213,3 +213,60 @@ def test_run_tool_loop_deterministic_is_honest() -> None:
     result = run_tool_loop("Quels documents me manquent ?", user_id=USER_A)
     assert "harnais" in result["answer"]
     assert result["toolCalls"] == []
+
+class _ChatLlm:
+    """LLM factice : enregistre ce que le chat lui envoie réellement."""
+
+    model = "fake"
+
+    def __init__(self) -> None:
+        self.text_calls: list[list[dict]] = []
+
+    def chat_json(self, prompt: str, system: str | None = None) -> dict:
+        if "memories" in prompt:
+            return {"memories": [{"kind": "FACT", "content": "habite à Thiès"}]}
+        return {"intent": "passeport_inconnu"}  # intention hors catalogue → clarification
+
+    def chat_text(self, messages: list[dict]) -> str:
+        self.text_calls.append(messages)
+        return "<think>brouillon</think>Allez au commissariat. Sources : https://exemple.sn"
+
+
+def test_live_chat_is_free_with_history_and_web(monkeypatch) -> None:
+    """Chat live : réponse libre (pas de JSON), historique relu, web injecté et cité,
+    et une demande hors catalogue (passeport) reçoit quand même une réponse."""
+    from agent import mode as app_mode
+    import agent.infrastructure.web.search as search
+
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    monkeypatch.setattr(search, "web_search", lambda q, k=5: [
+        {"title": "Passeport Sénégal", "url": "https://exemple.sn", "snippet": "pièces requises"}])
+    conv = create_conversation("user-chat-live", title="Passeport")
+    add_conversation_message(conv["id"], "user-chat-live", "user", "bonjour, je suis à Thiès")
+    add_conversation_message(conv["id"], "user-chat-live", "assistant", "Bonjour !")
+    llm = _ChatLlm()
+
+    out = run_agent_turn("comment refaire mon passeport perdu ?", "user-chat-live",
+                         conversation_id=conv["id"], llm=llm)
+
+    assert out["answer"] == "Allez au commissariat. Sources : https://exemple.sn"
+    assert out["sources"] == [{"title": "Passeport Sénégal", "url": "https://exemple.sn"}]
+    sent = llm.text_calls[0]
+    assert "https://exemple.sn" in sent[0]["content"]                    # web dans le contexte
+    assert [m["content"] for m in sent[1:]] == [
+        "bonjour, je suis à Thiès", "Bonjour !", "comment refaire mon passeport perdu ?"]
+    assert out["newMemories"][0]["content"] == "habite à Thiès"
+    assert len(list_conversation_messages(conv["id"], "user-chat-live")) == 4
+
+
+def test_parse_duckduckgo_results() -> None:
+    from agent.infrastructure.web.search import parse_duckduckgo
+
+    page = ('<a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg='
+            'https%3A%2F%2Fwww.servicepublic.gouv.sn%2Fpasseport&amp;rut=x">Passeport '
+            '<b>ordinaire</b></a><a class="result__snippet" href="#">Pièces à <b>fournir</b></a>')
+    assert parse_duckduckgo(page, 5) == [{
+        "title": "Passeport ordinaire",
+        "url": "https://www.servicepublic.gouv.sn/passeport",
+        "snippet": "Pièces à fournir",
+    }]

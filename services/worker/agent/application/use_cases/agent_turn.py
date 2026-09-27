@@ -14,11 +14,13 @@ fournisseur, LlmUnavailableError remonte → 503 honnête — jamais de réponse
 from __future__ import annotations
 
 import json
+import re
 
 from agent import mode as app_mode
 from agent.infrastructure.db.repositories import (
     add_conversation_message,
     create_memory,
+    list_conversation_messages,
     recall_top_memory,
 )
 from agent.infrastructure.llm.glm import GlmLlm, LlmUnavailableError
@@ -51,37 +53,71 @@ def _memory_summary(items: list[dict]) -> str:
     return " ; ".join(f"{m['kind']}:{m['content']}" for m in items)
 
 
-def _format_with_context(
-    text: str, intent, journey, memory_items, llm: GlmLlm
-) -> tuple[str, list[dict]]:
-    """Un appel GLM réel : réponse formulée + faits mémorisables extraits.
+#: Messages précédents relus pour le contexte (la conversation reste cohérente).
+_HISTORY_TURNS = 12
+_THINK = re.compile(r"<think>.*?</think>", re.S)
 
-    Le système est le seul à connaître l'état du dossier (résumé injecté) ; le
-    modèle ne fait que formuler et signaler des faits OBSERVABLES du message.
-    """
-    system = load_prompt("system", "v1")
-    prompt = (
-        f"Demande de l'usager : {text}\n"
-        f"Intention calculée : {intent.intent} (confiance {intent.confidence})"
-        f"{(' — clarification demandée : ' + (intent.clarificationQuestion or '')) if intent.needsClarification else ''}\n"
-        f"État du dossier (calculé par le moteur, ne jamais le contredire) : {_journey_summary(journey)}\n"
-        f"Mémoire de l'usager : {_memory_summary(memory_items)}\n\n"
-        "Réponds en JSON STRICT, sans texte hors JSON :\n"
-        '{"answer": "<réponse en français, courte, factuelle, utile>", '
-        '"memories": [{"kind": "FACT|PREFERENCE|SELF", "content": "<fait observé dans la demande, '
-        'utile à retenir>}], où "memories" ne contient que des infos NOUVELLES explicitement '
-        "données par l'usager dans SA demande (vide si rien de stable)."
+_CHAT_SYSTEM = """Tu es Sama Agent, assistant des démarches administratives au Sénégal
+(état civil, identité, passeport, permis, foncier, entreprise, fiscalité, santé, éducation…).
+Tu dialogues avec l'usager en français, ou en wolof s'il écrit en wolof.
+
+Règles :
+- Réponds à la question posée, de façon concrète : étapes, pièces, lieux, coûts, délais.
+- Appuie-toi sur les RÉSULTATS WEB fournis quand ils sont pertinents et cite-les :
+  termine alors par une ligne « Sources : » avec les liens utilisés (uniquement ceux fournis).
+- Si une information n'est ni dans les résultats ni certaine, dis-le et indique où la vérifier
+  (service compétent, site officiel) ; n'invente jamais un montant, une adresse ou un lien.
+- L'état du dossier de l'usager est calculé par le système : ne le contredis jamais.
+- Tiens compte de l'historique : ne redemande pas ce que l'usager a déjà dit.
+- Style : clair, chaleureux, phrases courtes, listes quand il y a des étapes. Pas de JSON."""
+
+
+def _web_context(results: list[dict]) -> str:
+    if not results:
+        return "aucun résultat web disponible pour ce tour"
+    return "\n".join(
+        f"[{i}] {r['title']} — {r['url']}\n    {r['snippet']}" for i, r in enumerate(results, 1)
     )
-    raw = llm.chat_json(prompt, system=system)
-    answer = str(raw.get("answer", "")).strip()
-    memories = raw.get("memories") or []
+
+
+def _converse(text, intent, journey, memory_items, history, web, llm: GlmLlm) -> str:
+    """Réponse LIBRE du modèle (texte), avec historique, dossier, mémoire et web."""
+    context = (
+        f"Intention détectée : {intent.intent} (confiance {intent.confidence})\n"
+        f"État du dossier (calculé par le moteur) : {_journey_summary(journey)}\n"
+        f"Mémoire de l'usager : {_memory_summary(memory_items)}\n"
+        f"RÉSULTATS WEB pour la question :\n{_web_context(web)}"
+    )
+    messages: list[dict] = [{"role": "system", "content": _CHAT_SYSTEM + "\n\nCONTEXTE :\n" + context}]
+    for m in history[-_HISTORY_TURNS:]:
+        if m.get("role") in ("user", "assistant") and m.get("content"):
+            messages.append({"role": m["role"], "content": m["content"]})
+    messages.append({"role": "user", "content": text})
+    answer = llm.chat_text(messages)
+    return _THINK.sub("", answer).strip()
+
+
+def _extract_memories(text: str, llm: GlmLlm) -> list[dict]:
+    """Faits stables donnés par l'usager (best effort : un échec n'annule pas le tour)."""
+    try:
+        raw = llm.chat_json(
+            "Message de l'usager : " + text + "\n\nRéponds en JSON STRICT : "
+            '{"memories": [{"kind": "FACT|PREFERENCE|SELF", "content": "<fait>"}]} — '
+            "uniquement des informations NOUVELLES et stables données explicitement "
+            "par l'usager sur lui-même (ville, situation, préférence de langue…). Liste vide sinon."
+        )
+    except Exception:  # noqa: BLE001
+        return []
     cleaned = []
+    memories = raw.get("memories") if isinstance(raw, dict) else None
     for m in memories if isinstance(memories, list) else []:
-        kind = str(m.get("kind", "FACT")).upper() if isinstance(m, dict) else "FACT"
-        content = str(m.get("content", "")) if isinstance(m, dict) else ""
-        if kind in {"FACT", "PREFERENCE", "SELF"} and content.strip():
-            cleaned.append({"kind": kind, "content": content.strip()[:1000]})
-    return answer, cleaned
+        if not isinstance(m, dict):
+            continue
+        kind = str(m.get("kind", "FACT")).upper()
+        content = str(m.get("content", "")).strip()
+        if kind in {"FACT", "PREFERENCE", "SELF"} and content:
+            cleaned.append({"kind": kind, "content": content[:1000]})
+    return cleaned[:3]
 
 
 def run_agent_turn(
@@ -96,7 +132,14 @@ def run_agent_turn(
     memory_items = recall_top_memory(user_id)
 
     # 2. Compréhension (GLM réel en live, règles en deterministic)
-    intent = infer_intent(IntentRequest(transcript=text), llm=llm)
+    # Le chat reste ouvert à TOUTE démarche : une intention non reconnue (ou un
+    # classement raté) ne bloque pas la réponse, elle ne crée simplement pas de dossier.
+    try:
+        intent = infer_intent(IntentRequest(transcript=text), llm=llm)
+    except LlmUnavailableError:
+        from agent.application.use_cases.process_intent import _clarify
+
+        intent = _clarify(IntentRequest(transcript=text), "")
 
     # 3. État du dossier via le moteur déterministe (jamais deviné)
     journey = None
@@ -108,13 +151,19 @@ def run_agent_turn(
         except KeyError:
             journey = None  # dossier inconnu → on répond sans inventer d'état
 
-    # 4–5. Formulation + extraction mémoire (un seul appel réel en live)
+    # 4–5. Réponse LIBRE (historique + web + dossier + mémoire), puis extraction mémoire
     answer: str = ""
     new_memories: list[dict] = []
+    sources: list[dict] = []
     if app_mode.is_live():
         if llm is None:
             llm = GlmLlm()
-        answer, new_memories = _format_with_context(text, intent, journey, memory_items, llm)
+        from agent.infrastructure.web.search import web_search
+
+        history = (list_conversation_messages(conversation_id, user_id, limit=200) or []) if conversation_id else []
+        sources = web_search(text + " Sénégal démarche") if len(text.split()) >= 3 else []
+        answer = _converse(text, intent, journey, memory_items, history, sources, llm)
+        new_memories = _extract_memories(text, llm)
     if not answer:  # panne fournisseur / mode deterministe : brique déterministe honnête
         from agent.application.dialogue import formulate
 
@@ -163,6 +212,7 @@ def run_agent_turn(
         "memoryUsed": [{"kind": m["kind"], "content": m["content"]} for m in memory_items],
         "newMemories": saved_memories,
         "conversation": messages,
+        "sources": [{"title": r["title"], "url": r["url"]} for r in sources],
     }
 
 
