@@ -1,6 +1,6 @@
 /**
- * Pied de l'espace (desktop et tablette) : repères discrets, jamais une
- * seconde navigation. Sur mobile, la BottomNav occupe le bas de l'écran.
+ * Pied de l'espace, sur tous les écrans : repères discrets, jamais une
+ * seconde navigation. Sur mobile, il laisse la place à la BottomNav fixe.
  */
 import Link from "next/link";
 
@@ -13,8 +13,8 @@ const LINKS = [
 
 export function AppFooter() {
   return (
-    <footer className="hidden border-t border-border md:block">
-      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4 text-sm text-text-muted lg:px-10">
+    <footer className="border-t border-border pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 text-sm text-text-muted lg:px-10">
         <p>Sama Agent prépare votre dossier ; le service compétent décide.</p>
         <nav aria-label="Liens utiles" className="flex flex-wrap gap-x-5 gap-y-1">
           {LINKS.map((l) => (

@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <TopBar />
           <MobileHeader />
         </Suspense>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-32 pt-4 sm:px-6 md:pb-12 md:pt-8 lg:px-10">
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-4 sm:px-6 md:pb-12 md:pt-8 lg:px-10">
           {children}
         </main>
         <AppFooter />
