@@ -110,7 +110,7 @@ class GlmLlm:
         timeout_s = float(os.getenv("LLM_TIMEOUT_SECS", "600"))
         self._httpx = httpx.Client(timeout=timeout_s)
 
-    def _chat(self, messages: list[dict]) -> str:
+    def _chat(self, messages: list[dict], force_json: bool | None = None) -> str:
         """Un aller-retour réel vers le NIM — renvoie le texte brut du modèle.
 
         NON-streaming (choix mesuré, pas un préjugé) : sur ce backend NVIDIA, le
@@ -127,7 +127,7 @@ class GlmLlm:
             "messages": messages,
             "temperature": 0,
         }
-        if self._force_json:
+        if self._force_json if force_json is None else force_json:
             payload["response_format"] = {"type": "json_object"}
         if not _circuit.allow():
             error = "NIM hors service (circuit ouvert) — réessayez dans un instant"
@@ -209,6 +209,10 @@ class GlmLlm:
             except json.JSONDecodeError:
                 pass
         raise LlmUnavailableError(f"réponse non-JSON du modèle : {content[:200]!r}")
+
+    def chat_text(self, messages: list[dict]) -> str:
+        """Conversation libre (texte, sans contrainte JSON) : le chat de l'usager."""
+        return self._chat(messages, force_json=False)
 
     def chat_json(self, prompt: str, system: str | None = None) -> dict:
         messages = []

@@ -15,7 +15,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { JOURNEY_STATUS_LABEL, type JOURNEY_STATUS } from "@sama/shared/gen/enums";
 import {
   Button,
@@ -60,6 +60,18 @@ export default function ConversationPage() {
   const saveMemory = useCreateMemory();
 
   const canSend = useMemo(() => text.trim().length > 0 && !turn.isPending, [text, turn.isPending]);
+
+  // `?q=` : question transmise par l'écran Comprendre → envoyée UNE fois, à l'ouverture.
+  const searchParams = useSearchParams();
+  const initialQuestion = searchParams.get("q");
+  const askedRef = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || askedRef.current || !conversation.data || messages.isLoading) return;
+    askedRef.current = true;
+    router.replace(`/app/chats/${conversationId}`);
+    if (!messages.data?.length) send(initialQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion, conversation.data, messages.isLoading]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -176,7 +188,7 @@ export default function ConversationPage() {
                   : "max-w-[85%] self-start whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-base text-text1"
               }
             >
-              {m.content}
+              <Linkified text={m.content} />
             </div>
             {m.role === "assistant" ? (
               <div className="flex items-center gap-1 self-start pl-1">
@@ -289,5 +301,29 @@ export default function ConversationPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/** Rend cliquables les liens (sources web) d'un message, sans HTML injecté. */
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s)\]]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="break-all font-semibold underline underline-offset-2"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
   );
 }
