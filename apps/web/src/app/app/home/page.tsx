@@ -12,6 +12,7 @@ import { Button, Card, ErrorNotice, Textarea } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { VoiceCore } from "@/components/voice/VoiceCore";
 import { useIntentMutation } from "@/lib/query/hooks";
+import { useCreateConversation } from "@/lib/query/conversations";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 import { procedureLabel } from "@/lib/labels";
 import { JOURNEY_STATUS_LABEL } from "@sama/shared/gen/enums";
@@ -23,11 +24,18 @@ export default function HomePage() {
   const setIntent = useJourneyStore((s) => s.setIntent);
   const ready = usePersistReady();
 
-  const intent = useIntentMutation((r) => {
-    // La réponse du serveur était jetée : on ne gardait que le `push`. On la
-    // conserve pour que l'écran suivant montre ce qui a été compris de la
-    // demande — y compris, et surtout, quand il faut préciser.
-    setIntent({ response: r, transcript: text.trim() });
+  const createConversation = useCreateConversation();
+  const intent = useIntentMutation(async (r) => {
+    const transcript = text.trim();
+    setIntent({ response: r, transcript });
+    if (r.needsClarification) {
+      // Pas de parcours guidé pour cette demande : l'agent y répond quand même,
+      // en conversation (recherche web, sources), sans étape intermédiaire.
+      const c = await createConversation.mutateAsync({ title: transcript.slice(0, 80) });
+      router.push(`/app/chats/${c.id}?q=${encodeURIComponent(transcript)}`);
+      return;
+    }
+    // Démarche avec parcours guidé (pièces, documents, suivi) : l'écran Comprendre.
     router.push("/app/comprehension");
   });
 

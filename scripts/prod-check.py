@@ -158,9 +158,24 @@ def main() -> int:
                               "conversationId": conv_id})
         turn = t.json() if t.status_code == 200 else {}
         reply = turn.get("answer") or ""
+        # Conversation CONTINUE : un long paragraphe, puis une question en wolof, hors permis.
+        import time as _t
+        follow_ups = [
+            ("paragraphe", "Merci. En fait j'ai aussi perdu ma carte d'identité la semaine dernière "
+             "au marché, avec d'autres papiers. Je travaille la journée et je ne peux pas me "
+             "déplacer souvent. Comment je fais pour la refaire rapidement et combien ça coûte ?"),
+            ("wolof", "Naka laa mëna def sama paaspoor ?"),
+        ]
+        for label, question in follow_ups:
+            t0 = _t.perf_counter()
+            f = client.post(f"{api}/api/agent/turn", headers=bearer,
+                            json={"text": question, "conversationId": conv_id})
+            ans = (f.json() if f.status_code == 200 else {}).get("answer", "")
+            step(f"10b. Chat continu ({label})", f.status_code == 200 and bool(ans),
+                 f"{_t.perf_counter() - t0:.1f} s · « {ans[:110]} »" if ans else f"HTTP {f.status_code} {f.text[:120]}")
         m = client.get(f"{api}/api/conversations/{conv_id}/messages", headers=bearer)
         n = len((m.json() if m.status_code == 200 else {}).get("items", []))
-        step("10. Discussion écrite (réponse de l'agent + historique)", t.status_code == 200 and n >= 2,
+        step("10. Discussion écrite (réponse de l'agent + historique)", t.status_code == 200 and n >= 6,
              f"{n} messages enregistrés · « {str(reply)[:70]} »" if t.status_code == 200 else f"HTTP {t.status_code} {t.text[:100]}")
     else:
         step("10. Discussion écrite (réponse de l'agent + historique)", False, f"conversation HTTP {r.status_code} {r.text[:100]}")

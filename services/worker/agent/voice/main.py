@@ -115,7 +115,9 @@ class VoiceRuntime:
         # déjà ajouté par la session). Rend (texte affiché, réponse complète à dire).
         history = [h for h in self.session.history if h.get("text")][:-1]
         reply = voice_turn(text, self.journey_id, history=history)
-        return reply.display, reply
+        # À l'écran : le WOLOF d'abord (ce que l'agent dit), la traduction dessous.
+        shown = f"{reply.spoken}\n\n{reply.display}" if reply.spoken else reply.display
+        return shown, reply
 
     def _synthesize(self, reply):
         """Voix réelle, PHRASE PAR PHRASE : générateur paresseux de WAV (aucun

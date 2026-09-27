@@ -53,7 +53,7 @@ Si la phrase est incompréhensible, demande gentiment de répéter.
 
 Format EXACT, deux lignes :
 FR: <ta réponse en français>
-WO: <la même réponse en wolof (orthographe wolof courante)>"""
+WO: <la même réponse en wolof naturel, tel qu'on le parle à Dakar (c'est CETTE ligne qui est dite)>"""
 
 # Tolère le markdown et les variantes (« **FR :** », « Wolof - … ») : sans la
 # ligne wolof, l'agent n'aurait rien à DIRE et resterait muet.
@@ -72,10 +72,10 @@ def _journey_context(journey) -> str:
 
 def _llm_voice_reply(text: str, journey, history: list[dict]) -> VoiceReply:
     from agent.infrastructure.llm.glm import GlmLlm
-    from agent.infrastructure.web.search import web_search
+    from agent.infrastructure.web.search import search_query, web_search
 
     llm = _voice_llm() or GlmLlm()
-    web = web_search(text + " Sénégal", k=3, timeout_s=3.0) if len(text.split()) >= 3 else []
+    web = web_search(search_query(text) + " Sénégal", k=3, timeout_s=3.0) if len(text.split()) >= 3 else []
     web_ctx = "\n".join(f"- {r['title']} : {r['snippet']}" for r in web) or "aucun"
     messages = [{"role": "system", "content": (
         _VOICE_SYSTEM + f"\n\nCONTEXTE : {_journey_context(journey)}\nINFOS WEB :\n{web_ctx}")}]

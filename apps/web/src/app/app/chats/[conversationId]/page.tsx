@@ -51,6 +51,7 @@ export default function ConversationPage() {
   const [proposal, setProposal] = useState<string | null>(null);
   const [kind, setKind] = useState<MemoryKind>("FACT");
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const conversation = useConversation(conversationId);
   const journeyId = conversation.data?.journeyId ?? undefined;
@@ -95,6 +96,7 @@ export default function ConversationPage() {
       }
     );
     setText("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
   }
 
   async function copyMessage(t: string) {
@@ -244,8 +246,14 @@ export default function ConversationPage() {
           className="relative flex items-end gap-2 rounded-2xl border border-border bg-surface-elevated p-2 shadow-elevated"
         >
           <Textarea
+            ref={inputRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              // Grandit avec le texte (paragraphes), jusqu'à max-h-40 puis défile.
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
