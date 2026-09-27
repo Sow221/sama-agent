@@ -13,9 +13,10 @@
     "gen:documents": "node scripts/gen-test-documents.mjs",
     "check:terminology": "node scripts/check-terminology.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
+    "check:theme": "node scripts/check-theme-contrast.mjs",
     "smoke": "node scripts/smoke-api.mjs",
     "latency": "node scripts/latency.mjs",
-    "verify": "npm run parity && npm run check:terminology && npm run check:secrets && npm test",
+    "verify": "npm run parity && npm run check:terminology && npm run check:secrets && npm run check:theme && npm test",
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "test": "npm run test -w apps/web"
