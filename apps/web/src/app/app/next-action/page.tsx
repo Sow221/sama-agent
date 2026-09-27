@@ -80,7 +80,7 @@ function NextStep({ journey }: { journey: JourneyResponse }) {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <StepBadge>5 · Suite</StepBadge>
+        <StepBadge>Votre prochaine étape</StepBadge>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Prochaine action</h1>
         <p className="mt-1 text-sm text-text2">
           {procedureLabel(journey.procedureId)} · {JOURNEY_STATUS_LABEL[journey.status]} ·{" "}
@@ -135,7 +135,7 @@ function FinalStep({ journey }: { journey: JourneyResponse }) {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <StepBadge>4 · Agir</StepBadge>
+        <StepBadge>Étape 4 · Agir</StepBadge>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre dossier est prêt</h1>
         <p className="mt-1 text-sm text-text2">{procedureLabel(journey.procedureId)}</p>
       </div>

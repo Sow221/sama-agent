@@ -4,7 +4,7 @@
  * AuthGate — garde des routes protégées (identité réelle).
  * - Supabase non configuré (harnais/dév local) : on laisse passer, l'identité de
  *   service du worker s'applique (comme SAMA_MODE=deterministic).
- * - Configuré (production) : pas de session → redirection vers /auth.
+ * - Configuré (production) : pas de session → redirection vers /login?next=<page demandée>.
  *
  * ⚠ Ce garde affichait un spinner INDÉFINIMENT quand la lecture de session
  * échouait (le `loading` restait bloqué, cf. `sessionError` dans auth-context).
@@ -16,13 +16,19 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Spinner } from "@/components/ui";
 import { useAuth } from "./auth-context";
+import { rememberNext } from "./next";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { configured, loading, session, sessionError } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (configured && !loading && !session && !sessionError) router.replace("/login");
+    if (configured && !loading && !session && !sessionError) {
+      // On garde la page demandée : après connexion, l'usager y revient.
+      const here = window.location.pathname + window.location.search;
+      rememberNext(here);
+      router.replace(`/login?next=${encodeURIComponent(here)}`);
+    }
   }, [configured, loading, session, sessionError, router]);
 
   if (!configured) return <>{children}</>;

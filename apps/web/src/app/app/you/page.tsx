@@ -18,7 +18,7 @@ const SECTIONS = [
   { href: "/app/you/preferences", label: "Préférences", description: "Langue et priorités" },
   { href: "/app/memory", label: "Mémoire", description: "Ce que l'agent retient" },
   { href: "/app/you/privacy", label: "Confidentialité", description: "Vos données, vos droits" },
-  { href: "/limits", label: "Aide et limites", description: "Ce que Sama peut faire" },
+  { href: "/app/you/help", label: "Aide", description: "Bien démarrer, engagements, questions" },
 ] as const;
 
 export default function YouPage() {
@@ -75,10 +75,6 @@ export default function YouPage() {
         <LogOutIcon className="h-5 w-5" />
         Se déconnecter
       </button>
-
-      <Link href="/limits" className="focus-visible text-center text-sm text-text-muted underline underline-offset-4">
-        Limites de l'application (transparence)
-      </Link>
     </div>
   );
 }

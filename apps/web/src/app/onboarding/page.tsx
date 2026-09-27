@@ -13,6 +13,7 @@ import { VoiceCore } from "@/components/voice/VoiceCore";
 import { CompassIcon, MemoryIcon, Mic } from "@/components/icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { completeOnboarding, isOnboardingDone } from "@/lib/auth/onboarding";
+import { takeNext } from "@/lib/auth/next";
 
 const STEPS = ["Intro", "Voix", "Micro", "Mémoire", "C'est parti"];
 
@@ -41,14 +42,14 @@ export default function OnboardingPage() {
   }, [stepParam]);
 
   useEffect(() => {
-    if (!configured && !loading) router.replace("/app/home");
+    if (!configured && !loading) router.replace(takeNext());
     else if (configured && !loading && !session) router.replace("/login");
-    else if (!loading && session && isOnboardingDone()) router.replace("/app/home");
+    else if (!loading && session && isOnboardingDone()) router.replace(takeNext());
   }, [configured, loading, session, router]);
 
   const finish = () => {
     completeOnboarding();
-    router.replace("/app/home");
+    router.replace(takeNext());
   };
 
   async function requestMic() {

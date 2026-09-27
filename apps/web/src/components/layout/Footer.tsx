@@ -8,7 +8,7 @@ import { BrandMark } from "./Header";
 const LINKS = [
   { href: "/#comment", label: "Comment ça marche" },
   { href: "/#faq", label: "Questions fréquentes" },
-  { href: "/limits", label: "Limites de l'application" },
+  { href: "/aide", label: "Aide et engagements" },
   { href: "/signup", label: "Créer un compte" },
   { href: "/login", label: "Se connecter" },
 ];

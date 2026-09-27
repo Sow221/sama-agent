@@ -7,10 +7,13 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Avatar, IconButton } from "@/components/ui";
+import { Avatar } from "@/components/ui";
 import { ArrowLeftIcon, InfoIcon } from "@/components/icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { routeInfo } from "@/lib/routes";
+
+const ICON_LINK =
+  "focus-visible flex h-11 w-11 items-center justify-center rounded-full text-text2 transition-colors duration-micro hover:bg-surface-hover hover:text-text1";
 
 /** Prénom affichable : nom saisi à l'inscription, sinon rien (jamais « ? »). */
 function firstName(user: ReturnType<typeof useAuth>["user"]): string | null {
@@ -46,20 +49,16 @@ export function MobileHeader() {
       <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-2">
         <div className="flex min-w-0 items-center gap-1">
           {parent ? (
-            <Link href={parent} aria-label="Retour" className="focus-visible rounded-full">
-              <IconButton label="Retour" tabIndex={-1}>
-                <ArrowLeftIcon className="h-5 w-5" />
-              </IconButton>
+            <Link href={parent} aria-label="Retour" title="Retour" className={ICON_LINK}>
+              <ArrowLeftIcon className="h-5 w-5" />
             </Link>
           ) : (
             <span className="w-2" />
           )}
           <p className="truncate text-base font-bold text-text1">{info?.title ?? "Sama Agent"}</p>
         </div>
-        <Link href="/limits" aria-label="Aide et limites" className="focus-visible rounded-full">
-          <IconButton label="Aide et limites" tabIndex={-1}>
-            <InfoIcon className="h-5 w-5" />
-          </IconButton>
+        <Link href="/app/you/help" aria-label="Aide" title="Aide" className={ICON_LINK}>
+          <InfoIcon className="h-5 w-5" />
         </Link>
       </div>
     </header>

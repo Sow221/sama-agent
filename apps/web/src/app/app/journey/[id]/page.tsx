@@ -70,7 +70,7 @@ export default function ParcoursPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-            2 · Parcours
+            Suivi du parcours
           </p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre parcours</h1>
         </div>

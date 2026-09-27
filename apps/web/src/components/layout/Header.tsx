@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * En-tête public (landing, connexion, inscription, limites) — pleine largeur.
+ * En-tête public (landing, aide, connexion, inscription) — pleine largeur.
  * Logo à gauche ; à droite la navigation (≥ md) puis l'action de compte :
  * visiteur → « Se connecter » + « Créer un compte » ; connecté → « Ouvrir mon
  * espace ». Sur la page de connexion, l'action utile est l'inscription (et
@@ -26,8 +26,9 @@ export function BrandMark({ href = "/" }: { href?: string }) {
 
 const NAV = [
   { href: "/#comment", label: "Comment ça marche" },
+  { href: "/#fonctionnalites", label: "Fonctionnalités" },
+  { href: "/#engagements", label: "Engagements" },
   { href: "/#faq", label: "Questions" },
-  { href: "/limits", label: "Limites" },
 ];
 
 export function Header() {

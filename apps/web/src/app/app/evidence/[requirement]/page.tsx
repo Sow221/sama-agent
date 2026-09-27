@@ -71,7 +71,7 @@ export default function PreuvePage() {
         </Link>
         <br />
         <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-          4 · Preuve
+          Étape 3 · Vérifier
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">
           {requirementLabel(requirement, journey)}

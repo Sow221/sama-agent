@@ -92,7 +92,7 @@ export default function CompréhensionPage() {
     <section className="flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-          1 · Comprendre
+          Étape 1 · Comprendre
         </p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Votre demande</h1>
       </div>

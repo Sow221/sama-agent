@@ -14,16 +14,16 @@ export default function NotFound() {
       </p>
       <div className="flex w-full flex-col gap-2 sm:flex-row">
         <Link
-          href="/app/home"
+          href="/"
           className="focus-visible inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-5 font-semibold text-[#04211a]"
         >
           Aller à l'accueil
         </Link>
         <Link
-          href="/limits"
+          href="/aide"
           className="focus-visible inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-border bg-surface-elevated px-5 font-semibold text-text1"
         >
-          Aide et limites
+          Obtenir de l'aide
         </Link>
       </div>
     </main>

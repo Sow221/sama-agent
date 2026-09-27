@@ -13,6 +13,7 @@ import { AuthShell } from "./AuthShell";
 import { Button, Input, Spinner } from "@/components/ui";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isOnboardingDone } from "@/lib/auth/onboarding";
+import { pendingNext, takeNext } from "@/lib/auth/next";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -23,15 +24,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-/** Après connexion réelle : onboarding si jamais fait, sinon l'espace. */
+/** Après connexion réelle : onboarding si jamais fait, sinon la page demandée (ou l'accueil). */
 function usePostAuthRedirect() {
   const router = useRouter();
   const { configured, loading, session } = useAuth();
   useEffect(() => {
     if (configured && !loading && session) {
-      router.replace(isOnboardingDone() ? "/app/home" : "/onboarding");
+      if (isOnboardingDone()) router.replace(takeNext());
+      else {
+        const next = pendingNext();
+        router.replace(next ? `/onboarding?next=${encodeURIComponent(next)}` : "/onboarding");
+      }
     } else if (!configured && !loading) {
-      router.replace("/app/home");
+      router.replace(takeNext());
     }
   }, [configured, loading, session, router]);
 }

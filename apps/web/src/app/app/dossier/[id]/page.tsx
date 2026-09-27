@@ -32,7 +32,7 @@ export default function DossierPage() {
     <section className="flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-          3 · Dossier
+          Étape 2 · Préparer
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Mon dossier</h1>
         <p className="mt-1 text-sm text-text2">

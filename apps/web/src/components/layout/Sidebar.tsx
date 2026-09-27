@@ -34,12 +34,20 @@ const MAIN_NAV = [
 ] as const;
 
 const UTILITY_NAV = [
-  { href: "/limits", label: "Limites", icon: InfoIcon },
+  { href: "/app/you/help", label: "Aide", icon: InfoIcon },
   { href: "/app/you", label: "Moi", icon: UserIcon },
 ] as const;
 
-function routeIsActive(pathname: string, href: string) {
+function matches(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const ALL_HREFS = [...MAIN_NAV, ...UTILITY_NAV].map((i) => i.href);
+
+/** Un seul lien actif : le plus précis (sur /app/you/help, « Aide » et non « Moi »). */
+function routeIsActive(pathname: string, href: string) {
+  if (!matches(pathname, href)) return false;
+  return !ALL_HREFS.some((other) => other.length > href.length && matches(pathname, other));
 }
 
 export function Sidebar() {
