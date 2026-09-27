@@ -1,17 +1,33 @@
 /**
  * Client Supabase (Auth) — identité RÉELLE des usagers (email/mot de passe + Google).
  *
- * L'authentification n'est active que si le projet Supabase est configuré
- * (NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY). Sans configuration
- * (développement local / harnais), l'app fonctionne avec l'identité de SERVICE du
- * worker — exactement comme SAMA_MODE=deterministic côté serveur. En production
- * (Brev, clés présentes), la connexion est obligatoire et chaque appel API porte
- * `Authorization: Bearer <access_token>`.
+ * La connexion est OBLIGATOIRE par défaut (NEXT_PUBLIC_SUPABASE_URL +
+ * NEXT_PUBLIC_SUPABASE_ANON_KEY). Seul le harnais explicite
+ * (NEXT_PUBLIC_SAMA_HARNESS=1, tests / dév local) ouvre l'espace avec l'identité
+ * de SERVICE du worker — comme SAMA_MODE=deterministic côté serveur. Chaque appel
+ * API porte `Authorization: Bearer <access_token>`.
  */
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+/**
+ * Mode harnais (tests automatisés, développement local SANS compte) : doit être
+ * DEMANDÉ explicitement avec NEXT_PUBLIC_SAMA_HARNESS=1.
+ *
+ * ⚠ Avant, l'absence des clés Supabase suffisait à ouvrir l'espace à tout le
+ * monde : un déploiement où l'on avait oublié les variables (ex. Vercel) donnait
+ * accès à l'app SANS connexion. Désormais l'app est fermée par défaut : sans clés
+ * et sans harnais explicite, la connexion est exigée et signalée indisponible.
+ */
+export function isHarness(): boolean {
+  return process.env.NEXT_PUBLIC_SAMA_HARNESS === "1";
+}
+
+/** Message affiché quand la connexion est exigée mais que Supabase n'est pas configuré. */
+export const AUTH_NOT_CONFIGURED =
+  "La connexion est momentanément indisponible : le service d'authentification n'est pas configuré sur ce déploiement.";
 
 /** Vrai uniquement si le projet Supabase est configuré (production/démo). */
 export function isAuthConfigured(): boolean {

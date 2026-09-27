@@ -44,7 +44,7 @@ function usePostAuthRedirect() {
 /* ═══════════════ Log in (§18) ═══════════════ */
 export function LoginForm() {
   usePostAuthRedirect();
-  const { signIn } = useAuth();
+  const { signIn, authUnavailable } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -108,7 +108,7 @@ export function LoginForm() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+        <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
           Se connecter
         </Button>
       </form>
@@ -119,7 +119,7 @@ export function LoginForm() {
 /* ═══════════════ Sign up (§19) ═══════════════ */
 export function SignupForm() {
   usePostAuthRedirect();
-  const { signUp } = useAuth();
+  const { signUp, authUnavailable } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -208,7 +208,7 @@ export function SignupForm() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+        <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
           Créer mon compte
         </Button>
         <p className="text-xs text-text-muted">
@@ -221,7 +221,7 @@ export function SignupForm() {
 
 /* ═══════════════ Forgot password (§20) ═══════════════ */
 export function ForgotForm() {
-  const { configured, loading, resetPassword } = useAuth();
+  const { configured, loading, resetPassword, authUnavailable } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -281,7 +281,7 @@ export function ForgotForm() {
               {error}
             </p>
           ) : null}
-          <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+          <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
             Envoyer le lien
           </Button>
         </form>
@@ -292,7 +292,7 @@ export function ForgotForm() {
 
 /* ═══════════════ Reset password (§22) ═══════════════ */
 export function ResetForm() {
-  const { configured, loading, updatePassword } = useAuth();
+  const { configured, loading, updatePassword, authUnavailable } = useAuth();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -355,7 +355,7 @@ export function ResetForm() {
               {error}
             </p>
           ) : null}
-          <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+          <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
             Enregistrer
           </Button>
         </form>
