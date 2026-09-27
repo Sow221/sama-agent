@@ -295,3 +295,12 @@ def test_live_chat_with_an_open_journey_does_not_crash(monkeypatch) -> None:
 
     assert out["answer"]
     assert "0/3 pièces" in llm.text_calls[0][0]["content"]
+
+
+def test_search_query_keeps_the_question_of_a_paragraph() -> None:
+    from agent.infrastructure.web.search import search_query
+
+    para = ("Bonjour, j'ai perdu mon portefeuille au marché Sandaga hier. Il y avait "
+            "ma carte d'identité et mon permis.\nComment refaire ma carte d'identité ?")
+    assert search_query(para) == "Comment refaire ma carte d'identité ?"
+    assert len(search_query("mot " * 60).split()) == 18

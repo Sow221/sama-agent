@@ -71,6 +71,15 @@ def _wikipedia(client: httpx.Client, query: str, k: int) -> list[dict]:
     } for item in r.json().get("query", {}).get("search", [])]
 
 
+def search_query(text: str, max_words: int = 18) -> str:
+    """Requête courte à partir d'un message, même long (paragraphe) : la phrase
+    interrogative si elle existe, sinon le début du message."""
+    sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+|\n+", text) if x.strip()]
+    questions = [x for x in sentences if x.endswith("?")]
+    base = questions[-1] if questions else (sentences[0] if sentences else text)
+    return " ".join(base.split()[:max_words])
+
+
 def web_search(query: str, k: int = 5, timeout_s: float = 8.0) -> list[dict]:
     """Jusqu'à `k` résultats {title, url, snippet} ; [] si le web est injoignable."""
     query = query.strip()[:300]

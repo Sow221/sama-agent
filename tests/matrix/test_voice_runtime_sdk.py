@@ -152,7 +152,8 @@ def test_runtime_turn_uses_the_persisted_dossier() -> None:
     journey = apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"))
     assert journey.status == enums.JourneyStatus.NEEDS_DOCUMENT
     display, reply = _runtime(_Room(), jid)._turn("permis de conduire")
-    assert display == reply.display and reply.spoken
+    # À l'écran : le wolof (ce qui est dit) d'abord, puis le français.
+    assert reply.spoken and display == f"{reply.spoken}\n\n{reply.display}"
 
 
 def test_formulation_names_the_real_pieces() -> None:

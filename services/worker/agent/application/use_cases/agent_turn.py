@@ -61,7 +61,7 @@ _THINK = re.compile(r"<think>.*?</think>", re.S)
 
 _CHAT_SYSTEM = """Tu es Sama Agent, assistant des démarches administratives au Sénégal
 (état civil, identité, passeport, permis, foncier, entreprise, fiscalité, santé, éducation…).
-Tu dialogues avec l'usager en français, ou en wolof s'il écrit en wolof.
+Réponds TOUJOURS dans la langue de l'usager : en wolof s'il écrit en wolof, sinon en français.
 
 Règles :
 - Réponds à la question posée, de façon concrète : étapes, pièces, lieux, coûts, délais.
@@ -144,10 +144,10 @@ def run_agent_turn(
     fut_intent = pool.submit(infer_intent, IntentRequest(transcript=text), llm)
     fut_web = fut_mem = None
     if live:
-        from agent.infrastructure.web.search import web_search
+        from agent.infrastructure.web.search import search_query, web_search
 
         if len(text.split()) >= 3:
-            fut_web = pool.submit(web_search, text + " Sénégal démarche", 5, 4.0)
+            fut_web = pool.submit(web_search, search_query(text) + " Sénégal", 5, 4.0)
         fut_mem = pool.submit(_extract_memories, text, llm)
     try:
         intent = fut_intent.result()
