@@ -40,7 +40,7 @@ export function NextActionCard({ journey }: { journey: JourneyResponse }) {
     journey.nextActionLabel ?? FALLBACK_LABELS[journey.nextAction] ?? "Étape suivante";
   const Icon = ICONS[journey.nextAction] ?? InfoIcon;
   return (
-    <div className="rounded-card border border-accent-ai/30 bg-gradient-to-br from-primary/[0.12] via-white/[0.05] to-accent-ai/[0.12] p-5 backdrop-blur-md">
+    <div className="rounded-card border border-accent-ai/30 bg-gradient-to-br from-primary/[0.12] via-[var(--surface)] to-accent-ai/[0.12] p-5 backdrop-blur-md">
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 to-accent-ai/25 text-accent-ai">
           <Icon className="h-5 w-5" />

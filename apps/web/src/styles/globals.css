@@ -6,45 +6,71 @@
    Sama Agent — UI/UX Master Specification v1.0
    Tokens complets : couleur, typographie, radius, ombres, z-index,
    motion. Aucune valeur critique hors tokens (règle §08).
+
+   Couleur : deux thèmes, même jeu de jetons.
+   Le thème actif est porté par la classe `dark` (ou `light`) sur <html>,
+   posée avant le premier rendu par le script anti-flash de app/layout.tsx
+   — `localStorage["sama:theme"]` si l'utilisateur a déjà choisi, sinon
+   `prefers-color-scheme`. `:root` ci-dessous = thème clair, `:root.dark`
+   = thème sombre. Sans JavaScript le thème clair s'applique : l'app est
+   une SPA, elle ne rend rien d'utile sans JavaScript de toute façon.
+   Les jetons non colorés (radius, z-index, motion) ne sont déclarés qu'une
+   fois : ils sont identiques dans les deux thèmes.
    ══════════════════════════════════════════════════════════════ */
 :root {
   /* ── Fond & surfaces (§11) ── */
-  --bg: #11110f; /* encre (charte Sama Agent) */
-  --surface: rgba(247, 245, 239, 0.05);
-  --surface-2: rgba(247, 245, 239, 0.09);
-  --surface-elevated: #1c1c19;
-  --surface-hover: rgba(247, 245, 239, 0.1);
+  --bg: #f4f2ec; /* papier chaud (ivoire assombri, charte) */
+  --surface: rgba(17, 17, 15, 0.035);
+  --surface-2: rgba(17, 17, 15, 0.06);
+  --surface-elevated: #fdfcf9;
+  --surface-hover: rgba(17, 17, 15, 0.07);
+  /* Bande de section : l'ancien `bg-white/[0.02]`, invisible sur papier. */
+  --band: rgba(17, 17, 15, 0.025);
+
+  /* ── Barres translucides (header public, top bar, bottom nav) ── */
+  --header-bg: rgba(244, 242, 236, 0.86);
+  --bar-bg: rgba(244, 242, 236, 0.92);
+  --bottom-nav-bg: rgba(244, 242, 236, 0.95);
 
   /* ── Bordures ── */
-  --border: rgba(247, 245, 239, 0.1);
-  --border-strong: rgba(247, 245, 239, 0.2);
+  --border: rgba(17, 17, 15, 0.13);
+  --border-strong: rgba(17, 17, 15, 0.26);
 
-  /* ── Sémantiques (accent = branding, utilisé avec parcimonie §11) ── */
-  --primary: #b7d8a8; /* sauge */
-  --primary-soft: rgba(183, 216, 168, 0.14);
-  --accent-ai: #d6e9cb; /* sauge clair */
-  --accent-soft: rgba(214, 233, 203, 0.12);
-  --success: #b7d8a8;
-  --warning: #f59e0b;
-  --danger: #f08c7a; /* erreur de la charte (agent-error) */
-  --error: #f08c7a;
-  --info: #d6e9cb;
+  /* ── Sémantiques (accent = branding, utilisé avec parcimonie §11) ──
+     Le sauge (#b7d8a8) ne passe pas le contraste AA en texte sur fond clair
+     (1.6:1) : sur papier, le vert devient donc le vert profond de la charte
+     (#164a3a, relevé) et le texte posé dessus bascule en ivoire. */
+  --primary: #1e5b41; /* vert profond — lisible en texte sur papier */
+  --primary-soft: rgba(30, 91, 65, 0.1);
+  --accent-ai: #2c7654;
+  --accent-soft: rgba(44, 118, 84, 0.1);
+  --on-primary: #f7f5ef; /* texte/icône posés sur une surface `primary` */
+  --success: #1e5b41;
+  --warning: #8a5a12; /* ambre assombri : #f59e0b ne vaut que 2.1:1 sur papier */
+  --danger: #a3352a; /* argile assombrie : #f08c7a ne vaut que 2.2:1 */
+  --error: #a3352a;
+  --info: #2c7654;
   /* Mêmes couleurs en canaux RGB : Tailwind en a besoin pour les variantes de
      transparence (bg-primary/15, border-warning/30…). Sans eux, ces classes
      ne généraient AUCUN style (87 usages dans l'app). Garder synchronisé. */
-  --primary-rgb: 183 216 168;
-  --accent-ai-rgb: 214 233 203;
-  --success-rgb: 183 216 168;
-  --warning-rgb: 245 158 11;
-  --danger-rgb: 240 140 122;
-  --error-rgb: 240 140 122;
-  --info-rgb: 214 233 203;
+  --primary-rgb: 30 91 65;
+  --accent-ai-rgb: 44 118 84;
+  --success-rgb: 30 91 65;
+  --warning-rgb: 138 90 18;
+  --danger-rgb: 163 53 42;
+  --error-rgb: 163 53 42;
+  --info-rgb: 44 118 84;
 
   /* ── Texte (§11) ── */
-  --text-1: #f7f5ef; /* ivoire */
-  --text-2: rgba(247, 245, 239, 0.74);
-  --text-muted: #a9a398;
-  --text-disabled: rgba(247, 245, 239, 0.3);
+  --text-1: #11110f; /* encre */
+  --text-2: rgba(17, 17, 15, 0.72);
+  --text-muted: #67655d;
+  --text-disabled: rgba(17, 17, 15, 0.38);
+  --text-1-rgb: 17 17 15; /* pour les dégradés (shimmer, orb) */
+
+  /* ── Ombres ── */
+  --shadow-glow: 0 0 0 4px rgba(30, 91, 65, 0.16);
+  --shadow-elevated: 0 12px 32px rgba(17, 17, 15, 0.1);
 
   /* ── Radius (§09 : 8/12/16/20/24/999) ── */
   --radius-xs: 8px;
@@ -54,10 +80,6 @@
   --radius-xl: 20px;
   --radius-2xl: 24px;
   --radius-card: var(--radius-xl);
-
-  /* ── Ombres ── */
-  --shadow-glow: 0 0 24px rgba(183, 216, 168, 0.22);
-  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.5);
 
   /* ── Z-index (§04 Blueprint : hiérarchie stricte) ── */
   --z-content: 0;
@@ -84,6 +106,53 @@
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
+/* ── Thème sombre ──
+   Mêmes noms de jetons, valeurs de la charte d'origine (encre, sauge, ivoire).
+   Le sauge redevient lisible en texte sur fond sombre, donc `on-primary`
+   repasse en encre. */
+:root.dark {
+  --bg: #11110f; /* encre (charte Sama Agent) */
+  --surface: rgba(247, 245, 239, 0.05);
+  --surface-2: rgba(247, 245, 239, 0.09);
+  --surface-elevated: #1c1c19;
+  --surface-hover: rgba(247, 245, 239, 0.1);
+  --band: rgba(247, 245, 239, 0.02);
+
+  --header-bg: rgba(17, 17, 15, 0.78);
+  --bar-bg: rgba(17, 17, 15, 0.72);
+  --bottom-nav-bg: rgba(17, 17, 15, 0.82);
+
+  --border: rgba(247, 245, 239, 0.1);
+  --border-strong: rgba(247, 245, 239, 0.2);
+
+  --primary: #b7d8a8; /* sauge */
+  --primary-soft: rgba(183, 216, 168, 0.14);
+  --accent-ai: #d6e9cb; /* sauge clair */
+  --accent-soft: rgba(214, 233, 203, 0.12);
+  --on-primary: #11110f;
+  --success: #b7d8a8;
+  --warning: #f59e0b;
+  --danger: #f08c7a; /* erreur de la charte (agent-error) */
+  --error: #f08c7a;
+  --info: #d6e9cb;
+  --primary-rgb: 183 216 168;
+  --accent-ai-rgb: 214 233 203;
+  --success-rgb: 183 216 168;
+  --warning-rgb: 245 158 11;
+  --danger-rgb: 240 140 122;
+  --error-rgb: 240 140 122;
+  --info-rgb: 214 233 203;
+
+  --text-1: #f7f5ef; /* ivoire */
+  --text-2: rgba(247, 245, 239, 0.74);
+  --text-muted: #a9a398;
+  --text-disabled: rgba(247, 245, 239, 0.3);
+  --text-1-rgb: 247 245 239;
+
+  --shadow-glow: 0 0 24px rgba(183, 216, 168, 0.22);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -100,16 +169,17 @@ body {
   min-height: 100dvh;
 }
 
-/* Aurora : halos fixes derrière le contenu (point de départ du kit). */
+/* Aurora : halos fixes derrière le contenu (point de départ du kit).
+   Couleurs prises dans les jetons : le halo suit le thème. */
 .aurora {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(420px 340px at 12% 6%, rgba(183, 216, 168, 0.14), transparent 60%),
-    radial-gradient(520px 420px at 88% 14%, rgba(214, 233, 203, 0.12), transparent 62%),
-    radial-gradient(560px 520px at 50% 100%, rgba(183, 216, 168, 0.08), transparent 60%);
+    radial-gradient(420px 340px at 12% 6%, rgb(var(--primary-rgb) / 0.14), transparent 60%),
+    radial-gradient(520px 420px at 88% 14%, rgb(var(--accent-ai-rgb) / 0.12), transparent 62%),
+    radial-gradient(560px 520px at 50% 100%, rgb(var(--primary-rgb) / 0.08), transparent 60%);
 }
 
 /* Titre en dégradé (vert fiabilité → bleu IA) — réservé aux moments-clés. */
@@ -205,9 +275,9 @@ a {
 .shimmer {
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0.04) 40%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 60%
+    rgb(var(--text-1-rgb) / 0.04) 40%,
+    rgb(var(--text-1-rgb) / 0.1) 50%,
+    rgb(var(--text-1-rgb) / 0.04) 60%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;

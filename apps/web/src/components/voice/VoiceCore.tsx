@@ -79,20 +79,27 @@ export const CORE_STATE_LABEL: Record<CoreState, string> = {
   connecting: "Connexion…",
 };
 
+/**
+ * Couleur de l'anneau pour chaque état réel du Core. Les teintes viennent des
+ * jetons de thème (`*-rgb`) : en mode sombre elles redonnent exactement les
+ * valeurs d'origine ; en mode clair, le sauge devient le vert profond, sinon
+ * les anneaux disparaissent sur fond papier. L'ambre et l'argile sont lusibles
+ * sur les deux fonds.
+ */
 const RING_COLORS: Record<CoreState, string> = {
-  idle: "rgba(214,233,203,0.35)",
-  listening: "rgba(214,233,203,0.65)",
-  transcribing: "rgba(214,233,203,0.55)",
-  processing: "rgba(183,216,168,0.5)",
-  speaking: "rgba(183,216,168,0.7)",
-  acting: "rgba(183,216,168,0.65)",
-  waiting_confirmation: "rgba(245,165,36,0.6)",
-  success: "rgba(183,216,168,0.8)",
-  paused: "rgba(247,245,239,0.35)",
-  interrupted: "rgba(245,165,36,0.6)",
-  error: "rgba(240,140,122,0.6)",
-  offline: "rgba(247,245,239,0.25)",
-  connecting: "rgba(214,233,203,0.4)",
+  idle: "rgb(var(--accent-ai-rgb) / 0.35)",
+  listening: "rgb(var(--accent-ai-rgb) / 0.65)",
+  transcribing: "rgb(var(--accent-ai-rgb) / 0.55)",
+  processing: "rgb(var(--primary-rgb) / 0.5)",
+  speaking: "rgb(var(--primary-rgb) / 0.7)",
+  acting: "rgb(var(--primary-rgb) / 0.65)",
+  waiting_confirmation: "rgb(var(--warning-rgb) / 0.6)",
+  success: "rgb(var(--primary-rgb) / 0.8)",
+  paused: "rgb(var(--text-1-rgb) / 0.35)",
+  interrupted: "rgb(var(--warning-rgb) / 0.6)",
+  error: "rgb(var(--error-rgb) / 0.6)",
+  offline: "rgb(var(--text-1-rgb) / 0.25)",
+  connecting: "rgb(var(--accent-ai-rgb) / 0.4)",
 };
 
 export function VoiceCore({
@@ -206,7 +213,9 @@ export function VoiceCore({
           style={{
             background:
               "linear-gradient(135deg, #b7d8a8 0%, #8fbf7f 45%, #164a3a 100%)",
-            boxShadow: `0 0 ${d * 0.35}px rgba(183,216,168,0.4), 0 0 ${d * 0.6}px rgba(214,233,203,0.22)`,
+            // Le dégradé de la sphère et le verre du cœur restent fixes : ce sont
+            // des objets de marque, posés sur leur propre fond, pas des surfaces.
+            boxShadow: `0 0 ${d * 0.35}px rgb(var(--primary-rgb) / 0.4), 0 0 ${d * 0.6}px rgb(var(--accent-ai-rgb) / 0.22)`,
           }}
         />
         {/* cœur verre + micro */}

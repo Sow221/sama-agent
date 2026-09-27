@@ -6,7 +6,7 @@ import type { Evidence } from "@/lib/schemas";
 export function EvidencePanel({ evidence }: { evidence: Evidence }) {
   return (
     <div className="space-y-3">
-      <div className="rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
+      <div className="rounded-card border border-border bg-surface p-4 backdrop-blur-md">
         <p className="text-xs font-semibold uppercase tracking-widest text-text2">
           Source officielle
         </p>
@@ -22,7 +22,7 @@ export function EvidencePanel({ evidence }: { evidence: Evidence }) {
           </a>
         ) : null}
       </div>
-      <div className="rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md">
+      <div className="rounded-card border border-border bg-surface p-4 backdrop-blur-md">
         <p className="font-semibold">Ce qu'il faut</p>
         <p className="mt-1 text-text1">{evidence.description}</p>
       </div>

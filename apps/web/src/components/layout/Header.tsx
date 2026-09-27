@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { BrandLogo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function BrandMark({ href = "/" }: { href?: string }) {
   return (
@@ -33,7 +34,7 @@ export function Header() {
   const inside = session || (!configured && !loading);
 
   return (
-    <header className="sticky top-0 z-header border-b border-border bg-[rgba(17,17,15,0.78)] backdrop-blur-xl">
+    <header className="sticky top-0 z-header border-b border-border bg-header-bg backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <BrandMark />
 
@@ -53,10 +54,11 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {inside ? (
             <Link
               href="/app/home"
-              className="focus-visible inline-flex min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-[#11110f]"
+              className="focus-visible inline-flex min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-on-primary"
             >
               Ouvrir mon espace
             </Link>
@@ -74,7 +76,7 @@ export function Header() {
                 <Link
                   href="/signup"
                   // Mobile : le hero porte déjà l'appel « Créer mon compte » ; l'en-tête garde la connexion.
-                  className={`focus-visible ${pathname === "/login" ? "inline-flex" : "hidden sm:inline-flex"} min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-[#11110f]`}
+                  className={`focus-visible ${pathname === "/login" ? "inline-flex" : "hidden sm:inline-flex"} min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-on-primary`}
                 >
                   Créer un compte
                 </Link>

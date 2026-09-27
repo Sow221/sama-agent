@@ -22,12 +22,14 @@ import {
   Mail,
   MessageSquare,
   Mic as LucideMic,
+  Moon,
   Pause,
   Plus,
   RotateCcw,
   Search,
   Send,
   Settings,
+  Sun,
   Trash2,
   TriangleAlert,
   Upload,
@@ -82,3 +84,5 @@ export const CompassIcon = brand(Compass);
 export const MailIcon = brand(Mail);
 export const WifiOffIcon = brand(WifiOff);
 export const FlagIcon = brand(Flag);
+export const SunIcon = brand(Sun);
+export const MoonIcon = brand(Moon);

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/ui";
 import { ArrowLeftIcon, Mic, SearchIcon } from "@/components/icons";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { routeInfo } from "@/lib/routes";
 import { cn } from "@/lib/cn";
@@ -29,7 +30,7 @@ export function TopBar() {
   const inVoice = pathname.startsWith("/app/voice");
 
   return (
-    <header className="sticky top-0 z-sticky hidden border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:block">
+    <header className="sticky top-0 z-sticky hidden border-b border-border bg-bar-bg backdrop-blur-xl md:block">
       <div className="flex h-16 items-center justify-between gap-4 px-6 lg:px-10">
         <div className="flex min-w-0 items-center gap-2">
           {parent ? (
@@ -43,7 +44,7 @@ export function TopBar() {
           {!inVoice ? (
             <Link
               href="/app/voice"
-              className="focus-visible mr-2 inline-flex min-h-10 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-[#11110f] shadow-glow transition-transform duration-micro active:scale-[0.97]"
+              className="focus-visible mr-2 inline-flex min-h-10 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-on-primary shadow-glow transition-transform duration-micro active:scale-[0.97]"
             >
               <Mic className="h-4 w-4" />
               Parler
@@ -52,6 +53,7 @@ export function TopBar() {
           <Link href="/app/search" aria-label="Rechercher" title="Rechercher" className={ICON_LINK}>
             <SearchIcon className="h-5 w-5" />
           </Link>
+          <ThemeToggle />
           <Link href="/app/you" aria-label="Mon profil" title="Mon profil" className={ICON_LINK}>
             <Avatar name={user?.email ?? null} size="sm" />
           </Link>

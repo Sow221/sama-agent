@@ -32,12 +32,12 @@ const BTN_BASE =
   "disabled:cursor-not-allowed disabled:opacity-40";
 
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-[#11110f] shadow-glow hover:brightness-110",
+  primary: "bg-primary text-on-primary shadow-glow hover:brightness-110",
   gradient:
-    "bg-gradient-to-r from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110",
+    "bg-gradient-to-r from-primary to-accent-ai text-on-primary shadow-glow hover:brightness-110",
   secondary: "bg-surface-elevated text-text1 border border-border hover:bg-surface-hover",
   ghost: "bg-transparent text-text1 hover:bg-surface-hover",
-  destructive: "bg-error text-[#11110f] hover:brightness-110",
+  destructive: "bg-error text-on-primary hover:brightness-110",
   icon: "bg-transparent text-text2 hover:bg-surface-hover hover:text-text1",
 };
 
@@ -164,7 +164,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 export function GlassCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-card border border-white/10 bg-white/[0.05] backdrop-blur-xl shadow-elevated ${className}`}
+      className={`rounded-card border border-border bg-surface backdrop-blur-xl shadow-elevated ${className}`}
     >
       {children}
     </div>
@@ -255,7 +255,7 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(it.id)}
             className={`focus-visible flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold transition-colors duration-micro sm:px-4 ${
-              active ? "bg-primary text-[#11110f]" : "text-text2 hover:text-text1"
+              active ? "bg-primary text-on-primary" : "text-text2 hover:text-text1"
             }`}
           >
             {it.label}
@@ -375,7 +375,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-12 text-center">
-      <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-accent-ai">
+      <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-accent-ai">
         {emoji}
       </span>
       <h2 className="text-lg font-bold text-text1">{title}</h2>

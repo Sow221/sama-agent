@@ -141,7 +141,7 @@ export function Sidebar() {
             <Link
               href="/app/home"
               aria-label="Nouveau parcours"
-              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110"
+              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-on-primary shadow-glow hover:brightness-110"
             >
               <PlusIcon className="h-5 w-5" />
             </Link>
@@ -149,7 +149,7 @@ export function Sidebar() {
         ) : (
           <Link
             href="/app/home"
-            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-[#11110f] shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
+            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-on-primary shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
           >
             <PlusIcon className="h-5 w-5" /> Nouveau parcours
           </Link>

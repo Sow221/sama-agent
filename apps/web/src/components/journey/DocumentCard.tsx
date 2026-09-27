@@ -21,7 +21,7 @@ export function DocumentCard({
       href={`/app/evidence/${encodeURIComponent(doc.requirementId)}?journey=${journeyId}`}
       className="focus-visible block"
     >
-      <div className="flex items-center gap-3 rounded-card border border-white/10 bg-white/[0.05] p-4 backdrop-blur-md transition-colors hover:border-primary/40">
+      <div className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 backdrop-blur-md transition-colors hover:border-primary/40">
         <span
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
             ok

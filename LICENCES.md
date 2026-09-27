@@ -46,6 +46,16 @@ Adia (Concree) et CAPP Karangë **n'ont pas de fichier de logo versionné** : il
 cités en texte dans la section « Propulsé par » de la page d'accueil et dans le pied de
 page. Aucun logo n'est reconstitué ni redessiné à la main.
 
+### Variante claire du logo Sama Agent
+
+`apps/web/public/brand/logo-horizontal-light.svg` est le **fichier kit
+`logo-horizontal-dark.svg` dont les deux `fill` du logotype ont été passés de
+l'ivoire `#F7F5EF` à l'encre `#11110F`**. Rien d'autre n'a été touché : la
+géométrie, le `viewBox` et les deux autres `fill` (sauge `#B7D8A8`, encre) sont
+identiques, ce qui se vérifie en comparant les deux fichiers. Ce n'est donc pas
+un redessin, c'est un recolorage, et il est nécessaire parce que le logotype
+ivoire du kit est invisible sur le fond clair du thème clair.
+
 ## Code Sama Agent
 
 Code produit du hackathon GOMYCODE × NVIDIA — propriété de l'équipe ; non publié.

@@ -70,7 +70,7 @@ export default function ParcoursPage() {
       {/* Mobile : la pastille passe sous le titre au lieu de se couper sur deux lignes. */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
           <BrandTon className="h-2.5 w-auto text-primary" />
             Suivi du parcours
           </p>
@@ -109,7 +109,7 @@ export default function ParcoursPage() {
         const pending = response.documents.filter((d) => d.status !== "ANALYZED");
         if (!pending.length) return null;
         return (
-          <div className="rounded-card border border-white/10 bg-white/[0.04] p-4">
+          <div className="rounded-card border border-border bg-white/[0.04] p-4">
             <p className="text-sm uppercase tracking-wide text-text2">Ce qui manque</p>
             <ul className="mt-2 space-y-2">
               {pending.map((d) => (

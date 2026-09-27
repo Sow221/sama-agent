@@ -2,12 +2,18 @@ import type { Config } from "tailwindcss";
 
 /**
  * Thème Sama Agent — UI/UX Master Specification (v1.0).
- * Tous les tokens vivent dans :root (globals.css) ; Tailwind n'est qu'un mapping.
+ * Tous les tokens vivent dans globals.css — pour les couleurs, deux blocs
+ * (`:root` = clair, `:root.dark` = sombre, même jeu de noms) ; Tailwind n'est
+ * qu'un mapping.
  * Échelles de référence : spacing 2/4/8/12/16/20/24/32/40/48/64/80/96,
  * radius xs6 sm8 md12 lg16 xl20 2xl24, z-index §25, motion §86.
  */
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
+  // La classe `dark` est posée sur <html> par le script anti-flash
+  // (app/layout.tsx) : c'est elle qui décide du thème, pas le réglage du
+  // système — sans quoi `prefers-color-scheme` gagnerait sur le choix explicite.
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -16,12 +22,17 @@ const config: Config = {
         "surface-2": "var(--surface-2)",
         "surface-elevated": "var(--surface-elevated)",
         "surface-hover": "var(--surface-hover)",
+        band: "var(--band)",
+        "header-bg": "var(--header-bg)",
+        "bar-bg": "var(--bar-bg)",
+        "bottom-nav-bg": "var(--bottom-nav-bg)",
         border: "var(--border)",
         "border-strong": "var(--border-strong)",
         primary: "rgb(var(--primary-rgb) / <alpha-value>)",
         "primary-soft": "var(--primary-soft)",
         "accent-ai": "rgb(var(--accent-ai-rgb) / <alpha-value>)",
         "accent-soft": "var(--accent-soft)",
+        "on-primary": "var(--on-primary)",
         success: "rgb(var(--success-rgb) / <alpha-value>)",
         warning: "rgb(var(--warning-rgb) / <alpha-value>)",
         danger: "rgb(var(--danger-rgb) / <alpha-value>)",

@@ -10,6 +10,10 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "fr",
     start_url: "/app/home",
     display: "standalone",
+    // Le manifest est un fichier statique : il ne peut pas exprimer deux thèmes.
+    // On garde l'encre de la charte, c'est la couleur de l'écran de démarrage
+    // pendant une fraction de seconde. Le thème de l'app, lui, est dynamique
+    // (voir `viewport` et le script de thème dans app/layout.tsx).
     background_color: "#11110f",
     theme_color: "#11110f",
     icons: [

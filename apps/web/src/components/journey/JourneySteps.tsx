@@ -22,7 +22,7 @@ export function JourneySteps({ steps }: { steps: JourneyStep[] }) {
                   ? "border-primary bg-gradient-to-br from-primary/30 to-accent-ai/20 text-primary"
                   : active
                     ? "border-warning bg-warning/15 text-warning"
-                    : "border-white/10 bg-white/[0.04] text-text2"
+                    : "border-border bg-surface text-text2"
               }`}
             >
               {done ? "✓" : i + 1}
@@ -43,7 +43,7 @@ export function JourneySteps({ steps }: { steps: JourneyStep[] }) {
                 className={`absolute left-[calc(50%+22px)] top-[20px] h-px w-[calc(100%-44px)] ${
                   done
                     ? "bg-gradient-to-r from-primary to-accent-ai"
-                    : "bg-white/10"
+                    : "bg-surface-2"
                 }`}
               />
             ) : null}

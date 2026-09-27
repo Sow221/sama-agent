@@ -103,7 +103,7 @@ export default function CompréhensionPage() {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+        <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
           <BrandTon className="h-2.5 w-auto text-primary" />
           Étape 1 · Comprendre
         </p>
@@ -183,7 +183,7 @@ export default function CompréhensionPage() {
             <div className="mt-4 flex flex-col gap-3">
               {REQUIREMENTS.map((r) => (
                 <div key={r.n} className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#11110f]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-on-primary">
                     {r.n}
                   </span>
                   <div>

@@ -71,7 +71,7 @@ export default function PreuvePage() {
           Mon dossier
         </Link>
         <br />
-        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
           <BrandTon className="h-2.5 w-auto text-primary" />
           Étape 3 · Vérifier
         </p>

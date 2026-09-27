@@ -160,7 +160,7 @@ export default function VoicePage() {
     <div className="flex min-h-[calc(100dvh-9rem)] flex-col items-center justify-center gap-8">
       {failed ? (
         <Card className="flex w-full max-w-sm flex-col items-center gap-4 p-8 text-center">
-          <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-accent-ai">
+          <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface text-accent-ai">
             <Mic className="h-8 w-8" />
           </span>
           <h1 className="text-xl font-extrabold">Voix indisponible</h1>

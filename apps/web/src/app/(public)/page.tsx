@@ -111,7 +111,7 @@ function PhoneShot({ src, alt, preload = false }: { src: string; alt: string; pr
         aria-hidden
         className="absolute -inset-8 -z-10 rounded-full bg-gradient-to-br from-primary/25 via-transparent to-accent-ai/25 blur-3xl"
       />
-      <div className="overflow-hidden rounded-[2.2rem] border-[6px] border-[#2a2a25] bg-bg shadow-elevated ring-1 ring-white/10">
+      <div className="overflow-hidden rounded-[2.2rem] border-[6px] border-[#2a2a25] bg-bg shadow-elevated ring-1 ring-border">
         <Image
           src={src}
           alt={alt}
@@ -135,7 +135,7 @@ export default function WelcomePage() {
   const primaryCta = (
     <Link
       href={startHref}
-      className="focus-visible inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-7 text-base font-semibold text-[#11110f] shadow-glow transition-transform active:scale-[0.98]"
+      className="focus-visible inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-7 text-base font-semibold text-on-primary shadow-glow transition-transform active:scale-[0.98]"
     >
       {startLabel}
       <ArrowRightIcon className="h-5 w-5" />
@@ -152,7 +152,7 @@ export default function WelcomePage() {
         />
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 md:grid-cols-[1.2fr_1fr] md:pb-24 md:pt-16">
           <div className="flex flex-col items-start gap-6">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-accent-ai">
               <BrandTon className="h-3 w-auto text-primary" />
               Assistant administratif vocal · Sénégal
             </p>
@@ -187,7 +187,7 @@ export default function WelcomePage() {
 
           <div className="relative">
             <PhoneShot src={FEATURES[1].image} alt={FEATURES[1].alt} preload />
-            <div className="absolute -left-2 bottom-10 hidden max-w-[240px] rounded-2xl border border-white/10 bg-surface-elevated p-4 shadow-elevated backdrop-blur sm:block md:-left-10">
+            <div className="absolute -left-2 bottom-10 hidden max-w-[240px] rounded-2xl border border-border bg-surface-elevated p-4 shadow-elevated backdrop-blur sm:block md:-left-10">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-accent-ai">
                 <Mic className="h-4 w-4" /> Vous dites
               </p>
@@ -200,7 +200,7 @@ export default function WelcomePage() {
       </section>
 
       {/* 2. Crédibilité */}
-      <section aria-labelledby="techno" className="border-y border-border bg-white/[0.02]">
+      <section aria-labelledby="techno" className="border-y border-border bg-band">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-8 sm:px-6 md:flex-row md:items-center md:justify-between">
           <h2 id="techno" className="text-xs font-semibold uppercase tracking-widest text-text-muted">
             Propulsé par
@@ -251,7 +251,7 @@ export default function WelcomePage() {
       </section>
 
       {/* 4. Comment ça marche */}
-      <section id="comment" aria-labelledby="comment-titre" className="scroll-mt-20 border-y border-border bg-white/[0.02]">
+      <section id="comment" aria-labelledby="comment-titre" className="scroll-mt-20 border-y border-border bg-band">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="max-w-2xl">
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
@@ -266,7 +266,7 @@ export default function WelcomePage() {
                 key={s.n}
                 className={`flex flex-col gap-3 rounded-card border border-border bg-surface p-5 ${CARD_HOVER}`}
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai font-bold text-[#11110f]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai font-bold text-on-primary">
                   {s.n}
                 </span>
                 <h3 className="text-lg font-bold">{s.title}</h3>
@@ -316,7 +316,7 @@ export default function WelcomePage() {
       </section>
 
       {/* 6. Nos engagements */}
-      <section id="engagements" aria-labelledby="engagements-titre" className="scroll-mt-20 border-y border-border bg-white/[0.02]">
+      <section id="engagements" aria-labelledby="engagements-titre" className="scroll-mt-20 border-y border-border bg-band">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1fr_1.6fr] md:py-24">
           <div>
             <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
@@ -357,7 +357,7 @@ export default function WelcomePage() {
 
       {/* 8. Appel final */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
-        <div className="flex flex-col items-center gap-5 rounded-[28px] border border-white/10 bg-gradient-to-br from-primary/[0.14] via-white/[0.04] to-accent-ai/[0.14] px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-5 rounded-[28px] border border-border bg-gradient-to-br from-primary/[0.14] via-[var(--surface)] to-accent-ai/[0.14] px-6 py-14 text-center">
           <h2 className="max-w-xl text-3xl font-extrabold tracking-tight [text-wrap:balance] sm:text-4xl">
             Arrivez au guichet avec un dossier complet
           </h2>

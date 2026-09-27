@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/ui";
 import { ArrowLeftIcon, InfoIcon } from "@/components/icons";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { useAuth } from "@/lib/auth/auth-context";
 import { routeInfo } from "@/lib/routes";
 
@@ -31,12 +32,15 @@ export function MobileHeader() {
   if (pathname === "/app/home") {
     const first = firstName(user);
     return (
-      <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:hidden">
+      <header className="sticky top-0 z-sticky border-b border-border bg-bar-bg backdrop-blur-xl md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <p className="text-lg font-bold">{first ? `Bonjour, ${first}` : "Bonjour"}</p>
-          <Link href="/app/you" aria-label="Mon profil" className="focus-visible rounded-full">
-            <Avatar name={first ?? user?.email ?? null} size="lg" />
-          </Link>
+          <div className="flex items-center">
+            <ThemeToggle />
+            <Link href="/app/you" aria-label="Mon profil" className="focus-visible rounded-full">
+              <Avatar name={first ?? user?.email ?? null} size="lg" />
+            </Link>
+          </div>
         </div>
       </header>
     );
@@ -45,7 +49,7 @@ export function MobileHeader() {
   const parent = info?.parent?.(pathname, new URLSearchParams(search.toString()));
 
   return (
-    <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:hidden">
+    <header className="sticky top-0 z-sticky border-b border-border bg-bar-bg backdrop-blur-xl md:hidden">
       <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-2">
         <div className="flex min-w-0 items-center gap-1">
           {parent ? (
@@ -57,9 +61,12 @@ export function MobileHeader() {
           )}
           <p className="truncate text-base font-bold text-text1">{info?.title ?? "Sama Agent"}</p>
         </div>
-        <Link href="/app/you/help" aria-label="Aide" title="Aide" className={ICON_LINK}>
-          <InfoIcon className="h-5 w-5" />
-        </Link>
+        <div className="flex items-center">
+          <ThemeToggle />
+          <Link href="/app/you/help" aria-label="Aide" title="Aide" className={ICON_LINK}>
+            <InfoIcon className="h-5 w-5" />
+          </Link>
+        </div>
       </div>
     </header>
   );

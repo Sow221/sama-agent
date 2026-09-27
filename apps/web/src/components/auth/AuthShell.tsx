@@ -32,7 +32,7 @@ export function AuthShell({
           {authUnavailable}
         </p>
       ) : null}
-      <div className="rounded-card border border-border bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6">
+      <div className="rounded-card border border-border bg-surface p-5 backdrop-blur-xl sm:p-6">
         {children}
       </div>
       {footer ? <p className="text-center text-sm text-text2">{footer}</p> : null}

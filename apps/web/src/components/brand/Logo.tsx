@@ -1,13 +1,39 @@
 /**
  * Logo officiel Sama Agent (kit SVG v1.0) — jamais redessiné à la main.
- *  - `BrandLogo` : logo horizontal pour fond sombre (symbole + « sama agent » vectorisé).
+ *  - `BrandLogo` : logo horizontal (symbole + « sama agent » vectorisé).
  *  - `BrandTile` : symbole seul (tuile sauge + parallélogramme encre), pour les petits
  *    formats (barre latérale réduite, cartes d'authentification, 404).
  * Couleurs de marque : sauge #B7D8A8, encre #11110F, ivoire #F7F5EF, forêt #164A3A.
+ *
+ * Le logotype est ivoire dans le kit, donc invisible sur fond clair. La variante
+ * claire n'est pas un redessin : c'est le même fichier avec les deux `fill` du
+ * logotype passés de l'ivoire à l'encre (géométrie identique, octet pour octet).
+ * Les deux images sont dans le document, la classe `dark` choisit laquelle est
+ * visible — aucun JavaScript, donc rien à désynchroniser au premier rendu. Comme
+ * la variante masquée est en `display:none`, elle disparaît aussi de l'arbre
+ * d'accessibilité : une seule expose le nom « Sama Agent », dans les deux thèmes.
  */
 export function BrandLogo({ className = "h-7 w-auto" }: { className?: string }) {
-  // eslint-disable-next-line @next/next/no-img-element -- SVG vectoriel statique, aucune optimisation utile
-  return <img src="/brand/logo-horizontal-dark.svg" alt="Sama Agent" width={211} height={28} className={className} />;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- SVG vectoriel statique, aucune optimisation utile */}
+      <img
+        src="/brand/logo-horizontal-light.svg"
+        alt="Sama Agent"
+        width={211}
+        height={28}
+        className={`${className} dark:hidden`}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element -- SVG vectoriel statique, aucune optimisation utile */}
+      <img
+        src="/brand/logo-horizontal-dark.svg"
+        alt="Sama Agent"
+        width={211}
+        height={28}
+        className={`${className} hidden dark:block`}
+      />
+    </>
+  );
 }
 
 export function BrandTile({ size = 36, className = "" }: { size?: number; className?: string }) {

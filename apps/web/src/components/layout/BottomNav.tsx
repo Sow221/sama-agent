@@ -32,7 +32,7 @@ export const BottomNav = memo(function BottomNav() {
   return (
     <nav
       aria-label="Navigation principale"
-      className="fixed inset-x-0 bottom-0 z-bottom-nav border-t border-border bg-[rgba(17,17,15,0.82)] backdrop-blur-xl md:hidden"
+      className="fixed inset-x-0 bottom-0 z-bottom-nav border-t border-border bg-bottom-nav-bg backdrop-blur-xl md:hidden"
     >
       <div className="mx-auto flex max-w-[480px] items-end justify-between px-3 pb-[max(env(safe-area-inset-bottom),8px)] pt-2">
         {ITEMS.slice(0, 2).map(({ href, label, icon: Icon }) => {
@@ -64,7 +64,7 @@ export const BottomNav = memo(function BottomNav() {
             if ("vibrate" in navigator) navigator.vibrate(10);
           }}
           onPointerUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          className="focus-visible relative -mt-10 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary to-accent-ai text-[#11110f] shadow-glow transition-transform duration-micro active:scale-[0.95]"
+          className="focus-visible relative -mt-10 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary to-accent-ai text-on-primary shadow-glow transition-transform duration-micro active:scale-[0.95]"
         >
           <span aria-hidden className="ring-pulse absolute inset-0 rounded-full border-2 border-accent-ai/50" />
           <span aria-hidden className="ring-pulse absolute inset-0 rounded-full border border-primary/60" style={{ animationDelay: "1.2s" }} />

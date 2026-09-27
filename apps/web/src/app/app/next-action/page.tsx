@@ -65,7 +65,7 @@ export default function ProchaineActionPage() {
 
 function StepBadge({ children }: { children: React.ReactNode }) {
   return (
-    <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+    <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
           <BrandTon className="h-2.5 w-auto text-primary" />
       {children}
     </p>
