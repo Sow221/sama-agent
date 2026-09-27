@@ -19,6 +19,8 @@ dependencies = [
     "pyjwt[crypto]>=2.9",
     "torch>=2.4",
     "transformers>=4.46",
+    # Kiriku est chargé avec low_cpu_mem_usage : transformers exige accelerate.
+    "accelerate>=0.26",
     "numpy>=1.26",
     # Voix de l'agent (repli réel quand xTTS wolof n'a pas de poids) : Edge neural FR.
     "edge-tts>=6.1",
