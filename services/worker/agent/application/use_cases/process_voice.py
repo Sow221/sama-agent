@@ -87,7 +87,7 @@ def _llm_voice_reply(text: str, journey, history: list[dict]) -> VoiceReply:
     parts: dict[str, str] = {}
     for key, value in _LINE.findall(raw.replace("*", "")):
         lang = "WO" if key.upper().startswith("WO") else "FR"
-        parts.setdefault(lang, value.strip())
+        parts[lang] = value.strip()  # la DERNIÈRE occurrence : la réponse finale
     display = parts.get("FR") or raw.replace("*", "").strip()
     return VoiceReply(display=display, spoken=parts.get("WO") or None)
 
