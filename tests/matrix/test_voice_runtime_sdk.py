@@ -368,3 +368,22 @@ def test_speak_reports_voice_failure_honestly() -> None:
     kinds = [(e["type"], e.get("code") or e.get("state")) for e in room.local_participant.data]
     assert kinds == [("agent_error", protocol.ERR_TTS_UNAVAILABLE), ("agent_state", protocol.ST_LISTENING)]
     assert room.local_participant.published == []  # jamais « je parle » sans voix
+
+
+def test_voice_reply_parses_markdown_fr_wo_lines(monkeypatch) -> None:
+    """Le LLM met souvent du gras (« **FR :** ») : la ligne wolof doit être retrouvée,
+    sinon l'agent n'a rien à dire à voix haute."""
+    import agent.application.use_cases.process_voice as pv
+    import agent.infrastructure.web.search as search
+
+    class _Llm:
+        model = "fake"
+
+        def chat_text(self, messages, max_tokens=300):
+            return "**FR :** Allez à la police avec votre extrait.\n**WO :** Demal ci polis ak sa extrait."
+
+    monkeypatch.setattr(search, "web_search", lambda *a, **k: [])
+    monkeypatch.setattr(pv, "_voice_llm", lambda: _Llm())
+    reply = pv._llm_voice_reply("sama passeport dafa réer", None, [])
+    assert reply.display == "Allez à la police avec votre extrait."
+    assert reply.spoken == "Demal ci polis ak sa extrait."

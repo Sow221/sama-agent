@@ -227,7 +227,7 @@ class _ChatLlm:
             return {"memories": [{"kind": "FACT", "content": "habite à Thiès"}]}
         return {"intent": "passeport_inconnu"}  # intention hors catalogue → clarification
 
-    def chat_text(self, messages: list[dict]) -> str:
+    def chat_text(self, messages: list[dict], max_tokens: int = 700) -> str:
         self.text_calls.append(messages)
         return "<think>brouillon</think>Allez au commissariat. Sources : https://exemple.sn"
 
@@ -239,7 +239,7 @@ def test_live_chat_is_free_with_history_and_web(monkeypatch) -> None:
     import agent.infrastructure.web.search as search
 
     monkeypatch.setattr(app_mode, "is_live", lambda: True)
-    monkeypatch.setattr(search, "web_search", lambda q, k=5: [
+    monkeypatch.setattr(search, "web_search", lambda q, k=5, t=8.0: [
         {"title": "Passeport Sénégal", "url": "https://exemple.sn", "snippet": "pièces requises"}])
     conv = create_conversation("user-chat-live", title="Passeport")
     add_conversation_message(conv["id"], "user-chat-live", "user", "bonjour, je suis à Thiès")
@@ -270,3 +270,28 @@ def test_parse_duckduckgo_results() -> None:
         "url": "https://www.servicepublic.gouv.sn/passeport",
         "snippet": "Pièces à fournir",
     }]
+
+
+def test_live_chat_with_an_open_journey_does_not_crash(monkeypatch) -> None:
+    """Régression prod : le résumé du dossier lisait `journey.progress` (inexistant)
+    → 503 dès qu'un dossier était ouvert. Le dossier réel doit être dans le contexte."""
+    import uuid
+
+    from agent import mode as app_mode
+    from agent.application.use_cases.persist_journey import apply_journey
+    from agent.schemas import JourneyRequest
+    import agent.infrastructure.web.search as search
+
+    monkeypatch.setattr(app_mode, "is_live", lambda: True)
+    monkeypatch.setattr(search, "web_search", lambda *a, **k: [])
+    from agent.infrastructure.db.repositories import upsert_user
+
+    upsert_user("user-chat-j")
+    jid = f"driving_license_new-{uuid.uuid4().hex[:8]}"
+    apply_journey(JourneyRequest(journeyId=jid, procedureId="driving_license_new"), user_id="user-chat-j")
+    llm = _ChatLlm()
+
+    out = run_agent_turn("quelles pièces me manquent ?", "user-chat-j", journey_id=jid, llm=llm)
+
+    assert out["answer"]
+    assert "0/3 pièces" in llm.text_calls[0][0]["content"]

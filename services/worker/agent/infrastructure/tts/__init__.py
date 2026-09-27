@@ -147,7 +147,14 @@ def stream_reply(display_fr: str, spoken_wo: str | None, speaker_wav: str | None
             yield wav, "wo"
         else:
             return
-    yield synthesize(display_fr, speaker_wav=speaker_wav), "fr"
+    try:
+        yield synthesize(display_fr, speaker_wav=speaker_wav), "fr"
+    except XttsUnavailableError:
+        # Aucune voix française sur ce serveur (Edge hors ligne / non installé) :
+        # la voix Adia lit la réponse plutôt que de laisser l'agent muet.
+        for sentence in tts_wolof.split_sentences(display_fr):
+            wav, _engine = tts_wolof.synthesize(sentence)
+            yield wav, "wo"
 
 
 __all__ = ["synthesize", "synthesize_reply", "stream_reply", "XttsUnavailableError"]
