@@ -33,9 +33,9 @@ export function MobileHeader() {
     const first = firstName(user);
     return (
       <header className="sticky top-0 z-sticky border-b border-border bg-bar-bg backdrop-blur-xl md:hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <p className="text-lg font-bold">{first ? `Bonjour, ${first}` : "Bonjour"}</p>
-          <div className="flex items-center">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <p className="min-w-0 truncate text-lg font-bold">{first ? `Bonjour, ${first}` : "Bonjour"}</p>
+          <div className="flex shrink-0 items-center">
             <ThemeToggle />
             <Link href="/app/you" aria-label="Mon profil" className="focus-visible rounded-full">
               <Avatar name={first ?? user?.email ?? null} size="lg" />
@@ -50,7 +50,7 @@ export function MobileHeader() {
 
   return (
     <header className="sticky top-0 z-sticky border-b border-border bg-bar-bg backdrop-blur-xl md:hidden">
-      <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-2">
+      <div className="flex h-14 items-center justify-between gap-2 px-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-1">
           {parent ? (
             <Link href={parent} aria-label="Retour" title="Retour" className={ICON_LINK}>
@@ -61,7 +61,7 @@ export function MobileHeader() {
           )}
           <p className="truncate text-base font-bold text-text1">{info?.title ?? "Sama Agent"}</p>
         </div>
-        <div className="flex items-center">
+        <div className="flex shrink-0 items-center">
           <ThemeToggle />
           <Link href="/app/you/help" aria-label="Aide" title="Aide" className={ICON_LINK}>
             <InfoIcon className="h-5 w-5" />

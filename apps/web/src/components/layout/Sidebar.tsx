@@ -95,6 +95,7 @@ export function Sidebar() {
                 <Link
                   href={href}
                   aria-label={label}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "focus-visible flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-micro",
                     active ? "bg-primary-soft text-primary" : "text-text2 hover:bg-surface-hover hover:text-text1"
@@ -106,6 +107,7 @@ export function Sidebar() {
             ) : (
               <Link
                 href={href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "focus-visible flex items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium transition-colors duration-micro",
                   active ? "bg-primary-soft text-primary" : "text-text2 hover:bg-surface-hover hover:text-text1"
@@ -123,7 +125,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface/30 backdrop-blur-xl md:flex"
+      className="sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface backdrop-blur-xl md:flex"
       style={{ width }}
       aria-label="Navigation principale"
     >
@@ -156,40 +158,45 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Navigation principale */}
-      <nav className={cn("mt-6 flex flex-col gap-6 overflow-y-auto px-3 pb-4", collapsed && "px-0")}>
-        <NavList items={MAIN_NAV} />
-      </nav>
+      {/* Zone navigation + récent. `flex-1` ancre l'utilité et le compte en bas
+          de la barre, même sans parcours récent. Réduite, la barre ne défile pas :
+          un conteneur `overflow` rognerait les infobulles affichées à sa droite. */}
+      <div className={cn("flex min-h-0 flex-1 flex-col", !collapsed && "overflow-y-auto")}>
+        {/* Navigation principale */}
+        <nav className={cn("mt-6 flex flex-col gap-6 px-3 pb-4", collapsed && "px-0")}>
+          <NavList items={MAIN_NAV} />
+        </nav>
 
-      {/* Récent (parcours de session réel) */}
-      {journey && (
-        <div className="flex-1 overflow-y-auto">
-          <p className={cn("mb-1 px-4 text-xs font-semibold uppercase tracking-widest text-text-muted", collapsed && "px-0 text-center")}>
-            {collapsed ? "" : "Récent"}
-          </p>
-          {collapsed ? (
-            <div className="px-0 text-center">
-              <Tooltip label="Parcours en cours">
-                <Link
-                  href={`/app/journey/${journey.journeyId}`}
-                  aria-label="Parcours en cours"
-                  className="focus-visible inline-flex h-11 w-11 items-center justify-center rounded-xl text-text2 hover:bg-surface-hover hover:text-text1"
-                >
-                  <FlagIcon className="h-5 w-5" />
-                </Link>
-              </Tooltip>
-            </div>
-          ) : (
-            <Link
-              href={`/app/journey/${journey.journeyId}`}
-              className="focus-visible mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-text2 hover:bg-surface-hover hover:text-text1"
-            >
-              <FlagIcon className="h-5 w-5 shrink-0" />
-              <span className="truncate">Parcours en cours</span>
-            </Link>
-          )}
-        </div>
-      )}
+        {/* Récent (parcours de session réel) */}
+        {journey && (
+          <div>
+            <p className={cn("mb-1 px-4 text-xs font-semibold uppercase tracking-widest text-text-muted", collapsed && "px-0 text-center")}>
+              {collapsed ? "" : "Récent"}
+            </p>
+            {collapsed ? (
+              <div className="px-0 text-center">
+                <Tooltip label="Parcours en cours">
+                  <Link
+                    href={`/app/journey/${journey.journeyId}`}
+                    aria-label="Parcours en cours"
+                    className="focus-visible inline-flex h-11 w-11 items-center justify-center rounded-xl text-text2 hover:bg-surface-hover hover:text-text1"
+                  >
+                    <FlagIcon className="h-5 w-5" />
+                  </Link>
+                </Tooltip>
+              </div>
+            ) : (
+              <Link
+                href={`/app/journey/${journey.journeyId}`}
+                className="focus-visible mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-text2 hover:bg-surface-hover hover:text-text1"
+              >
+                <FlagIcon className="h-5 w-5 shrink-0" />
+                <span className="truncate">Parcours en cours</span>
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Bas : utilité + compte */}
       <div className="border-t border-border p-3">
@@ -201,6 +208,7 @@ export function Sidebar() {
                   <Link
                     href={href}
                     aria-label={label}
+                    aria-current={routeIsActive(pathname, href) ? "page" : undefined}
                     className={cn(
                       "focus-visible flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-micro",
                       routeIsActive(pathname, href)
@@ -214,6 +222,7 @@ export function Sidebar() {
               ) : (
                 <Link
                   href={href}
+                  aria-current={routeIsActive(pathname, href) ? "page" : undefined}
                   className={cn(
                     "focus-visible flex items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium transition-colors duration-micro",
                     routeIsActive(pathname, href)

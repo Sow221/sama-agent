@@ -21,6 +21,16 @@ const SECTIONS = [
   { href: "/app/you/help", label: "Aide", description: "Bien démarrer, engagements, questions" },
 ] as const;
 
+/**
+ * Sur mobile, Fichiers et Actions n'ont pas d'onglet (BottomNav limitée à 4
+ * destinations, §3.1) : sans ce bloc, ils n'étaient joignables que depuis la
+ * barre latérale, donc jamais sous 768 px.
+ */
+const WORKSPACE = [
+  { href: "/app/files", label: "Fichiers", description: "Vos pièces et documents" },
+  { href: "/app/actions", label: "Actions", description: "Ce qui reste à faire" },
+] as const;
+
 export default function YouPage() {
   const router = useRouter();
   const { user, configured, signOut } = useAuth();
@@ -48,6 +58,22 @@ export default function YouPage() {
           <p className="truncate text-sm text-text2">
             {user?.email ?? (configured ? "Aucune session" : "Harnais de démonstration — identité de service")}
           </p>
+        </div>
+      </Card>
+
+      <Card className="p-2 md:hidden">
+        <div className="flex flex-col">
+          {WORKSPACE.map((s, i) => (
+            <div key={s.href}>
+              {i > 0 ? <span className="mx-4 block h-px bg-border" /> : null}
+              <ListItem
+                title={s.label}
+                description={s.description}
+                href={s.href}
+                trailing={<ChevronRightIcon className="h-4 w-4" />}
+              />
+            </div>
+          ))}
         </div>
       </Card>
 

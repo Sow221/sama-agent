@@ -41,6 +41,7 @@ export const BottomNav = memo(function BottomNav() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "focus-visible flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition-colors duration-micro",
                 active ? "text-primary" : "text-text-muted"
@@ -77,6 +78,7 @@ export const BottomNav = memo(function BottomNav() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "focus-visible flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium transition-colors duration-micro",
                 active ? "text-primary" : "text-text-muted"

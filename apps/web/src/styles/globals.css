@@ -169,6 +169,13 @@ body {
   min-height: 100dvh;
 }
 
+/* Aucun défilement horizontal de page : les halos décoratifs (`-inset-8`,
+   aurora) dépassaient du viewport à 360 px. `clip` (et non `hidden`) ne crée
+   pas de conteneur de défilement, donc les en-têtes `sticky` restent collés. */
+body {
+  overflow-x: clip;
+}
+
 /* Aurora : halos fixes derrière le contenu (point de départ du kit).
    Couleurs prises dans les jetons : le halo suit le thème. */
 .aurora {

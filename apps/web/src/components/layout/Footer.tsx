@@ -16,8 +16,8 @@ const LINKS = [
 export function Footer() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="flex flex-col gap-3">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-1">
           <BrandMark />
           <p className="max-w-sm text-sm text-text2">
             Assistant pour préparer vos démarches administratives au Sénégal, à la voix en wolof ou
@@ -41,9 +41,10 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-border">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-text-muted sm:px-6">
-          Prototype réalisé pour le hackathon GOMYCODE × NVIDIA — septembre 2026.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-5 text-xs text-text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>© 2026 Sama Agent</p>
+          <p>Prototype réalisé pour le hackathon GOMYCODE × NVIDIA — septembre 2026.</p>
+        </div>
       </div>
     </footer>
   );

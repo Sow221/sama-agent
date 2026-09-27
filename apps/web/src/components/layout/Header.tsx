@@ -16,7 +16,8 @@ import { ThemeToggle } from "@/components/layout/ThemeToggle";
 export function BrandMark({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="focus-visible flex shrink-0 items-center rounded-lg" aria-label="Sama Agent — accueil">
-      <BrandLogo />
+      {/* Logo réduit sous 640 px : à 360 px, logo + thème + action débordaient. */}
+      <BrandLogo className="h-5 w-auto sm:h-7" />
     </Link>
   );
 }
@@ -35,10 +36,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-header border-b border-border bg-header-bg backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
         <BrandMark />
 
-        <nav aria-label="Navigation principale" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Navigation principale" className="hidden items-center gap-1 lg:flex">
           {NAV.map((n) => (
             <Link
               key={n.href}
@@ -53,21 +54,23 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <ThemeToggle />
           {inside ? (
             <Link
               href="/app/home"
-              className="focus-visible inline-flex min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-on-primary"
+              className="focus-visible inline-flex min-h-10 items-center whitespace-nowrap rounded-full bg-gradient-to-r from-primary to-accent-ai px-3 text-sm font-semibold text-on-primary sm:px-4"
             >
-              Ouvrir mon espace
+              {/* Libellé court sous 640 px : le libellé complet débordait à 360 px. */}
+              <span className="sm:hidden">Mon espace</span>
+              <span className="hidden sm:inline">Ouvrir mon espace</span>
             </Link>
           ) : loading ? null : (
             <>
               {pathname !== "/login" ? (
                 <Link
                   href="/login"
-                  className="focus-visible inline-flex min-h-10 items-center rounded-full px-3 text-sm font-semibold text-text1 hover:bg-surface-hover"
+                  className="focus-visible inline-flex min-h-10 items-center whitespace-nowrap rounded-full px-2.5 text-sm font-semibold text-text1 hover:bg-surface-hover sm:px-3"
                 >
                   Se connecter
                 </Link>
@@ -76,9 +79,10 @@ export function Header() {
                 <Link
                   href="/signup"
                   // Mobile : le hero porte déjà l'appel « Créer mon compte » ; l'en-tête garde la connexion.
-                  className={`focus-visible ${pathname === "/login" ? "inline-flex" : "hidden sm:inline-flex"} min-h-10 items-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-on-primary`}
+                  className={`focus-visible ${pathname === "/login" ? "inline-flex" : "hidden sm:inline-flex"} min-h-10 items-center whitespace-nowrap rounded-full bg-gradient-to-r from-primary to-accent-ai px-3 text-sm font-semibold text-on-primary sm:px-4`}
                 >
-                  Créer un compte
+                  <span className="sm:hidden">S&apos;inscrire</span>
+                  <span className="hidden sm:inline">Créer un compte</span>
                 </Link>
               ) : null}
             </>
