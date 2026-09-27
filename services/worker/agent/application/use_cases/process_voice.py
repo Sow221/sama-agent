@@ -5,12 +5,15 @@ en français à l'écran et en wolof à l'oral. L'état du dossier reste celui d
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 
 from agent import mode as app_mode
 from agent.schemas import IntentRequest
 from dataclasses import dataclass
+
+log = logging.getLogger("sama.voice.turn")
 
 from agent.application.dialogue import formulate, formulate_wolof
 from agent.application.use_cases.process_intent import infer_intent
@@ -74,22 +77,46 @@ def _llm_voice_reply(text: str, journey, history: list[dict]) -> VoiceReply:
     from agent.infrastructure.llm.glm import GlmLlm
     from agent.infrastructure.web.search import search_query, web_search
 
-    llm = _voice_llm() or GlmLlm()
+    # Même modèle et même appel que le chat écrit (qui marche en production).
+    llm = GlmLlm()
     web = web_search(search_query(text) + " Sénégal", k=3, timeout_s=3.0) if len(text.split()) >= 3 else []
     web_ctx = "\n".join(f"- {r['title']} : {r['snippet']}" for r in web) or "aucun"
     messages = [{"role": "system", "content": (
         _VOICE_SYSTEM + f"\n\nCONTEXTE : {_journey_context(journey)}\nINFOS WEB :\n{web_ctx}")}]
+    # Rôles strictement alternés (certains modèles refusent deux « user » de suite).
     for h in history[-10:]:
         role = "user" if h.get("role") == "user" else "assistant"
-        messages.append({"role": role, "content": h["text"]})
+        if messages[-1]["role"] == role:
+            messages[-1] = {"role": role, "content": messages[-1]["content"] + "\n" + h["text"]}
+        else:
+            messages.append({"role": role, "content": h["text"]})
+    if messages[-1]["role"] == "user":
+        messages.pop()
     messages.append({"role": "user", "content": text})
-    raw = _THINK.sub("", llm.chat_text(messages, max_tokens=300)).strip()
+    try:
+        raw = llm.chat_text(messages, max_tokens=450)
+    except Exception:
+        log.exception("voix : appel LLM en échec — nouvel essai simplifié")
+        raw = llm.chat_text([{"role": "system", "content": _VOICE_SYSTEM},
+                             {"role": "user", "content": text}], max_tokens=450)
+    raw = _THINK.sub("", raw).strip()
     parts: dict[str, str] = {}
     for key, value in _LINE.findall(raw.replace("*", "")):
         lang = "WO" if key.upper().startswith("WO") else "FR"
         parts[lang] = value.strip()  # la DERNIÈRE occurrence : la réponse finale
     display = parts.get("FR") or raw.replace("*", "").strip()
-    return VoiceReply(display=display, spoken=parts.get("WO") or None)
+    spoken = parts.get("WO")
+    if not spoken:
+        # Le modèle n'a pas donné la ligne wolof : on la demande explicitement,
+        # pour que l'agent PARLE wolof (jamais du français lu par une voix wolof).
+        from agent.application.use_cases.speak_wolof import to_spoken_wolof
+
+        try:
+            spoken = to_spoken_wolof(display, llm=llm)
+        except Exception:
+            log.exception("voix : reformulation wolof en échec")
+            spoken = None
+    return VoiceReply(display=display, spoken=spoken or None)
 
 
 def process_voice_turn(text: str, journey_id: str, history: list[dict] | None = None) -> VoiceReply:
@@ -107,7 +134,8 @@ def process_voice_turn(text: str, journey_id: str, history: list[dict] | None = 
 
         try:
             return _llm_voice_reply(text, journey, history or [])
-        except LlmUnavailableError:
+        except Exception:
+            log.exception("voix : réponse LLM impossible")
             # LLM injoignable : l'état réel du dossier, ou une demande de répéter.
             if journey is None:
                 return VoiceReply("Je n'arrive pas à répondre pour le moment. Pouvez-vous répéter ?")
