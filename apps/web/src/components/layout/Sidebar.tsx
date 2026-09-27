@@ -24,6 +24,7 @@ import {
 import { useJourneyStore } from "@/lib/state/stores";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "@/components/ui";
+import { BrandLogo, BrandTile } from "@/components/brand/Logo";
 
 const MAIN_NAV = [
   { href: "/app/home", label: "Accueil", icon: HomeIcon },
@@ -129,14 +130,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className={cn("flex items-center px-4 py-5", collapsed && "justify-center px-0")}>
         <Link href="/app/home" className="focus-visible flex items-center gap-2" aria-label="Sama Agent — Accueil">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-sm font-extrabold text-[#04211a] shadow-glow">
-            SA
-          </span>
-          {!collapsed ? (
-            <span className="text-lg font-bold tracking-tight text-text1">
-              Sama <span className="text-gradient">Agent</span>
-            </span>
-          ) : null}
+          {collapsed ? <BrandTile size={36} /> : <BrandLogo className="h-7 w-auto" />}
         </Link>
       </div>
 
@@ -147,7 +141,7 @@ export function Sidebar() {
             <Link
               href="/app/home"
               aria-label="Nouveau parcours"
-              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#04211a] shadow-glow hover:brightness-110"
+              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110"
             >
               <PlusIcon className="h-5 w-5" />
             </Link>
@@ -155,7 +149,7 @@ export function Sidebar() {
         ) : (
           <Link
             href="/app/home"
-            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-[#04211a] shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
+            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-[#11110f] shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
           >
             <PlusIcon className="h-5 w-5" /> Nouveau parcours
           </Link>

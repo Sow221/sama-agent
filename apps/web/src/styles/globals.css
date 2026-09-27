@@ -9,42 +9,42 @@
    ══════════════════════════════════════════════════════════════ */
 :root {
   /* ── Fond & surfaces (§11) ── */
-  --bg: #0a1220;
-  --surface: rgba(255, 255, 255, 0.06);
-  --surface-2: rgba(255, 255, 255, 0.1);
-  --surface-elevated: rgba(255, 255, 255, 0.09);
-  --surface-hover: rgba(255, 255, 255, 0.12);
+  --bg: #11110f; /* encre (charte Sama Agent) */
+  --surface: rgba(247, 245, 239, 0.05);
+  --surface-2: rgba(247, 245, 239, 0.09);
+  --surface-elevated: #1c1c19;
+  --surface-hover: rgba(247, 245, 239, 0.1);
 
   /* ── Bordures ── */
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  --border: rgba(247, 245, 239, 0.1);
+  --border-strong: rgba(247, 245, 239, 0.2);
 
   /* ── Sémantiques (accent = branding, utilisé avec parcimonie §11) ── */
-  --primary: #0dc98a;
-  --primary-soft: rgba(13, 201, 138, 0.14);
-  --accent-ai: #38bdf8;
-  --accent-soft: rgba(56, 189, 248, 0.14);
-  --success: #0dc98a;
+  --primary: #b7d8a8; /* sauge */
+  --primary-soft: rgba(183, 216, 168, 0.14);
+  --accent-ai: #d6e9cb; /* sauge clair */
+  --accent-soft: rgba(214, 233, 203, 0.12);
+  --success: #b7d8a8;
   --warning: #f59e0b;
   --danger: #ef4444;
   --error: #ef4444;
-  --info: #38bdf8;
+  --info: #d6e9cb;
   /* Mêmes couleurs en canaux RGB : Tailwind en a besoin pour les variantes de
      transparence (bg-primary/15, border-warning/30…). Sans eux, ces classes
      ne généraient AUCUN style (87 usages dans l'app). Garder synchronisé. */
-  --primary-rgb: 13 201 138;
-  --accent-ai-rgb: 56 189 248;
-  --success-rgb: 13 201 138;
+  --primary-rgb: 183 216 168;
+  --accent-ai-rgb: 214 233 203;
+  --success-rgb: 183 216 168;
   --warning-rgb: 245 158 11;
   --danger-rgb: 239 68 68;
   --error-rgb: 239 68 68;
-  --info-rgb: 56 189 248;
+  --info-rgb: 214 233 203;
 
   /* ── Texte (§11) ── */
-  --text-1: #f8fafc;
-  --text-2: rgba(248, 250, 252, 0.7);
-  --text-muted: rgba(248, 250, 252, 0.5);
-  --text-disabled: rgba(248, 250, 252, 0.28);
+  --text-1: #f7f5ef; /* ivoire */
+  --text-2: rgba(247, 245, 239, 0.74);
+  --text-muted: #a9a398;
+  --text-disabled: rgba(247, 245, 239, 0.3);
 
   /* ── Radius (§09 : 8/12/16/20/24/999) ── */
   --radius-xs: 8px;
@@ -56,8 +56,8 @@
   --radius-card: var(--radius-xl);
 
   /* ── Ombres ── */
-  --shadow-glow: 0 0 24px rgba(56, 189, 248, 0.35);
-  --shadow-elevated: 0 12px 32px rgba(2, 6, 23, 0.5);
+  --shadow-glow: 0 0 24px rgba(183, 216, 168, 0.22);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.5);
 
   /* ── Z-index (§04 Blueprint : hiérarchie stricte) ── */
   --z-content: 0;
@@ -107,9 +107,9 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(420px 340px at 12% 6%, rgba(13, 201, 138, 0.14), transparent 60%),
-    radial-gradient(520px 420px at 88% 14%, rgba(56, 189, 248, 0.12), transparent 62%),
-    radial-gradient(560px 520px at 50% 100%, rgba(13, 201, 138, 0.08), transparent 60%);
+    radial-gradient(420px 340px at 12% 6%, rgba(183, 216, 168, 0.14), transparent 60%),
+    radial-gradient(520px 420px at 88% 14%, rgba(214, 233, 203, 0.12), transparent 62%),
+    radial-gradient(560px 520px at 50% 100%, rgba(183, 216, 168, 0.08), transparent 60%);
 }
 
 /* Titre en dégradé (vert fiabilité → bleu IA) — réservé aux moments-clés. */

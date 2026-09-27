@@ -163,7 +163,7 @@ export default function CompréhensionPage() {
             <div className="mt-4 flex flex-col gap-3">
               {REQUIREMENTS.map((r) => (
                 <div key={r.n} className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#04211a]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#11110f]">
                     {r.n}
                   </span>
                   <div>

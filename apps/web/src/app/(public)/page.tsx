@@ -95,7 +95,7 @@ function PhoneShot({ src, alt, preload = false }: { src: string; alt: string; pr
         aria-hidden
         className="absolute -inset-8 -z-10 rounded-full bg-gradient-to-br from-primary/25 via-transparent to-accent-ai/25 blur-3xl"
       />
-      <div className="overflow-hidden rounded-[2.2rem] border-[6px] border-[#1c2a3f] bg-bg shadow-elevated ring-1 ring-white/10">
+      <div className="overflow-hidden rounded-[2.2rem] border-[6px] border-[#2a2a25] bg-bg shadow-elevated ring-1 ring-white/10">
         <Image
           src={src}
           alt={alt}
@@ -119,7 +119,7 @@ export default function WelcomePage() {
   const primaryCta = (
     <Link
       href={startHref}
-      className="focus-visible inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-7 text-base font-semibold text-[#04211a] shadow-glow transition-transform active:scale-[0.98]"
+      className="focus-visible inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-7 text-base font-semibold text-[#11110f] shadow-glow transition-transform active:scale-[0.98]"
     >
       {startLabel}
       <ArrowRightIcon className="h-5 w-5" />
@@ -236,7 +236,7 @@ export default function WelcomePage() {
           <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s) => (
               <li key={s.n} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai font-bold text-[#04211a]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai font-bold text-[#11110f]">
                   {s.n}
                 </span>
                 <h3 className="text-lg font-bold">{s.title}</h3>

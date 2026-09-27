@@ -29,7 +29,7 @@ export function TopBar() {
   const inVoice = pathname.startsWith("/app/voice");
 
   return (
-    <header className="sticky top-0 z-sticky hidden border-b border-border bg-[rgba(10,18,32,0.72)] backdrop-blur-xl md:block">
+    <header className="sticky top-0 z-sticky hidden border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:block">
       <div className="flex h-16 items-center justify-between gap-4 px-6 lg:px-10">
         <div className="flex min-w-0 items-center gap-2">
           {parent ? (
@@ -43,7 +43,7 @@ export function TopBar() {
           {!inVoice ? (
             <Link
               href="/app/voice"
-              className="focus-visible mr-2 inline-flex min-h-10 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-[#04211a] shadow-glow transition-transform duration-micro active:scale-[0.97]"
+              className="focus-visible mr-2 inline-flex min-h-10 items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent-ai px-4 text-sm font-semibold text-[#11110f] shadow-glow transition-transform duration-micro active:scale-[0.97]"
             >
               <Mic className="h-4 w-4" />
               Parler

@@ -31,7 +31,7 @@ export function MobileHeader() {
   if (pathname === "/app/home") {
     const first = firstName(user);
     return (
-      <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(10,18,32,0.72)] backdrop-blur-xl md:hidden">
+      <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <p className="text-lg font-bold">{first ? `Bonjour, ${first}` : "Bonjour"}</p>
           <Link href="/app/you" aria-label="Mon profil" className="focus-visible rounded-full">
@@ -45,7 +45,7 @@ export function MobileHeader() {
   const parent = info?.parent?.(pathname, new URLSearchParams(search.toString()));
 
   return (
-    <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(10,18,32,0.72)] backdrop-blur-xl md:hidden">
+    <header className="sticky top-0 z-sticky border-b border-border bg-[rgba(17,17,15,0.72)] backdrop-blur-xl md:hidden">
       <div className="mx-auto flex h-14 max-w-[480px] items-center justify-between px-2">
         <div className="flex min-w-0 items-center gap-1">
           {parent ? (

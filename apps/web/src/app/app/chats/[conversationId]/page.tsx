@@ -170,7 +170,7 @@ export default function ConversationPage() {
             <div
               className={
                 m.role === "user"
-                  ? "max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-4 py-3 text-base text-[#04211a]"
+                  ? "max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary px-4 py-3 text-base text-[#11110f]"
                   : "max-w-[85%] self-start whitespace-pre-wrap rounded-2xl rounded-bl-md border border-border bg-surface px-4 py-3 text-base text-text1"
               }
             >
@@ -199,7 +199,7 @@ export default function ConversationPage() {
         {turn.isPending ? (
           <>
             {lastSent ? (
-              <div className="max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/70 px-4 py-3 text-base text-[#04211a]">
+              <div className="max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/70 px-4 py-3 text-base text-[#11110f]">
                 {lastSent}
               </div>
             ) : null}
@@ -245,7 +245,7 @@ export default function ConversationPage() {
             type="submit"
             aria-label="Envoyer"
             disabled={!canSend}
-            className="focus-visible flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#04211a] transition-transform duration-micro active:scale-[0.95] disabled:opacity-40"
+            className="focus-visible flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#11110f] transition-transform duration-micro active:scale-[0.95] disabled:opacity-40"
           >
             <SendIcon className="h-5 w-5" />
           </button>
@@ -275,7 +275,7 @@ export default function ConversationPage() {
               onClick={() => setKind(k)}
               className={
                 kind === k
-                  ? "focus-visible min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-[#04211a]"
+                  ? "focus-visible min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-[#11110f]"
                   : "focus-visible min-h-11 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-text2 hover:bg-surface-hover"
               }
             >

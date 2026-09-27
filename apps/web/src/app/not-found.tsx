@@ -1,12 +1,11 @@
 import Link from "next/link";
+import { BrandTile } from "@/components/brand/Logo";
 
 /** 404 — toute URL inconnue de l'application (français, charte de l'app). */
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#04211a]">
-        SA
-      </span>
+      <BrandTile size={56} />
       <p className="text-sm font-semibold uppercase tracking-widest text-accent-ai">Erreur 404</p>
       <h1 className="text-3xl font-extrabold tracking-tight">Cette page n'existe pas</h1>
       <p className="text-text2">
@@ -15,7 +14,7 @@ export default function NotFound() {
       <div className="flex w-full flex-col gap-2 sm:flex-row">
         <Link
           href="/"
-          className="focus-visible inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-5 font-semibold text-[#04211a]"
+          className="focus-visible inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-primary to-accent-ai px-5 font-semibold text-[#11110f]"
         >
           Aller à l'accueil
         </Link>

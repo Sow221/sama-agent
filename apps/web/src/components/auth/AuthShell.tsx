@@ -6,6 +6,7 @@
  */
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { BrandTile } from "@/components/brand/Logo";
 
 export function AuthShell({
   title,
@@ -22,9 +23,7 @@ export function AuthShell({
   return (
     <section className="container-page flex min-h-[calc(100dvh-4.5rem)] flex-col justify-center gap-6 py-8">
       <div className="text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-base font-extrabold text-[#04211a] shadow-glow">
-          SA
-        </span>
+        <BrandTile size={48} className="mx-auto" />
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight">{title}</h1>
         {subtitle ? <p className="mt-2 text-sm text-text2">{subtitle}</p> : null}
       </div>

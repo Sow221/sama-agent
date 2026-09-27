@@ -60,19 +60,19 @@ export const CORE_STATE_LABEL: Record<CoreState, string> = {
 };
 
 const RING_COLORS: Record<CoreState, string> = {
-  idle: "rgba(56,189,248,0.35)",
-  listening: "rgba(56,189,248,0.65)",
-  transcribing: "rgba(56,189,248,0.55)",
-  processing: "rgba(13,201,138,0.5)",
-  speaking: "rgba(13,201,138,0.7)",
-  acting: "rgba(13,201,138,0.65)",
+  idle: "rgba(214,233,203,0.35)",
+  listening: "rgba(214,233,203,0.65)",
+  transcribing: "rgba(214,233,203,0.55)",
+  processing: "rgba(183,216,168,0.5)",
+  speaking: "rgba(183,216,168,0.7)",
+  acting: "rgba(183,216,168,0.65)",
   waiting_confirmation: "rgba(245,165,36,0.6)",
-  success: "rgba(13,201,138,0.8)",
+  success: "rgba(183,216,168,0.8)",
   paused: "rgba(248,250,252,0.35)",
   interrupted: "rgba(245,165,36,0.6)",
   error: "rgba(239,68,68,0.6)",
   offline: "rgba(248,250,252,0.25)",
-  connecting: "rgba(56,189,248,0.4)",
+  connecting: "rgba(214,233,203,0.4)",
 };
 
 export function VoiceCore({
@@ -185,8 +185,8 @@ export function VoiceCore({
           )}
           style={{
             background:
-              "linear-gradient(135deg, #0dc98a 0%, #0ab8a0 45%, #38bdf8 100%)",
-            boxShadow: `0 0 ${d * 0.35}px rgba(13,201,138,0.4), 0 0 ${d * 0.6}px rgba(56,189,248,0.22)`,
+              "linear-gradient(135deg, #b7d8a8 0%, #8fbf7f 45%, #164a3a 100%)",
+            boxShadow: `0 0 ${d * 0.35}px rgba(183,216,168,0.4), 0 0 ${d * 0.6}px rgba(214,233,203,0.22)`,
           }}
         />
         {/* cœur verre + micro */}
@@ -198,7 +198,7 @@ export function VoiceCore({
             transform: "translate(-50%, -50%)",
             width: d / 2.75,
             height: d / 2.75,
-            background: "rgba(4,33,26,0.3)",
+            background: "rgba(17,17,15,0.3)",
             backdropFilter: "blur(6px)",
             border: "1px solid rgba(255,255,255,0.28)",
           }}

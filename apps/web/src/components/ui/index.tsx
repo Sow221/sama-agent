@@ -32,9 +32,9 @@ const BTN_BASE =
   "disabled:cursor-not-allowed disabled:opacity-40";
 
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-[#04211a] shadow-glow hover:bg-[#16d99a]",
+  primary: "bg-primary text-[#11110f] shadow-glow hover:bg-[#16d99a]",
   gradient:
-    "bg-gradient-to-r from-primary to-accent-ai text-[#04211a] shadow-glow hover:brightness-110",
+    "bg-gradient-to-r from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110",
   secondary: "bg-surface-elevated text-text1 border border-border hover:bg-surface-hover",
   ghost: "bg-transparent text-text1 hover:bg-surface-hover",
   destructive: "bg-error text-white hover:brightness-110",
@@ -255,7 +255,7 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(it.id)}
             className={`focus-visible flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-2.5 text-sm font-semibold transition-colors duration-micro sm:px-4 ${
-              active ? "bg-primary text-[#04211a]" : "text-text2 hover:text-text1"
+              active ? "bg-primary text-[#11110f]" : "text-text2 hover:text-text1"
             }`}
           >
             {it.label}
