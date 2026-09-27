@@ -94,8 +94,10 @@ def main() -> int:
              confirm or f"HTTP {r.status_code} {body.get('msg') or body.get('error_description') or ''}")
 
     # 4. Connexion réelle
-    email = input("E-mail d'un compte de démo (confirmé) : ").strip()
-    password = getpass.getpass("Mot de passe (masqué) : ")
+    # Saisie masquée impossible dans certains terminaux web (Jupyter) :
+    # SAMA_CHECK_EMAIL / SAMA_CHECK_PASSWORD permettent de les passer en variables.
+    email = os.getenv("SAMA_CHECK_EMAIL") or input("E-mail d'un compte de démo (confirmé) : ").strip()
+    password = os.getenv("SAMA_CHECK_PASSWORD") or getpass.getpass("Mot de passe (masqué) : ")
     r = client.post(f"{supabase_url}/auth/v1/token?grant_type=password", headers=auth_headers,
                     json={"email": email, "password": password})
     body = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
