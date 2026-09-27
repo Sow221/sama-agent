@@ -132,6 +132,10 @@ class GlmLlm:
             payload["max_tokens"] = max_tokens
         if self._force_json if force_json is None else force_json:
             payload["response_format"] = {"type": "json_object"}
+        if "nemotron" in self.model.lower():
+            # Nemotron raisonne à voix haute par défaut (« We need to respond… ») :
+            # lent (≈20 s) et cette réflexion finissait dans la réponse lue à l'usager.
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         if not _circuit.allow():
             error = "NIM hors service (circuit ouvert) — réessayez dans un instant"
             with _status_lock:
@@ -148,13 +152,24 @@ class GlmLlm:
                     headers={"Authorization": f"Bearer {self.api_key}"},
                     json=payload,
                 )
+                if r.status_code == 400 and payload.pop("chat_template_kwargs", None) is not None:
+                    # Ce NIM refuse l'option : on la retire et on redemande aussitôt.
+                    log.warning("NIM : chat_template_kwargs refusé, nouvel essai sans")
+                    r = self._httpx.post(
+                        f"{self.base_url}/chat/completions",
+                        headers={"Authorization": f"Bearer {self.api_key}"},
+                        json=payload,
+                    )
                 if r.status_code >= 500 or r.status_code == 429:
                     # 5xx / 429 : fournisseur saturé ou en panne — nouvel essai borné.
                     raise httpx.HTTPStatusError(
                         f"NIM status {r.status_code}", request=r.request, response=r
                     )
                 r.raise_for_status()
-                content = r.json()["choices"][0]["message"]["content"]
+                content = r.json()["choices"][0]["message"]["content"] or ""
+                if "</think>" in content:
+                    # Réflexion du modèle : seule la réponse finale est gardée.
+                    content = content.rsplit("</think>", 1)[1].strip()
                 if not content:
                     raise LlmUnavailableError("réponse vide du modèle")
                 latency_ms = round((time.perf_counter() - started) * 1000, 1)
