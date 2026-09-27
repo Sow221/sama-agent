@@ -42,3 +42,5 @@ Thumbs.db
 # Docs de travail (jamais versionnés — hors projet de code)
 panning/
 ui-kit-figma/
+# Fichiers d'exécution du VAD, copiés par scripts/copy-vad-assets.mjs
+apps/web/public/vad/

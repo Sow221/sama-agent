@@ -9,7 +9,9 @@ Fait le vrai parcours d'un usager, sans navigateur, et dit ce qui marche :
   6. la compréhension NVIDIA reconnaît la demande ;
   7. un dossier est créé puis RELU (reprise) ;
   8. ce dossier existe dans la base Supabase, rattaché à l'usager ;
-  9. un jeton vocal LiveKit est délivré.
+  9. un jeton vocal LiveKit est délivré ;
+ 10. la discussion ÉCRITE marche : conversation créée, réponse de l'agent, historique relu ;
+ 11. l'agent vocal (worker Brev) rejoint réellement la room LiveKit et se met à l'écoute.
 
     cd ~/sama-agent/services/worker && source .venv/bin/activate
     set -a; source ~/sama.env; set +a
@@ -21,6 +23,7 @@ Aucun secret n'est affiché. Le mot de passe est saisi masqué.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import getpass
 import json
 import os
@@ -144,7 +147,63 @@ def main() -> int:
     step("9. Jeton vocal LiveKit délivré", r.status_code == 200 and bool(vt.get("token")),
          vt.get("url", "") if vt else r.text[:120])
 
+    # 10. Discussion écrite (écran « Discussions ») : le même chemin que le site
+    r = client.post(f"{api}/api/conversations", headers=bearer, json={"title": "prod-check", "journeyId": journey_id})
+    conv_id = (r.json() if r.status_code == 200 else {}).get("id")
+    if conv_id:
+        t = client.post(f"{api}/api/agent/turn", headers=bearer,
+                        json={"text": "pour mon permis de conduire, quelles pièces dois-je fournir ?", "journeyId": journey_id,
+                              "conversationId": conv_id})
+        turn = t.json() if t.status_code == 200 else {}
+        reply = turn.get("answer") or ""
+        m = client.get(f"{api}/api/conversations/{conv_id}/messages", headers=bearer)
+        n = len((m.json() if m.status_code == 200 else {}).get("items", []))
+        step("10. Discussion écrite (réponse de l'agent + historique)", t.status_code == 200 and n >= 2,
+             f"{n} messages enregistrés · « {str(reply)[:70]} »" if t.status_code == 200 else f"HTTP {t.status_code} {t.text[:100]}")
+    else:
+        step("10. Discussion écrite (réponse de l'agent + historique)", False, f"conversation HTTP {r.status_code} {r.text[:100]}")
+
+    # 11. L'agent vocal rejoint vraiment la room (worker lancé, dispatch LiveKit OK)
+    if vt.get("token"):
+        ok, detail = asyncio.run(_voice_agent_joins(vt["url"], vt["token"]))
+        step("11. Agent vocal présent dans la room (à l'écoute)", ok, detail)
+
     return summary()
+
+
+async def _voice_agent_joins(url: str, token: str, wait_s: float = 30.0) -> tuple[bool, str]:
+    """Rejoint la room comme le navigateur et attend l'`agent_state` du worker."""
+    try:
+        from livekit import rtc
+    except ImportError:
+        return False, "paquet livekit absent (activez le .venv du worker)"
+    room = rtc.Room()
+    heard: asyncio.Future = asyncio.get_running_loop().create_future()
+
+    @room.on("data_received")
+    def _data(packet) -> None:  # noqa: ANN001
+        try:
+            event = json.loads(bytes(packet.data).decode())
+        except Exception:  # noqa: BLE001
+            return
+        if not heard.done() and event.get("type") in ("agent_state", "agent_error"):
+            heard.set_result(event)
+
+    try:
+        await room.connect(url, token)
+        event = await asyncio.wait_for(heard, timeout=wait_s)
+        agents = [p.identity for p in room.remote_participants.values()]
+        if event.get("type") == "agent_error":
+            return False, f"le worker répond une erreur : {event.get('code')} {event.get('message', '')}"
+        return True, f"état « {event.get('state')} » · participant {agents[0] if agents else '?'}"
+    except asyncio.TimeoutError:
+        others = len(room.remote_participants)
+        return False, (f"aucun agent en {wait_s:.0f} s ({others} autre(s) participant(s)) — "
+                       "le worker vocal tourne-t-il ? voir var/logs/voice.log")
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)[:160]
+    finally:
+        await room.disconnect()
 
 
 def summary() -> int:
