@@ -12,7 +12,7 @@ const LIMITS = [
 
 export default function LimitesPage() {
   return (
-    <section className="flex flex-col gap-6 pt-8">
+    <section className="container-page flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-warning">
           Transparence

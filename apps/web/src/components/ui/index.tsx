@@ -201,7 +201,7 @@ export function Badge({
 }
 
 export function StatusPill({ label, tone }: { label: string; tone: BadgeTone }) {
-  return <Badge tone={tone}>{label}</Badge>;
+  return <Badge tone={tone} className="whitespace-nowrap">{label}</Badge>;
 }
 
 /**

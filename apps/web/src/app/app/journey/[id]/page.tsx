@@ -66,7 +66,8 @@ export default function ParcoursPage() {
 
   return (
     <section className="flex flex-col gap-6 pt-8">
-      <div className="flex items-center justify-between">
+      {/* Mobile : la pastille passe sous le titre au lieu de se couper sur deux lignes. */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
             2 · Parcours

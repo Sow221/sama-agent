@@ -14,6 +14,7 @@ import {
   ArrowLeftIcon,
   ChatIcon,
   FileIcon,
+  FlagIcon,
   HomeIcon,
   InfoIcon,
   MemoryIcon,
@@ -172,7 +173,7 @@ export function Sidebar() {
                   aria-label="Parcours en cours"
                   className="focus-visible inline-flex h-11 w-11 items-center justify-center rounded-xl text-text2 hover:bg-surface-hover hover:text-text1"
                 >
-                  <ActionIcon className="h-5 w-5" />
+                  <FlagIcon className="h-5 w-5" />
                 </Link>
               </Tooltip>
             </div>
@@ -181,7 +182,7 @@ export function Sidebar() {
               href={`/app/journey/${journey.journeyId}`}
               className="focus-visible mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-text2 hover:bg-surface-hover hover:text-text1"
             >
-              <ActionIcon className="h-5 w-5 shrink-0" />
+              <FlagIcon className="h-5 w-5 shrink-0" />
               <span className="truncate">Parcours en cours</span>
             </Link>
           )}

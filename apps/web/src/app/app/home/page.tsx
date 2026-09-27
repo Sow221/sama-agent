@@ -46,8 +46,8 @@ export default function HomePage() {
           Sur quoi travaillons-nous <span className="text-gradient">aujourd'hui</span> ?
         </h1>
         <p className="mx-auto mt-2 max-w-md text-base text-text2">
-          Parlez en wolof ou écrivez en français : chaque réponse vient de la vraie chaîne,
-          jamais d'une simulation.
+          Parlez en wolof ou écrivez en français : l'agent identifie la démarche, les pièces à
+          fournir et la prochaine étape.
         </p>
       </div>
 

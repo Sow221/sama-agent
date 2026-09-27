@@ -29,6 +29,16 @@
   --danger: #ef4444;
   --error: #ef4444;
   --info: #38bdf8;
+  /* Mêmes couleurs en canaux RGB : Tailwind en a besoin pour les variantes de
+     transparence (bg-primary/15, border-warning/30…). Sans eux, ces classes
+     ne généraient AUCUN style (87 usages dans l'app). Garder synchronisé. */
+  --primary-rgb: 13 201 138;
+  --accent-ai-rgb: 56 189 248;
+  --success-rgb: 13 201 138;
+  --warning-rgb: 245 158 11;
+  --danger-rgb: 239 68 68;
+  --error-rgb: 239 68 68;
+  --info-rgb: 56 189 248;
 
   /* ── Texte (§11) ── */
   --text-1: #f8fafc;
