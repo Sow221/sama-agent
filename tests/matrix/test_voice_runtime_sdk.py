@@ -384,7 +384,8 @@ def test_voice_reply_parses_markdown_fr_wo_lines(monkeypatch) -> None:
             return "**FR :** Allez à la police avec votre extrait.\n**WO :** Demal ci polis ak sa extrait."
 
     monkeypatch.setattr(search, "web_search", lambda *a, **k: [])
-    monkeypatch.setattr(pv, "_voice_llm", lambda: _Llm())
+    import agent.infrastructure.llm.glm as glm
+    monkeypatch.setattr(glm, "GlmLlm", lambda *a, **k: _Llm())
     reply = pv._llm_voice_reply("sama passeport dafa réer", None, [])
     assert reply.display == "Allez à la police avec votre extrait."
     assert reply.spoken == "Demal ci polis ak sa extrait."
