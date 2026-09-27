@@ -421,9 +421,11 @@ def agent_turn(body: AgentTurnRequest, request: Request,
                                     journey_id=body.journeyId,
                                     conversation_id=body.conversationId)
     except Exception as exc:
-        log.warning("agent/turn — échec de la chaîne : %s", exc)
+        log.exception("agent/turn — échec de la chaîne : %s", exc)
+        # La cause (type + message, sans secret) aide à diagnostiquer depuis le client.
         raise HTTPException(status_code=503,
-                            detail="le service de dialogue est momentanément indisponible")
+                            detail=f"le service de dialogue est momentanément indisponible "
+                                   f"({type(exc).__name__}: {str(exc)[:200]})")
     request.state.trace_fields = {
         "intent": result.get("intent"),
         "journeyState": result.get("journeyStatus"),

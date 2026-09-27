@@ -43,7 +43,8 @@ def _journey_summary(journey) -> str:
     ]
     return (
         f"journeyId={journey.journeyId} statut={journey.status} "
-        f"nextAction={journey.nextAction} progression={journey.progress or 'n/a'} "
+        f"nextAction={journey.nextAction} "
+        f"progression={journey.completion.provided}/{journey.completion.required} pièces "
         f"documents_non_analyses={missing or 'aucun'}"
     )
 
@@ -70,7 +71,8 @@ Règles :
   (service compétent, site officiel) ; n'invente jamais un montant, une adresse ou un lien.
 - L'état du dossier de l'usager est calculé par le système : ne le contredis jamais.
 - Tiens compte de l'historique : ne redemande pas ce que l'usager a déjà dit.
-- Style : clair, chaleureux, phrases courtes, listes quand il y a des étapes. Pas de JSON."""
+- Style : clair, chaleureux, direct. 150 mots maximum, listes courtes quand il y a des
+  étapes. Pas de JSON."""
 
 
 def _web_context(results: list[dict]) -> str:
@@ -145,7 +147,7 @@ def run_agent_turn(
         from agent.infrastructure.web.search import web_search
 
         if len(text.split()) >= 3:
-            fut_web = pool.submit(web_search, text + " Sénégal démarche")
+            fut_web = pool.submit(web_search, text + " Sénégal démarche", 5, 4.0)
         fut_mem = pool.submit(_extract_memories, text, llm)
     try:
         intent = fut_intent.result()
