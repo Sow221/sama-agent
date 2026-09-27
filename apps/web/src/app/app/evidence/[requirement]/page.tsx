@@ -17,6 +17,7 @@ import { useDossierStore, useJourneyStore } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor, procedureIdOf } from "@/lib/auth/journey-id";
 import { documentStatusLabel, requirementLabel } from "@/lib/labels";
+import { BrandTon } from "@/components/brand/Logo";
 
 export default function PreuvePage() {
   const params = useParams<{ requirement: string }>();
@@ -71,6 +72,7 @@ export default function PreuvePage() {
         </Link>
         <br />
         <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <BrandTon className="h-2.5 w-auto text-primary" />
           Étape 3 · Vérifier
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">

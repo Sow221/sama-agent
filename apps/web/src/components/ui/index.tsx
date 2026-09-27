@@ -32,12 +32,12 @@ const BTN_BASE =
   "disabled:cursor-not-allowed disabled:opacity-40";
 
 const BTN_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-[#11110f] shadow-glow hover:bg-[#16d99a]",
+  primary: "bg-primary text-[#11110f] shadow-glow hover:brightness-110",
   gradient:
     "bg-gradient-to-r from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110",
   secondary: "bg-surface-elevated text-text1 border border-border hover:bg-surface-hover",
   ghost: "bg-transparent text-text1 hover:bg-surface-hover",
-  destructive: "bg-error text-white hover:brightness-110",
+  destructive: "bg-error text-[#11110f] hover:brightness-110",
   icon: "bg-transparent text-text2 hover:bg-surface-hover hover:text-text1",
 };
 
@@ -177,7 +177,7 @@ export type BadgeTone = "ok" | "warn" | "danger" | "neutral" | "info";
 const BADGE_TONES: Record<BadgeTone, string> = {
   ok: "bg-success/15 text-success border border-success/30",
   warn: "bg-warning/15 text-warning border border-warning/30",
-  danger: "bg-error/15 text-[#fca5a5] border border-error/30",
+  danger: "bg-error/15 text-error border border-error/30",
   neutral: "bg-surface-2 text-text2 border border-border",
   info: "bg-accent-soft text-accent-ai border border-accent-ai/30",
 };

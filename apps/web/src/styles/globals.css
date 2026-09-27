@@ -26,8 +26,8 @@
   --accent-soft: rgba(214, 233, 203, 0.12);
   --success: #b7d8a8;
   --warning: #f59e0b;
-  --danger: #ef4444;
-  --error: #ef4444;
+  --danger: #f08c7a; /* erreur de la charte (agent-error) */
+  --error: #f08c7a;
   --info: #d6e9cb;
   /* Mêmes couleurs en canaux RGB : Tailwind en a besoin pour les variantes de
      transparence (bg-primary/15, border-warning/30…). Sans eux, ces classes
@@ -36,8 +36,8 @@
   --accent-ai-rgb: 214 233 203;
   --success-rgb: 183 216 168;
   --warning-rgb: 245 158 11;
-  --danger-rgb: 239 68 68;
-  --error-rgb: 239 68 68;
+  --danger-rgb: 240 140 122;
+  --error-rgb: 240 140 122;
   --info-rgb: 214 233 203;
 
   /* ── Texte (§11) ── */

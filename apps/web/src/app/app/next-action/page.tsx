@@ -29,6 +29,7 @@ import { useJourneyState } from "@/lib/query/journey-state";
 import { useEvidence } from "@/lib/query/hooks";
 import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import type { JourneyResponse } from "@/lib/schemas";
+import { BrandTon } from "@/components/brand/Logo";
 
 export default function ProchaineActionPage() {
   const search = useSearchParams();
@@ -65,6 +66,7 @@ export default function ProchaineActionPage() {
 function StepBadge({ children }: { children: React.ReactNode }) {
   return (
     <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <BrandTon className="h-2.5 w-auto text-primary" />
       {children}
     </p>
   );

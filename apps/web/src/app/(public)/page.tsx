@@ -22,6 +22,7 @@ import { isOnboardingDone } from "@/lib/auth/onboarding";
 import { COMMITMENTS, STEPS } from "@/lib/content/help";
 import { FaqList } from "@/components/help/HelpContent";
 import { ArrowRightIcon, BuildingIcon, CheckIcon, Mic, SearchIcon } from "@/components/icons";
+import { BrandTon } from "@/components/brand/Logo";
 
 const PROBLEMS = [
   {
@@ -137,7 +138,7 @@ export default function WelcomePage() {
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 md:grid-cols-[1.2fr_1fr] md:pb-24 md:pt-16">
           <div className="flex flex-col items-start gap-6">
             <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-              <span className="inline-block h-2 w-2 rounded-full bg-primary" aria-hidden />
+              <BrandTon className="h-3 w-auto text-primary" />
               Assistant administratif vocal · Sénégal
             </p>
             <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight [text-wrap:balance] sm:text-5xl lg:text-6xl">
@@ -203,7 +204,8 @@ export default function WelcomePage() {
       {/* 3. Problème → réponse */}
       <section aria-labelledby="probleme" className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:py-24">
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Pourquoi Sama Agent</p>
+          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                  <BrandTon className="h-3 w-auto" />Pourquoi Sama Agent</p>
           <h2 id="probleme" className="mt-2 text-3xl font-extrabold tracking-tight [text-wrap:balance] sm:text-4xl">
             Préparer un dossier ne devrait pas demander plusieurs allers-retours
           </h2>
@@ -228,7 +230,8 @@ export default function WelcomePage() {
       <section id="comment" aria-labelledby="comment-titre" className="scroll-mt-20 border-y border-border bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 md:py-24">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary">Comment ça marche</p>
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                  <BrandTon className="h-3 w-auto" />Comment ça marche</p>
             <h2 id="comment-titre" className="mt-2 text-3xl font-extrabold tracking-tight [text-wrap:balance] sm:text-4xl">
               De votre demande au dépôt du dossier, en 4 étapes
             </h2>
@@ -254,7 +257,8 @@ export default function WelcomePage() {
         className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-16 sm:px-6 md:py-24"
       >
         <div className="max-w-2xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Fonctionnalités</p>
+          <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                  <BrandTon className="h-3 w-auto" />Fonctionnalités</p>
           <h2 id="fonctionnalites-titre" className="mt-2 text-3xl font-extrabold tracking-tight [text-wrap:balance] sm:text-4xl">
             Ce que vous voyez dans l'application
           </h2>
@@ -263,7 +267,8 @@ export default function WelcomePage() {
           {FEATURES.map((f, i) => (
             <article key={f.title} className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
               <div className={i % 2 === 1 ? "md:order-2" : ""}>
-                <p className="text-sm font-semibold uppercase tracking-widest text-accent-ai">{f.step}</p>
+                <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-accent-ai">
+                  <BrandTon className="h-3 w-auto" />{f.step}</p>
                 <h3 className="mt-2 text-2xl font-extrabold tracking-tight [text-wrap:balance] sm:text-3xl">{f.title}</h3>
                 <p className="mt-4 text-lg text-text2">{f.text}</p>
                 <ul className="mt-6 flex flex-col gap-3">
@@ -287,7 +292,8 @@ export default function WelcomePage() {
       <section id="engagements" aria-labelledby="engagements-titre" className="scroll-mt-20 border-y border-border bg-white/[0.02]">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1fr_1.6fr] md:py-24">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary">Nos engagements</p>
+            <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-primary">
+                  <BrandTon className="h-3 w-auto" />Nos engagements</p>
             <h2 id="engagements-titre" className="mt-2 text-3xl font-extrabold tracking-tight [text-wrap:balance] sm:text-4xl">
               Une IA digne de confiance pour vos démarches
             </h2>

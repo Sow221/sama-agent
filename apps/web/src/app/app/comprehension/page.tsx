@@ -23,6 +23,7 @@ import { useJourneyMutation } from "@/lib/query/hooks";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor } from "@/lib/auth/journey-id";
+import { BrandTon } from "@/components/brand/Logo";
 
 /** Procédure de démonstration (report du référentiel officiel data/). */
 const PROCEDURE_ID = "driving_license_new";
@@ -92,6 +93,7 @@ export default function CompréhensionPage() {
     <section className="flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <BrandTon className="h-2.5 w-auto text-primary" />
           Étape 1 · Comprendre
         </p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Votre demande</h1>

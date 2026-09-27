@@ -21,3 +21,12 @@ export function BrandTile({ size = 36, className = "" }: { size?: number; classN
     </svg>
   );
 }
+
+/** « Ton » de la charte (08-elements-graphiques) : le parallélogramme, en puce ou repère. */
+export function BrandTon({ className = "h-3 w-auto text-primary" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 23.3 26" className={className} aria-hidden focusable="false">
+      <polygon points="0,0 16.54,0 23.3,26 6.76,26" fill="currentColor" />
+    </svg>
+  );
+}

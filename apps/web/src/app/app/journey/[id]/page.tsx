@@ -13,6 +13,7 @@ import { NextActionCard } from "@/components/journey/NextActionCard";
 import { AskAgentButton } from "@/components/journey/AskAgentButton";
 import { ArrowRightIcon } from "@/components/icons";
 import { useJourneyState } from "@/lib/query/journey-state";
+import { BrandTon } from "@/components/brand/Logo";
 
 /** Pourquoi un élément bloque (point 20 — « ce qui manque / pourquoi »). */
 const STATUS_WHY: Record<string, string> = {
@@ -70,6 +71,7 @@ export default function ParcoursPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <BrandTon className="h-2.5 w-auto text-primary" />
             Suivi du parcours
           </p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre parcours</h1>
