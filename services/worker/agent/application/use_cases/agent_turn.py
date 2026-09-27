@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from agent import mode as app_mode
 from agent.infrastructure.db.repositories import (
@@ -131,11 +132,23 @@ def run_agent_turn(
     # 1. Mémoire persistée de l'usager (source de vérité PostgreSQL)
     memory_items = recall_top_memory(user_id)
 
-    # 2. Compréhension (GLM réel en live, règles en deterministic)
+    # 2. En PARALLÈLE (vitesse) : compréhension, recherche web, faits à mémoriser.
     # Le chat reste ouvert à TOUTE démarche : une intention non reconnue (ou un
     # classement raté) ne bloque pas la réponse, elle ne crée simplement pas de dossier.
+    live = app_mode.is_live()
+    if live and llm is None:
+        llm = GlmLlm()
+    pool = ThreadPoolExecutor(max_workers=3)
+    fut_intent = pool.submit(infer_intent, IntentRequest(transcript=text), llm)
+    fut_web = fut_mem = None
+    if live:
+        from agent.infrastructure.web.search import web_search
+
+        if len(text.split()) >= 3:
+            fut_web = pool.submit(web_search, text + " Sénégal démarche")
+        fut_mem = pool.submit(_extract_memories, text, llm)
     try:
-        intent = infer_intent(IntentRequest(transcript=text), llm=llm)
+        intent = fut_intent.result()
     except LlmUnavailableError:
         from agent.application.use_cases.process_intent import _clarify
 
@@ -155,15 +168,14 @@ def run_agent_turn(
     answer: str = ""
     new_memories: list[dict] = []
     sources: list[dict] = []
-    if app_mode.is_live():
-        if llm is None:
-            llm = GlmLlm()
-        from agent.infrastructure.web.search import web_search
-
+    if live:
         history = (list_conversation_messages(conversation_id, user_id, limit=200) or []) if conversation_id else []
-        sources = web_search(text + " Sénégal démarche") if len(text.split()) >= 3 else []
-        answer = _converse(text, intent, journey, memory_items, history, sources, llm)
-        new_memories = _extract_memories(text, llm)
+        sources = fut_web.result() if fut_web else []
+        try:
+            answer = _converse(text, intent, journey, memory_items, history, sources, llm)
+        finally:
+            new_memories = fut_mem.result() if fut_mem else []
+    pool.shutdown(wait=False)
     if not answer:  # panne fournisseur / mode deterministe : brique déterministe honnête
         from agent.application.dialogue import formulate
 

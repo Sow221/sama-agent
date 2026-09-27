@@ -13,7 +13,10 @@ import { Room, RoomEvent, Track, type RemoteParticipant } from "livekit-client";
 import { agentEventSchema, voiceEventSchema, type AgentEvent, type VoiceEvent } from "@/lib/schemas";
 
 export interface VoiceRoomCallbacks {
-  onRemoteAudio: (element: HTMLAudioElement) => void;
+  /** Voix de l'agent : l'élément joue tout seul ; la piste sert à l'animation. */
+  onRemoteAudio: (element: HTMLAudioElement, track: MediaStreamTrack) => void;
+  /** Le navigateur bloque la lecture (mobile sans geste) : proposer « Activer le son ». */
+  onPlaybackBlocked?: (blocked: boolean) => void;
   onRemoteDisconnected: () => void;
   onError: (err: unknown) => void;
   /** Événement REAL reçu du worker (état, transcription, erreur). */
@@ -41,10 +44,15 @@ export class VoiceRoom {
     room.on(RoomEvent.TrackSubscribed, (track, _pub) => {
       if (track.kind === Track.Kind.Audio) {
         // Track audio IA réelle (le worker publie sa voix TTS : on y attache un élément).
+        // L'élément est placé dans la page et joue DIRECTEMENT : le faire passer
+        // par un AudioContext (souvent suspendu sur mobile) rendait la voix muette.
         const el = track.attach();
         this.audioEl = el;
         el.autoplay = true;
-        cb.onRemoteAudio(el);
+        el.setAttribute("playsinline", "true");
+        el.style.display = "none";
+        document.body.appendChild(el);
+        cb.onRemoteAudio(el, track.mediaStreamTrack);
       }
     });
     room.on(RoomEvent.TrackUnsubscribed, (_track) => {
@@ -62,8 +70,29 @@ export class VoiceRoom {
       cb.onAgentEvent(event);
     });
 
+    room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+      cb.onPlaybackBlocked?.(!room.canPlaybackAudio);
+    });
+
     await room.connect(url, token);
-    await room.localParticipant.setMicrophoneEnabled(true);
+    // Micro avec annulation d'écho : la voix de l'agent ne se déclenche pas elle-même.
+    await room.localParticipant.setMicrophoneEnabled(true, {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    });
+    cb.onPlaybackBlocked?.(!room.canPlaybackAudio);
+  }
+
+  /** Piste micro réellement publiée (pour l'animation du niveau sonore). */
+  micTrack(): MediaStreamTrack | null {
+    const pub = this.room?.localParticipant.getTrackPublication(Track.Source.Microphone);
+    return pub?.track?.mediaStreamTrack ?? null;
+  }
+
+  /** Débloque la lecture audio (à appeler dans un geste : toucher un bouton). */
+  async startAudio(): Promise<void> {
+    await this.room?.startAudio();
   }
 
   /** Envoie un événement structuré sur le DataChannel (schéma voiceEventSchema). */
@@ -80,6 +109,7 @@ export class VoiceRoom {
   stopAgentAudio(): void {
     this.audioEl?.pause();
     this.audioEl?.removeAttribute("src");
+    this.audioEl?.remove();
     this.audioEl = null;
   }
 
@@ -89,6 +119,7 @@ export class VoiceRoom {
       this.room.disconnect();
     } finally {
       this.room = null;
+      this.audioEl?.remove();
       this.audioEl = null;
       this.lastTurn = 0;
     }

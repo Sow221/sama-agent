@@ -154,8 +154,8 @@ export default function YouSectionPage() {
           <Card className="flex items-start gap-3">
             <Mic className="mt-0.5 h-5 w-5 shrink-0 text-accent-ai" />
             <p className="text-sm text-text2">
-              La session vocale utilise votre micro (VAD Silero), LiveKit pour le transport et le
-              worker pour la reconnaissance (Kiriku) et la synthèse (xTTS wolof).
+              La session vocale utilise votre micro, LiveKit pour le transport et le serveur
+              pour détecter la parole, la reconnaître (Kiriku) et répondre en wolof (Adia).
             </p>
           </Card>
         </div>

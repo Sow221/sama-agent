@@ -176,11 +176,14 @@ def test_voice_token_honours_explicit_journey() -> None:
     assert r.json()["room"] == room_name(a)
 
 
-def test_voice_token_without_journey_is_409_not_a_fake_room() -> None:
-    """Aucun dossier → 409 explicite. Jamais un jeton vers une room fantôme."""
+def test_voice_token_without_journey_opens_a_private_free_room() -> None:
+    """Aucun dossier → conversation vocale libre, dans une room PROPRE à l'usager
+    (jamais une room partagée entre comptes)."""
     r = client.post("/api/voice/token", json={"journeyId": "   "})
-    assert r.status_code == 409, r.text
-    assert "dossier" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["journeyId"].startswith("libre-")
+    assert body["room"] == room_name(body["journeyId"])
 
 
 def test_voice_token_oversized_journey_is_422() -> None:

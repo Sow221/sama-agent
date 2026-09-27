@@ -11,7 +11,9 @@ Fait le vrai parcours d'un usager, sans navigateur, et dit ce qui marche :
   8. ce dossier existe dans la base Supabase, rattaché à l'usager ;
   9. un jeton vocal LiveKit est délivré ;
  10. la discussion ÉCRITE marche : conversation créée, réponse de l'agent, historique relu ;
- 11. l'agent vocal (worker Brev) rejoint réellement la room LiveKit et se met à l'écoute.
+ 11. l'agent vocal (worker Brev) rejoint réellement la room LiveKit et se met à l'écoute ;
+ 12. une VRAIE phrase wolof lui est dite : détection de parole, transcription Kiriku,
+     réponse du LLM et voix de l'agent reçue (latence mesurée).
 
     cd ~/sama-agent/services/worker && source .venv/bin/activate
     set -a; source ~/sama.env; set +a
@@ -163,22 +165,47 @@ def main() -> int:
     else:
         step("10. Discussion écrite (réponse de l'agent + historique)", False, f"conversation HTTP {r.status_code} {r.text[:100]}")
 
-    # 11. L'agent vocal rejoint vraiment la room (worker lancé, dispatch LiveKit OK)
+    # 11–12. L'agent vocal rejoint la room, puis une VRAIE phrase parlée est traitée
     if vt.get("token"):
-        ok, detail = asyncio.run(_voice_agent_joins(vt["url"], vt["token"]))
-        step("11. Agent vocal présent dans la room (à l'écoute)", ok, detail)
+        for name, ok, detail in asyncio.run(_voice_check(vt["url"], vt["token"])):
+            step(name, ok, detail)
 
     return summary()
 
 
-async def _voice_agent_joins(url: str, token: str, wait_s: float = 30.0) -> tuple[bool, str]:
-    """Rejoint la room comme le navigateur et attend l'`agent_state` du worker."""
+def _speech_wav() -> tuple[bytes, str]:
+    """Une vraie phrase parlée : fichier fourni (SAMA_CHECK_WAV) ou voix wolof Adia."""
+    path = os.getenv("SAMA_CHECK_WAV")
+    if path:
+        return Path(path).read_bytes(), f"fichier {path}"
+    sys.path.insert(0, str(ROOT / "services" / "worker"))
+    from agent.infrastructure.tts import tts_wolof
+
+    sentence = "Asalaa maalekum. Dama bëgg def sama permis de conduire, lan laa wara indi?"
+    wav, engine = tts_wolof.synthesize(sentence)
+    return wav, f"phrase wolof synthétisée ({engine}) : « {sentence} »"
+
+
+VOICE_JOIN = "11. Agent vocal présent dans la room (à l'écoute)"
+VOICE_TURN = "12. Conversation vocale réelle (parole → réponse → voix)"
+
+
+async def _voice_check(url: str, token: str, wait_join: float = 30.0, wait_turn: float = 120.0):
+    """Rejoint la room comme le navigateur, attend l'agent, lui PARLE, puis vérifie
+    transcription + réponse + voix. Rend [(nom, ok, détail), …]."""
+    import io
+    import time
+    import wave
+
     try:
         from livekit import rtc
     except ImportError:
-        return False, "paquet livekit absent (activez le .venv du worker)"
+        return [(VOICE_JOIN, False, "paquet livekit absent (activez le .venv du worker)")]
     room = rtc.Room()
-    heard: asyncio.Future = asyncio.get_running_loop().create_future()
+    joined: asyncio.Future = asyncio.get_running_loop().create_future()
+    events: list[dict] = []
+    agent_voice = asyncio.Event()
+    replied = asyncio.Event()
 
     @room.on("data_received")
     def _data(packet) -> None:  # noqa: ANN001
@@ -186,22 +213,76 @@ async def _voice_agent_joins(url: str, token: str, wait_s: float = 30.0) -> tupl
             event = json.loads(bytes(packet.data).decode())
         except Exception:  # noqa: BLE001
             return
-        if not heard.done() and event.get("type") in ("agent_state", "agent_error"):
-            heard.set_result(event)
+        events.append(event)
+        if not joined.done() and event.get("type") in ("agent_state", "agent_error"):
+            joined.set_result(event)
+        if event.get("type") == "agent_error" or (
+                event.get("type") == "agent_text" and event.get("role") != "user"):
+            replied.set()
 
+    @room.on("track_subscribed")
+    def _track(track, *_args) -> None:  # noqa: ANN001
+        if track.kind == rtc.TrackKind.KIND_AUDIO:
+            agent_voice.set()
+
+    out: list[tuple[str, bool, str]] = []
     try:
         await room.connect(url, token)
-        event = await asyncio.wait_for(heard, timeout=wait_s)
-        agents = [p.identity for p in room.remote_participants.values()]
-        if event.get("type") == "agent_error":
-            return False, f"le worker répond une erreur : {event.get('code')} {event.get('message', '')}"
-        return True, f"état « {event.get('state')} » · participant {agents[0] if agents else '?'}"
-    except asyncio.TimeoutError:
-        others = len(room.remote_participants)
-        return False, (f"aucun agent en {wait_s:.0f} s ({others} autre(s) participant(s)) — "
-                       "le worker vocal tourne-t-il ? voir var/logs/voice.log")
+        try:
+            first = await asyncio.wait_for(joined, timeout=wait_join)
+        except asyncio.TimeoutError:
+            return [(VOICE_JOIN, False, f"aucun agent en {wait_join:.0f} s — le worker vocal "
+                                        "tourne-t-il ? voir var/logs/voice.log")]
+        if first.get("type") == "agent_error":
+            return [(VOICE_JOIN, False, f"erreur du worker : {first.get('code')} {first.get('message', '')}")]
+        out.append((VOICE_JOIN, True, f"état « {first.get('state')} »"))
+
+        # 12. On PARLE à l'agent, au rythme réel : silence, phrase, silence.
+        try:
+            wav, origin = await asyncio.to_thread(_speech_wav)
+            with wave.open(io.BytesIO(wav)) as w:
+                rate, width, channels = w.getframerate(), w.getsampwidth(), w.getnchannels()
+                pcm = w.readframes(w.getnframes())
+            if width != 2 or channels != 1:
+                raise ValueError(f"WAV non géré ({width * 8} bits, {channels} canaux)")
+        except Exception as exc:  # noqa: BLE001
+            out.append((VOICE_TURN, False, f"phrase test impossible à produire : {exc}"[:200]))
+            return out
+        source = rtc.AudioSource(rate, 1)
+        mic = rtc.LocalAudioTrack.create_audio_track("prod-check-mic", source)
+        await room.local_participant.publish_track(
+            mic, rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE))
+        await asyncio.sleep(1.0)  # le worker s'abonne au micro
+        chunk = rate // 100  # trames de 10 ms
+        speech = [pcm[i:i + chunk * 2].ljust(chunk * 2, b"\x00") for i in range(0, len(pcm), chunk * 2)]
+        silence = b"\x00\x00" * chunk
+        for frame in [silence] * 100 + speech + [silence] * 150:
+            await source.capture_frame(rtc.AudioFrame(frame, rate, 1, chunk))
+        spoke_at = time.perf_counter()
+        try:
+            await asyncio.wait_for(replied.wait(), timeout=wait_turn)
+            await asyncio.wait_for(agent_voice.wait(), timeout=30)
+        except asyncio.TimeoutError:
+            pass
+        latency = time.perf_counter() - spoke_at
+        said = next((e.get("text") for e in events
+                     if e.get("type") == "agent_text" and e.get("role") == "user"), None)
+        reply = next((e.get("text") for e in events
+                      if e.get("type") == "agent_text" and e.get("role") != "user"), None)
+        error = next((e for e in events if e.get("type") == "agent_error"), None)
+        detail = (f"{origin} · entendu : « {said} » · réponse : « {(reply or '')[:100]} » · "
+                  f"voix de l'agent {'reçue' if agent_voice.is_set() else 'NON reçue'} · "
+                  f"{latency:.1f} s après la fin de la phrase")
+        if error:
+            detail += f" · erreur {error.get('code')} : {str(error.get('message', ''))[:120]}"
+        if said is None:
+            detail += " · rien transcrit : parole non détectée ou Kiriku en échec (voir voice.log)"
+        out.append((VOICE_TURN, bool(said) and bool(reply) and agent_voice.is_set() and error is None,
+                    detail))
+        return out
     except Exception as exc:  # noqa: BLE001
-        return False, str(exc)[:160]
+        out.append((VOICE_TURN, False, str(exc)[:160]))
+        return out
     finally:
         await room.disconnect()
 

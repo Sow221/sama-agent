@@ -141,9 +141,10 @@ def test_voice_turn_reads_a_per_user_journey_from_the_database() -> None:
     assert reply.spoken and "kàrtu identite" in reply.spoken
 
 
-def test_voice_turn_on_unknown_journey_fails_explicitly() -> None:
-    with pytest.raises(KeyError):
-        process_voice_turn("je veux mon permis", f"inconnu-{uuid.uuid4().hex[:8]}")
+def test_voice_turn_without_journey_is_a_free_conversation() -> None:
+    """Room sans dossier : pas de crash, pas d'état inventé (déterministe : précision)."""
+    reply = process_voice_turn("bonjour", f"libre-{uuid.uuid4().hex[:8]}")
+    assert reply.display and reply.spoken is None
 
 
 def test_runtime_turn_uses_the_persisted_dossier() -> None:

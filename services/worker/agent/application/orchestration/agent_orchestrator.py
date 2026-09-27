@@ -8,6 +8,6 @@ from __future__ import annotations
 from agent.application.use_cases.process_voice import VoiceReply, process_voice_turn
 
 
-def voice_turn(text: str, journey_id: str) -> VoiceReply:
-    """Un tour complet : ASR (fait par l'appelant) → intent → journey → réponse formulée."""
-    return process_voice_turn(text, journey_id)
+def voice_turn(text: str, journey_id: str, history: list[dict] | None = None) -> VoiceReply:
+    """Un tour complet : ASR (fait par l'appelant) → réponse du LLM (dossier + historique)."""
+    return process_voice_turn(text, journey_id, history=history)
