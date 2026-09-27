@@ -108,22 +108,20 @@ export default function MemoryPage() {
           <Card className="flex items-start gap-3">
             <InfoIcon className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
             <div>
-              <p className="font-semibold">Limites de l'analyse</p>
+              <p className="font-semibold">Ce que signifie « analysée »</p>
               <p className="mt-0.5 text-sm text-text2">
-                Une pièce « ANALYSÉE » n'est pas une validation officielle : la vérification
+                Une pièce analysée n'est pas une validation officielle : la vérification
                 définitive relève du service compétent (CAPP Karangë).
               </p>
             </div>
           </Card>
-          {journey ? (
-            <Link href="/limits" className="focus-visible">
-              <Card className="transition-colors hover:border-primary/40">
-                <p className="text-sm font-semibold text-accent-ai">
-                  Voir toutes les limites de l'application →
-                </p>
-              </Card>
-            </Link>
-          ) : null}
+          <Link href="/app/you/help#engagements" className="focus-visible">
+            <Card className="transition-colors hover:border-primary/40">
+              <p className="text-sm font-semibold text-accent-ai">
+                Voir nos engagements →
+              </p>
+            </Card>
+          </Link>
         </div>
       ) : null}
 

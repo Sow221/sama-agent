@@ -15,12 +15,14 @@ import {
   type ReactNode,
 } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { isAuthConfigured, supabaseAuthFlow, type SupabaseAuth } from "./supabase";
+import { AUTH_NOT_CONFIGURED, isHarness, supabaseAuthFlow, type SupabaseAuth } from "./supabase";
 import { readSessionOnce, SESSION_UNAVAILABLE } from "./session-bootstrap";
 
 export interface AuthValue {
-  /** L'authentification est-elle exigée (Supabase configuré) ? */
+  /** La connexion est-elle exigée ? Toujours, sauf harnais explicite (NEXT_PUBLIC_SAMA_HARNESS=1). */
   configured: boolean;
+  /** Connexion exigée mais impossible (clés Supabase absentes du déploiement). */
+  authUnavailable: string | null;
   /** Session en cours de chargement (premier rendu). */
   loading: boolean;
   session: Session | null;
@@ -58,9 +60,11 @@ export function AuthProvider({
   flow?: SupabaseAuth | null;
 }) {
   const auth = useMemo(() => (flow === undefined ? supabaseAuthFlow() : flow), [flow]);
-  const configured = isAuthConfigured();
+  // Fermé par défaut : seul le harnais explicite dispense de connexion.
+  const configured = auth !== null || !isHarness();
+  const authUnavailable = configured && auth === null ? AUTH_NOT_CONFIGURED : null;
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(configured);
+  const [loading, setLoading] = useState(auth !== null);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -109,25 +113,29 @@ export function AuthProvider({
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      if (auth) await auth.signInWithPassword(email, password);
+      if (!auth) throw new Error(AUTH_NOT_CONFIGURED);
+      await auth.signInWithPassword(email, password);
     },
     [auth]
   );
   const signUp = useCallback(
     async (email: string, password: string, options?: { name?: string }) => {
-      if (auth) await auth.signUp(email, password, options);
+      if (!auth) throw new Error(AUTH_NOT_CONFIGURED);
+      await auth.signUp(email, password, options);
     },
     [auth]
   );
   const signInWithGoogle = useCallback(async () => {
-    if (auth) await auth.signInWithGoogle(`${window.location.origin}/`);
+    if (!auth) throw new Error(AUTH_NOT_CONFIGURED);
+    await auth.signInWithGoogle(`${window.location.origin}/`);
   }, [auth]);
   const signOut = useCallback(async () => {
     if (auth) await auth.signOut();
   }, [auth]);
   const resetPassword = useCallback(
     async (email: string) => {
-      if (auth) await auth.resetPassword?.(email);
+      if (!auth) throw new Error(AUTH_NOT_CONFIGURED);
+      await auth.resetPassword?.(email);
     },
     [auth]
   );
@@ -141,6 +149,7 @@ export function AuthProvider({
   const value = useMemo<AuthValue>(
     () => ({
       configured,
+      authUnavailable,
       loading,
       session,
       sessionError,
@@ -154,6 +163,7 @@ export function AuthProvider({
     }),
     [
       configured,
+      authUnavailable,
       loading,
       session,
       sessionError,

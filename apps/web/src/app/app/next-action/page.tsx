@@ -29,6 +29,7 @@ import { useJourneyState } from "@/lib/query/journey-state";
 import { useEvidence } from "@/lib/query/hooks";
 import { documentStatusLabel, procedureLabel, requirementLabel } from "@/lib/labels";
 import type { JourneyResponse } from "@/lib/schemas";
+import { BrandTon } from "@/components/brand/Logo";
 
 export default function ProchaineActionPage() {
   const search = useSearchParams();
@@ -65,6 +66,7 @@ export default function ProchaineActionPage() {
 function StepBadge({ children }: { children: React.ReactNode }) {
   return (
     <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
+          <BrandTon className="h-2.5 w-auto text-primary" />
       {children}
     </p>
   );
@@ -80,7 +82,7 @@ function NextStep({ journey }: { journey: JourneyResponse }) {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <StepBadge>5 · Suite</StepBadge>
+        <StepBadge>Votre prochaine étape</StepBadge>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Prochaine action</h1>
         <p className="mt-1 text-sm text-text2">
           {procedureLabel(journey.procedureId)} · {JOURNEY_STATUS_LABEL[journey.status]} ·{" "}
@@ -135,7 +137,7 @@ function FinalStep({ journey }: { journey: JourneyResponse }) {
   return (
     <section className="flex flex-col gap-6 pt-8">
       <div>
-        <StepBadge>4 · Agir</StepBadge>
+        <StepBadge>Étape 4 · Agir</StepBadge>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre dossier est prêt</h1>
         <p className="mt-1 text-sm text-text2">{procedureLabel(journey.procedureId)}</p>
       </div>

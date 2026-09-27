@@ -1,8 +1,13 @@
 """Authentification API (infrastructure) — JWT Supabase Auth (email/password + Google).
 
 En live (SAMA_MODE=live), chaque route protégée exige un jeton Access Token émis par
-Supabase Auth, vérifié HMAC-HS256 avec `SUPABASE_JWT_SECRET` (secret du projet
-Supabase, jamais commité). L'identité réelle est `sub` = users.id ; les journeys
+Supabase Auth. Deux signatures existent selon l'âge du projet Supabase :
+  - clés asymétriques (ES256/RS256, défaut des projets récents) : clé publique lue
+    sur `SUPABASE_URL/auth/v1/.well-known/jwks.json` (mise en cache) ;
+  - ancien secret partagé (HS256) : `SUPABASE_JWT_SECRET` (jamais commité).
+⚠ Avant, seul HS256 était accepté : sur un projet récent, TOUTE connexion réelle
+était refusée (401). L'algorithme est pris dans une liste fermée — jamais `none`,
+jamais un HS256 vérifié avec une clé publique. L'identité réelle est `sub` = users.id ; les journeys
 sont liés à l'utilisateur via journeys.user_id (appropriation stricte : on ne
 consulte/modifie que ses propres dossiers).
 
@@ -21,6 +26,21 @@ from agent import mode as app_mode
 from agent.infrastructure.db.repositories import upsert_user
 
 JWT_ALGO = "HS256"
+ASYMMETRIC_ALGOS = ("ES256", "RS256")
+_jwks_clients: dict[str, "jwt.PyJWKClient"] = {}
+
+
+def _supabase_url() -> str:
+    return os.getenv("SUPABASE_URL", "").rstrip("/")
+
+
+def _jwks_client(base_url: str) -> "jwt.PyJWKClient":
+    """Client JWKS mis en cache (clés publiques du projet, rafraîchies par PyJWT)."""
+    client = _jwks_clients.get(base_url)
+    if client is None:
+        client = jwt.PyJWKClient(f"{base_url}/auth/v1/.well-known/jwks.json", cache_keys=True, lifespan=3600)
+        _jwks_clients[base_url] = client
+    return client
 SERVICE_USER_ID = "service-deterministe"
 
 
@@ -40,19 +60,41 @@ class AuthContext:
 
 
 def verify_access_token(access_token: str) -> AuthContext:
-    """Vérifie un JWT Supabase (HS256, exp + sub obligatoires). AuthError si invalide."""
-    secret = os.getenv("SUPABASE_JWT_SECRET", "")
-    if not secret:
-        raise AuthError("SUPABASE_JWT_SECRET non configuré")
+    """Vérifie un JWT Supabase (ES256/RS256 via JWKS, ou HS256 via secret ; exp + sub obligatoires)."""
+    try:
+        alg = jwt.get_unverified_header(access_token).get("alg")
+    except jwt.InvalidTokenError as exc:
+        raise AuthError(f"jeton invalide : {exc}") from exc
+
+    base_url = _supabase_url()
+    if alg in ASYMMETRIC_ALGOS:
+        if not base_url:
+            raise AuthError("SUPABASE_URL non configuré (clés de signature asymétriques)")
+        try:
+            key = _jwks_client(base_url).get_signing_key_from_jwt(access_token).key
+        except jwt.PyJWKClientError as exc:
+            raise AuthError(f"clé de signature introuvable : {exc}") from exc
+        algorithms = [alg]
+    elif alg == JWT_ALGO:
+        key = os.getenv("SUPABASE_JWT_SECRET", "")
+        if not key:
+            raise AuthError("SUPABASE_JWT_SECRET non configuré")
+        algorithms = [JWT_ALGO]
+    else:
+        raise AuthError(f"algorithme de signature refusé : {alg}")
+
     try:
         claims = jwt.decode(
             access_token,
-            secret,
-            algorithms=[JWT_ALGO],
+            key,
+            algorithms=algorithms,
             # PyJWT rejette tout jeton portant `aud` si l'audience d'attente n'est
             # pas fournie. Les Access Tokens Supabase portent `aud="authenticated"` :
             # sans cette option, TOUT login réel serait refusé (Invalid audience).
             audience="authenticated",
+            # Émetteur vérifié quand le projet est connu : un jeton d'un AUTRE
+            # projet Supabase est refusé.
+            issuer=f"{base_url}/auth/v1" if base_url else None,
             options={"require": ["exp", "sub"]},
         )
     except jwt.InvalidTokenError as exc:

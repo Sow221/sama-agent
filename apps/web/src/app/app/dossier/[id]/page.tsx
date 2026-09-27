@@ -10,6 +10,7 @@ import { Button, ErrorNotice, ThinkingDots } from "@/components/ui";
 import { ArrowRightIcon } from "@/components/icons";
 import { DocumentCard } from "@/components/journey/DocumentCard";
 import { useJourneyState } from "@/lib/query/journey-state";
+import { BrandTon } from "@/components/brand/Logo";
 
 export default function DossierPage() {
   const params = useParams<{ id: string }>();
@@ -32,7 +33,8 @@ export default function DossierPage() {
     <section className="flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-          3 · Dossier
+          <BrandTon className="h-2.5 w-auto text-primary" />
+          Étape 2 · Préparer
         </p>
         <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Mon dossier</h1>
         <p className="mt-1 text-sm text-text2">

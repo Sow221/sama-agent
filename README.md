@@ -36,6 +36,9 @@ npm run verify                                            # parité + terminolog
 npm run smoke -w                             # smoke API scripté (point 26) — API lancée requise
 node scripts/latency.mjs 20                  # latence RÉELLE (point 17), pas la cible
 npx --prefix apps/web playwright test         # E2E : parcours complet + reprise de dossier (point 18/25) — front + API lancés
+#    Le front des tests se construit en harnais EXPLICITE (sans compte) :
+#    NEXT_PUBLIC_SAMA_HARNESS=1 npm run build -w apps/web && npm run start -w apps/web
+#    Sans cette variable, la connexion est obligatoire (production).
 ```
 
 ## Décisions

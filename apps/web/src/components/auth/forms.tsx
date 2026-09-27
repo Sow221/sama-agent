@@ -13,6 +13,7 @@ import { AuthShell } from "./AuthShell";
 import { Button, Input, Spinner } from "@/components/ui";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isOnboardingDone } from "@/lib/auth/onboarding";
+import { pendingNext, takeNext } from "@/lib/auth/next";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -23,15 +24,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-/** Après connexion réelle : onboarding si jamais fait, sinon l'espace. */
+/** Après connexion réelle : onboarding si jamais fait, sinon la page demandée (ou l'accueil). */
 function usePostAuthRedirect() {
   const router = useRouter();
   const { configured, loading, session } = useAuth();
   useEffect(() => {
     if (configured && !loading && session) {
-      router.replace(isOnboardingDone() ? "/app/home" : "/onboarding");
+      if (isOnboardingDone()) router.replace(takeNext());
+      else {
+        const next = pendingNext();
+        router.replace(next ? `/onboarding?next=${encodeURIComponent(next)}` : "/onboarding");
+      }
     } else if (!configured && !loading) {
-      router.replace("/app/home");
+      router.replace(takeNext());
     }
   }, [configured, loading, session, router]);
 }
@@ -39,7 +44,7 @@ function usePostAuthRedirect() {
 /* ═══════════════ Log in (§18) ═══════════════ */
 export function LoginForm() {
   usePostAuthRedirect();
-  const { signIn } = useAuth();
+  const { signIn, authUnavailable } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,7 +108,7 @@ export function LoginForm() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+        <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
           Se connecter
         </Button>
       </form>
@@ -114,7 +119,7 @@ export function LoginForm() {
 /* ═══════════════ Sign up (§19) ═══════════════ */
 export function SignupForm() {
   usePostAuthRedirect();
-  const { signUp } = useAuth();
+  const { signUp, authUnavailable } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -203,7 +208,7 @@ export function SignupForm() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+        <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
           Créer mon compte
         </Button>
         <p className="text-xs text-text-muted">
@@ -216,7 +221,7 @@ export function SignupForm() {
 
 /* ═══════════════ Forgot password (§20) ═══════════════ */
 export function ForgotForm() {
-  const { configured, loading, resetPassword } = useAuth();
+  const { configured, loading, resetPassword, authUnavailable } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -276,7 +281,7 @@ export function ForgotForm() {
               {error}
             </p>
           ) : null}
-          <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+          <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
             Envoyer le lien
           </Button>
         </form>
@@ -287,7 +292,7 @@ export function ForgotForm() {
 
 /* ═══════════════ Reset password (§22) ═══════════════ */
 export function ResetForm() {
-  const { configured, loading, updatePassword } = useAuth();
+  const { configured, loading, updatePassword, authUnavailable } = useAuth();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -350,7 +355,7 @@ export function ResetForm() {
               {error}
             </p>
           ) : null}
-          <Button type="submit" variant="gradient" size="lg" loading={busy} className="w-full">
+          <Button type="submit" variant="gradient" size="lg" loading={busy} disabled={Boolean(authUnavailable)} className="w-full">
             Enregistrer
           </Button>
         </form>

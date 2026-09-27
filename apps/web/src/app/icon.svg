@@ -1,12 +1,2 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0dc98a"/>
-      <stop offset="1" stop-color="#38bdf8"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="16" fill="url(#g)"/>
-  <rect x="26" y="13" width="12" height="24" rx="6" fill="#04211a"/>
-  <path d="M19 31a13 13 0 0 0 26 0" fill="none" stroke="#04211a" stroke-width="4" stroke-linecap="round"/>
-  <path d="M32 44v7" stroke="#04211a" stroke-width="4" stroke-linecap="round"/>
-</svg>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><title>Sama Agent</title><style>.t{fill:#164A3A}.m{fill:#B7D8A8}@media (prefers-color-scheme:dark){.t{fill:#B7D8A8}.m{fill:#11110F}}</style><path d="M12.8 0 H51.2 A12.8 12.8 0 0 1 64 12.8 V51.2 A12.8 12.8 0 0 1 51.2 64 H12.8 A12.8 12.8 0 0 1 0 51.2 V12.8 A12.8 12.8 0 0 1 12.8 0 Z" class="t"/><polygon points="15.941,14.080 38.741,14.080 48.059,49.920 25.259,49.920" class="m" /></svg>

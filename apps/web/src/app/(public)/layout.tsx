@@ -1,10 +1,11 @@
 /**
  * Layout public — header vitrine + colonne mobile-first.
  * Routes : / (welcome), /login, /signup, /forgot-password, /verify-email,
- * /reset-password, /auth (alias compat), /limits.
+ * /reset-password, /auth (alias compat), /aide.
  * Tout ce qui est connecté vit sous /app (groupe protégé, AppShell).
  */
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 
 export default function PublicLayout({
   children,
@@ -12,9 +13,11 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
       <Header />
-      <main className="container-page">{children}</main>
+      {/* Pleine largeur : chaque page choisit sa colonne (landing large, formulaires étroits). */}
+      <main className="flex-1">{children}</main>
+      <Footer />
     </div>
   );
 }

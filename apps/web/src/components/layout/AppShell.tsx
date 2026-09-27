@@ -1,6 +1,6 @@
 /**
  * AppShell — workspace responsive (UI/UX Master Spec §101-103, §10).
- * Desktop : Sidebar 256/72 + TopBar 64 + contenu. Mobile : MobileHeader + BottomNav.
+ * Desktop : Sidebar 256/72 + TopBar 64 + contenu + pied. Mobile : MobileHeader + BottomNav.
  * La sidebar ne pousse jamais le contenu avec des marges arbitraires (§10).
  */
 "use client";
@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { MobileHeader } from "./MobileHeader";
 import { BottomNav } from "./BottomNav";
+import { AppFooter } from "./AppFooter";
 import { AppSystemUI } from "@/components/system/AppSystemUI";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-32 pt-4 sm:px-6 md:pb-12 md:pt-8 lg:px-10">
           {children}
         </main>
+        <AppFooter />
       </div>
       <BottomNav />
       <AppSystemUI />

@@ -40,8 +40,10 @@ LIVEKIT_API_SECRET=<secret>
 LIVEKIT_ROOM=sama-demo
 ALLOWED_ORIGINS=http://localhost:3000,https://<domaine-brev>
 # ── Authentification (Supabase Auth — email/mot de passe + Google) ─────────
-# SUPABASE_JWT_SECRET : « JWT secret » du projet Supabase (Dashboard → Settings →
-# API → JWT Secret). Vérifie chaque Access Token sur le worker (HMAC-HS256).
+# SUPABASE_URL : « Project URL » (Dashboard → Settings → API). Le worker y lit les
+# clés publiques du projet (JWKS) et vérifie chaque Access Token (ES256/RS256).
+SUPABASE_URL=https://<ref>.supabase.co
+# Facultatif — anciens projets signés HS256 : « Legacy JWT Secret ».
 SUPABASE_JWT_SECRET=<secret Supabase>
 # Côté front (Next.js) : URL + clé ANON publique du projet Supabase.
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co

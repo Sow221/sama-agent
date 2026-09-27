@@ -23,6 +23,7 @@ import { useJourneyMutation } from "@/lib/query/hooks";
 import { useJourneyStore, usePersistReady } from "@/lib/state/stores";
 import { useAuth } from "@/lib/auth/auth-context";
 import { journeyIdFor } from "@/lib/auth/journey-id";
+import { BrandTon } from "@/components/brand/Logo";
 
 /** Procédure de démonstration (report du référentiel officiel data/). */
 const PROCEDURE_ID = "driving_license_new";
@@ -92,7 +93,8 @@ export default function CompréhensionPage() {
     <section className="flex flex-col gap-6 pt-8">
       <div>
         <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-          1 · Comprendre
+          <BrandTon className="h-2.5 w-auto text-primary" />
+          Étape 1 · Comprendre
         </p>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight">Votre demande</h1>
       </div>
@@ -163,7 +165,7 @@ export default function CompréhensionPage() {
             <div className="mt-4 flex flex-col gap-3">
               {REQUIREMENTS.map((r) => (
                 <div key={r.n} className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#04211a]">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-extrabold text-[#11110f]">
                     {r.n}
                   </span>
                   <div>

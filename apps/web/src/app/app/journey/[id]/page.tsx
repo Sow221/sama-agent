@@ -13,6 +13,7 @@ import { NextActionCard } from "@/components/journey/NextActionCard";
 import { AskAgentButton } from "@/components/journey/AskAgentButton";
 import { ArrowRightIcon } from "@/components/icons";
 import { useJourneyState } from "@/lib/query/journey-state";
+import { BrandTon } from "@/components/brand/Logo";
 
 /** Pourquoi un élément bloque (point 20 — « ce qui manque / pourquoi »). */
 const STATUS_WHY: Record<string, string> = {
@@ -66,10 +67,12 @@ export default function ParcoursPage() {
 
   return (
     <section className="flex flex-col gap-6 pt-8">
-      <div className="flex items-center justify-between">
+      {/* Mobile : la pastille passe sous le titre au lieu de se couper sur deux lignes. */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent-ai">
-            2 · Parcours
+          <BrandTon className="h-2.5 w-auto text-primary" />
+            Suivi du parcours
           </p>
           <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Votre parcours</h1>
         </div>

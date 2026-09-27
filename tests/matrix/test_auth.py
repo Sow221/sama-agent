@@ -139,3 +139,57 @@ def test_unowned_journey_has_no_owner_filter_in_harness() -> None:
     """Sans appropriation (harnais), le dossier reste unique et accessible."""
     apply_journey(_journey_req("auth-legacy"), user_id=None)
     assert resume_journey("auth-legacy").journeyId == "auth-legacy"
+
+# ── Clés asymétriques (projets Supabase récents : ES256 via JWKS) ──────────
+def test_es256_token_verified_with_project_public_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Un jeton ES256 signé par la clé du projet est accepté ; l'émetteur est vérifié.
+
+    Seule la récupération HTTP du JWKS est remplacée (clé publique fournie
+    directement) : la signature, l'audience, l'émetteur et l'expiration sont
+    vérifiés pour de vrai par PyJWT.
+    """
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    from agent.infrastructure.auth import supabase as auth
+
+    private = ec.generate_private_key(ec.SECP256R1())
+    base = "https://projet-test.supabase.co"
+    monkeypatch.setenv("SUPABASE_URL", base)
+
+    class _Key:
+        key = private.public_key()
+
+    class _Client:
+        def get_signing_key_from_jwt(self, _token: str) -> _Key:
+            return _Key()
+
+    monkeypatch.setitem(auth._jwks_clients, base, _Client())
+    claims = {**_valid_claims(), "iss": f"{base}/auth/v1"}
+    token = jwt.encode(claims, private, algorithm="ES256", headers={"kid": "k1"})
+    assert verify_access_token(token).user_id == claims["sub"]
+
+    # Jeton d'un autre projet (émetteur différent) : refusé.
+    other = jwt.encode({**claims, "iss": "https://autre.supabase.co/auth/v1"}, private, algorithm="ES256")
+    with pytest.raises(AuthError):
+        verify_access_token(other)
+
+    # Signé par une autre clé : refusé.
+    intruder = jwt.encode(claims, ec.generate_private_key(ec.SECP256R1()), algorithm="ES256")
+    with pytest.raises(AuthError):
+        verify_access_token(intruder)
+
+
+def test_es256_without_supabase_url_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    token = jwt.encode(_valid_claims(), ec.generate_private_key(ec.SECP256R1()), algorithm="ES256")
+    with pytest.raises(AuthError, match="SUPABASE_URL"):
+        verify_access_token(token)
+
+
+def test_unsigned_token_is_refused() -> None:
+    """alg=none : jamais accepté, même avec des claims valides."""
+    token = jwt.encode(_valid_claims(), None, algorithm="none")
+    with pytest.raises(AuthError, match="algorithme"):
+        verify_access_token(token)

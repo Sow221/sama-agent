@@ -5,6 +5,8 @@
  * L'écran reste visuellement calme : marque, titre, carte, pied de page.
  */
 import type { ReactNode } from "react";
+import { useAuth } from "@/lib/auth/auth-context";
+import { BrandTile } from "@/components/brand/Logo";
 
 export function AuthShell({
   title,
@@ -17,15 +19,19 @@ export function AuthShell({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const { authUnavailable } = useAuth();
   return (
-    <section className="flex min-h-[calc(100dvh-4.5rem)] flex-col justify-center gap-6 py-8">
+    <section className="container-page flex min-h-[calc(100dvh-4.5rem)] flex-col justify-center gap-6 py-8">
       <div className="text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-base font-extrabold text-[#04211a] shadow-glow">
-          SA
-        </span>
+        <BrandTile size={48} className="mx-auto" />
         <h1 className="mt-4 text-3xl font-extrabold tracking-tight">{title}</h1>
         {subtitle ? <p className="mt-2 text-sm text-text2">{subtitle}</p> : null}
       </div>
+      {authUnavailable ? (
+        <p role="alert" className="rounded-card border border-warning/40 bg-warning/10 p-4 text-sm text-text1">
+          {authUnavailable}
+        </p>
+      ) : null}
       <div className="rounded-card border border-border bg-white/[0.05] p-5 backdrop-blur-xl sm:p-6">
         {children}
       </div>

@@ -10,8 +10,13 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "fr",
     start_url: "/app/home",
     display: "standalone",
-    background_color: "#0a1220",
-    theme_color: "#0a1220",
-    icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
+    background_color: "#11110f",
+    theme_color: "#11110f",
+    icons: [
+      { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
   };
 }

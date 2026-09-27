@@ -12,6 +12,7 @@ import { Avatar, Badge, Button, Card, EmptyState } from "@/components/ui";
 import { useAuth } from "@/lib/auth/auth-context";
 import { resetOnboarding } from "@/lib/auth/onboarding";
 import { useBoolPref, useEnumPref } from "@/lib/prefs";
+import { HelpContent } from "@/components/help/HelpContent";
 
 function Toggle({
   label,
@@ -206,19 +207,19 @@ export default function YouSectionPage() {
         <div className="flex max-w-xl flex-col gap-6">
           <h1 className="text-3xl font-extrabold tracking-tight">Confidentialité</h1>
           {[
-            "Vos pièces et votre dossier ne sont partagés avec personne hors de la chaîne de traitement.",
-            "L'identité Supabase authentifie chaque appel : le worker n'agit jamais « anonymement » en production.",
-            "La mémoire est limitée à ce que vous fournissez volontairement (demande, pièces, préférences).",
-            "Une pièce « ANALYSÉE » n'est pas une validation officielle — vérification par le service compétent requise.",
+            "Votre dossier, vos pièces et vos échanges sont liés à votre compte : vous seul y avez accès.",
+            "Chaque action passe par votre session connectée ; rien n'est traité de façon anonyme.",
+            "L'agent ne retient que ce que vous lui confiez (demande, pièces, préférences), et vous pouvez l'oublier depuis la page Mémoire.",
+            "Une pièce analysée n'est pas une pièce validée : la vérification officielle reste celle du service compétent.",
           ].map((line, i) => (
             <Card key={i} className="flex items-start gap-3">
               <Badge tone="info">{i + 1}</Badge>
               <p className="text-sm text-text1">{line}</p>
             </Card>
           ))}
-          <Link href="/limits" className="focus-visible">
+          <Link href="/app/memory" className="focus-visible">
             <Button variant="secondary" className="w-full">
-              Voir les limites de l'application
+              Gérer ce que l'agent retient
             </Button>
           </Link>
         </div>
@@ -226,20 +227,14 @@ export default function YouSectionPage() {
 
     case "help":
       return (
-        <div className="flex max-w-xl flex-col gap-6">
-          <h1 className="text-3xl font-extrabold tracking-tight">Aide</h1>
-          <Link href="/app/comprehension" className="focus-visible">
-            <Card className="transition-colors hover:border-primary/40">
-              <p className="font-semibold">Comprendre une démarche</p>
-              <p className="mt-0.5 text-sm text-text2">Les pièces exigées et leurs sources officielles.</p>
-            </Card>
-          </Link>
-          <Link href="/limits" className="focus-visible">
-            <Card className="transition-colors hover:border-primary/40">
-              <p className="font-semibold">Limites de l'application</p>
-              <p className="mt-0.5 text-sm text-text2">Transparence sur ce que Sama Agent peut et ne peut pas faire.</p>
-            </Card>
-          </Link>
+        <div className="flex max-w-4xl flex-col gap-8">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Aide</h1>
+            <p className="mt-1 text-sm text-text2">
+              Les étapes de votre démarche, nos engagements et les questions fréquentes.
+            </p>
+          </div>
+          <HelpContent />
         </div>
       );
 

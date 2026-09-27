@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Compression gzip/brotli des réponses (vérifiée par curl après redémarrage).
   compress: true,
+  // Anciennes adresses : redirection HTTP réelle (308), pas une page intermédiaire.
+  async redirects() {
+    return [
+      { source: "/limits", destination: "/aide#engagements", permanent: true },
+      { source: "/help", destination: "/aide", permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

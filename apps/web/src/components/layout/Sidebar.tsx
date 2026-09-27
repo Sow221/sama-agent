@@ -14,6 +14,7 @@ import {
   ArrowLeftIcon,
   ChatIcon,
   FileIcon,
+  FlagIcon,
   HomeIcon,
   InfoIcon,
   MemoryIcon,
@@ -23,6 +24,7 @@ import {
 import { useJourneyStore } from "@/lib/state/stores";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "@/components/ui";
+import { BrandLogo, BrandTile } from "@/components/brand/Logo";
 
 const MAIN_NAV = [
   { href: "/app/home", label: "Accueil", icon: HomeIcon },
@@ -33,12 +35,20 @@ const MAIN_NAV = [
 ] as const;
 
 const UTILITY_NAV = [
-  { href: "/limits", label: "Limites", icon: InfoIcon },
+  { href: "/app/you/help", label: "Aide", icon: InfoIcon },
   { href: "/app/you", label: "Moi", icon: UserIcon },
 ] as const;
 
-function routeIsActive(pathname: string, href: string) {
+function matches(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const ALL_HREFS = [...MAIN_NAV, ...UTILITY_NAV].map((i) => i.href);
+
+/** Un seul lien actif : le plus précis (sur /app/you/help, « Aide » et non « Moi »). */
+function routeIsActive(pathname: string, href: string) {
+  if (!matches(pathname, href)) return false;
+  return !ALL_HREFS.some((other) => other.length > href.length && matches(pathname, other));
 }
 
 export function Sidebar() {
@@ -120,14 +130,7 @@ export function Sidebar() {
       {/* Brand */}
       <div className={cn("flex items-center px-4 py-5", collapsed && "justify-center px-0")}>
         <Link href="/app/home" className="focus-visible flex items-center gap-2" aria-label="Sama Agent — Accueil">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-[#0ab8a0] to-accent-ai text-sm font-extrabold text-[#04211a] shadow-glow">
-            SA
-          </span>
-          {!collapsed ? (
-            <span className="text-lg font-bold tracking-tight text-text1">
-              Sama <span className="text-gradient">Agent</span>
-            </span>
-          ) : null}
+          {collapsed ? <BrandTile size={36} /> : <BrandLogo className="h-7 w-auto" />}
         </Link>
       </div>
 
@@ -138,7 +141,7 @@ export function Sidebar() {
             <Link
               href="/app/home"
               aria-label="Nouveau parcours"
-              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#04211a] shadow-glow hover:brightness-110"
+              className="focus-visible mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent-ai text-[#11110f] shadow-glow hover:brightness-110"
             >
               <PlusIcon className="h-5 w-5" />
             </Link>
@@ -146,7 +149,7 @@ export function Sidebar() {
         ) : (
           <Link
             href="/app/home"
-            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-[#04211a] shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
+            className="focus-visible flex min-h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent-ai text-base font-bold text-[#11110f] shadow-glow transition-all duration-micro hover:brightness-110 active:scale-[0.97]"
           >
             <PlusIcon className="h-5 w-5" /> Nouveau parcours
           </Link>
@@ -172,7 +175,7 @@ export function Sidebar() {
                   aria-label="Parcours en cours"
                   className="focus-visible inline-flex h-11 w-11 items-center justify-center rounded-xl text-text2 hover:bg-surface-hover hover:text-text1"
                 >
-                  <ActionIcon className="h-5 w-5" />
+                  <FlagIcon className="h-5 w-5" />
                 </Link>
               </Tooltip>
             </div>
@@ -181,7 +184,7 @@ export function Sidebar() {
               href={`/app/journey/${journey.journeyId}`}
               className="focus-visible mx-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-base text-text2 hover:bg-surface-hover hover:text-text1"
             >
-              <ActionIcon className="h-5 w-5 shrink-0" />
+              <FlagIcon className="h-5 w-5 shrink-0" />
               <span className="truncate">Parcours en cours</span>
             </Link>
           )}
