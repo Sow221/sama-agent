@@ -8,6 +8,9 @@
  */
 import { getDefaultRealTimeVADOptions, MicVAD as RickyMicVAD } from "@ricky0123/vad-web";
 
+/** Dossier public des fichiers d'exécution du VAD (worklet, modèle ONNX, WASM). */
+export const VAD_ASSET_PATH = "/vad/";
+
 export interface VadCallbacks {
   onSpeechStart: () => void;
   /** Segment audio réel détecté (16 kHz, entre -1 et 1) — publié puis traitée par le worker. */
@@ -25,6 +28,10 @@ export class SileroVad {
     const vad = await RickyMicVAD.new({
       ...defaults,
       model: "v5",
+      // Fichiers servis par le site (copiés par scripts/copy-vad-assets.mjs) :
+      // sans ces chemins, le VAD les cherche à la racine et échoue au démarrage.
+      baseAssetPath: VAD_ASSET_PATH,
+      onnxWASMBasePath: VAD_ASSET_PATH,
       // Le flux est déjà fourni (LiveKit) : on ne le coupe ni ne le ré-acquiert jamais.
       getStream: async () => stream,
       pauseStream: async () => {},
