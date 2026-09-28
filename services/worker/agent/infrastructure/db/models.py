@@ -233,10 +233,41 @@ class MemoryItem(TimestampMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class DataItem(TimestampMixin, Base):
+    """Usine à données (doc 11) : un exemple wolof candidat et ses contrôles automatiques.
+
+    kind : AUDIO_TEXT (audio + texte, pour l'oreille) · FR_WO (paire traduite).
+    checks : scores des contrôles K1–K5 (ex. {"K1": {"wer": 0.08, "passed": true, …}}).
+    auto_pass : verdict agrégé des contrôles automatiques (None = non contrôlé).
+    status : pending → accepted | rejected (verdict humain de l'étalon).
+    """
+    __tablename__ = "df_items"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    text_wo: Mapped[str] = mapped_column(Text)
+    text_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    source: Mapped[str] = mapped_column(String(128))
+    checks: Mapped[dict] = mapped_column(JSON, default=dict)
+    auto_pass: Mapped[bool | None] = mapped_column(Boolean, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+
+
+class DataVerdict(Base):
+    """Verdict de l'étalon wolophone sur un DataItem : ok · ko · edit (avec correction)."""
+    __tablename__ = "df_verdicts"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    item_id: Mapped[str] = mapped_column(ForeignKey("df_items.id"), index=True)
+    user_id: Mapped[str] = mapped_column(String(64), index=True)
+    verdict: Mapped[str] = mapped_column(String(8))
+    correction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 # Toutes les tables pour alembic / create_all
 ALL_MODELS = (
     User, Session, AgentMessage, Procedure, ProcedureVersion, ProcedureStep,
     Requirement, Source, RequirementSource, Journey, JourneyRequirement,
     Document, DocumentObservation, Evidence, ToolCall, AuditEvent,
-    Conversation, ConversationMessage, MemoryItem,
+    Conversation, ConversationMessage, MemoryItem, DataItem, DataVerdict,
 )

@@ -32,6 +32,7 @@ import {
   Sun,
   Trash2,
   TriangleAlert,
+  Pencil,
   Upload,
   User,
   Volume2,
@@ -54,6 +55,7 @@ function brand(Icon: LucideIcon) {
 
 export const Mic = brand(LucideMic);
 export const CheckIcon = brand(Check);
+export const EditIcon = brand(Pencil);
 export const AlertIcon = brand(TriangleAlert);
 export const CloseIcon = brand(X);
 export const ArrowRightIcon = brand(ArrowRight);

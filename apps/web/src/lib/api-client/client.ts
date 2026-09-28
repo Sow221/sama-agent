@@ -29,6 +29,32 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Exemple candidat de l'usine à données et ses contrôles automatiques (K1…). */
+export const dataItemSchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  textWo: z.string(),
+  textFr: z.string().nullable(),
+  hasAudio: z.boolean(),
+  source: z.string(),
+  checks: z.record(z.string(), z.unknown()),
+  autoPass: z.boolean().nullable(),
+  status: z.string(),
+});
+export type DataItem = z.infer<typeof dataItemSchema>;
+
+export const dataStatsSchema = z.object({
+  judged: z.number(),
+  agreement: z.number().nullable(),
+  precision: z.number().nullable(),
+  target: z.number(),
+  trusted: z.boolean(),
+  pending: z.number(),
+  accepted: z.number(),
+  rejected: z.number(),
+});
+export type DataStats = z.infer<typeof dataStatsSchema>;
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -177,6 +203,30 @@ export const api = {
       z.object({ wolof: z.string(), audio: z.string(), mime: z.string() }),
       { method: "POST", body: JSON.stringify({ text }) }
     );
+  },
+
+  /* ── Usine à données wolof (doc 11) — réservé aux étalons ── */
+  datafactoryNext(n = 10): Promise<DataItem[]> {
+    return request(`/api/datafactory/next?n=${n}`, z.object({ items: z.array(dataItemSchema) })).then(
+      (r) => r.items
+    );
+  },
+
+  datafactoryVerdict(body: { itemId: string; verdict: "ok" | "ko" | "edit"; correction?: string }): Promise<DataItem> {
+    return request("/api/datafactory/verdict", dataItemSchema, { method: "POST", body: JSON.stringify(body) });
+  },
+
+  datafactoryStats(): Promise<{ me: DataStats; all: DataStats }> {
+    return request("/api/datafactory/stats", z.object({ me: dataStatsSchema, all: dataStatsSchema }));
+  },
+
+  /** Audio d'un exemple (protégé) → URL locale lisible par un <audio>. */
+  async datafactoryAudio(itemId: string): Promise<string> {
+    const res = await fetch(`${API_URL}/api/datafactory/audio/${encodeURIComponent(itemId)}`, {
+      headers: await authBearerHeaders(),
+    });
+    if (!res.ok) throw new ApiError(`audio ${itemId} → ${res.status}`, res.status);
+    return URL.createObjectURL(await res.blob());
   },
 
   /* ── Mémoire long terme (serveur, purgeable) ── */

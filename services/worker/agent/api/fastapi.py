@@ -48,6 +48,7 @@ from agent.infrastructure.db.repositories import (
 )
 from agent.schemas import (
     AgentTurnRequest,
+    DataVerdictRequest,
     ConversationCreate,
     ConversationUpdate,
     DocumentAnalysis,
@@ -448,6 +449,60 @@ def speak(body: SpeakRequest, user: AuthContext = Depends(require_user)) -> dict
     except (SpeakUnavailableError, LlmUnavailableError) as exc:
         raise HTTPException(status_code=503, detail=f"voix wolof indisponible : {str(exc)[:200]}")
     return {"wolof": wolof, "audio": base64.b64encode(wav).decode("ascii"), "mime": "audio/wav"}
+
+
+# ── Usine à données wolof (doc 11) : l'étalon wolophone valide en un geste ────
+def require_validator(user: AuthContext = Depends(require_user)) -> AuthContext:
+    """Réservé aux étalons listés dans SAMA_VALIDATORS (e-mails ou identifiants,
+    séparés par des virgules). En production, liste vide = personne : ces données
+    alimentent l'entraînement, on ne les ouvre pas à tous les comptes."""
+    allowed = {v.strip().lower() for v in os.getenv("SAMA_VALIDATORS", "").split(",") if v.strip()}
+    if not allowed:
+        if app_mode.is_live():
+            raise HTTPException(status_code=403, detail="aucun étalon configuré (SAMA_VALIDATORS)")
+        return user  # harnais déterministe : tests et développement local
+    if user.user_id.lower() in allowed or (user.email or "").lower() in allowed:
+        return user
+    raise HTTPException(status_code=403, detail="réservé aux étalons de l'usine à données")
+
+
+@app.get("/api/datafactory/next")
+def datafactory_next(n: int = 10, user: AuthContext = Depends(require_validator)) -> dict:
+    from agent.datafactory.store import next_for_review
+
+    return {"items": next_for_review(user.user_id, n=n)}
+
+
+@app.post("/api/datafactory/verdict")
+def datafactory_verdict(body: DataVerdictRequest, user: AuthContext = Depends(require_validator)) -> dict:
+    from agent.datafactory.store import record_verdict
+
+    try:
+        item = record_verdict(body.itemId, user.user_id, body.verdict, body.correction)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if item is None:
+        raise HTTPException(status_code=404, detail="élément introuvable")
+    return item
+
+
+@app.get("/api/datafactory/stats")
+def datafactory_stats(user: AuthContext = Depends(require_validator)) -> dict:
+    from agent.datafactory.store import stats
+
+    return {"me": stats(user.user_id), "all": stats()}
+
+
+@app.get("/api/datafactory/audio/{item_id}")
+def datafactory_audio(item_id: str, user: AuthContext = Depends(require_validator)):
+    from fastapi.responses import FileResponse
+
+    from agent.datafactory.store import audio_path_of
+
+    path = audio_path_of(item_id)
+    if path is None or not path.exists():
+        raise HTTPException(status_code=404, detail="audio introuvable")
+    return FileResponse(path, media_type="audio/wav")
 
 
 # ── Mémoire long terme (P1) — persistante, liée à l'usager, purgeable ────────
