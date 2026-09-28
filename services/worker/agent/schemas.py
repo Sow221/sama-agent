@@ -5,6 +5,8 @@ Convention : camelCase — même contrat côté TS.
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent import bootstrap  # noqa: F401  (prépare le sys.path)
@@ -167,6 +169,14 @@ class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=100_000)
     language: str | None = None
     journeyId: str | None = None
+
+
+class DataVerdictRequest(BaseModel):
+    """Verdict de l'étalon sur un exemple de l'usine à données (doc 11)."""
+    model_config = ConfigDict(extra="forbid")
+    itemId: str = Field(min_length=1, max_length=64)
+    verdict: Literal["ok", "ko", "edit"]
+    correction: str | None = Field(default=None, max_length=2000)
 
 
 class SpeakRequest(BaseModel):
